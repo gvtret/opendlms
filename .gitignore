@@ -1,1 +1,33 @@
+# Build output
 build/
+
+# IDE / editor
+.vs/
+*.swp
+*.swo
+
+# Compiled / generated
+*.o
+*.obj
+*.exe
+*.out
+*.so
+*.dylib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenClaw workspace
+.openclaw/
+AGENTS.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
