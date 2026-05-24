@@ -60,7 +60,7 @@
 #define MBEDTLS_ASN1_PARSE_C
 #define MBEDTLS_ASN1_WRITE_C
 #define MBEDTLS_BIGNUM_C
-#define MBEDTLS_CCM_C
+//#define MBEDTLS_CCM_C  // ccm.c/ccm.h not present in this project; add from mbed TLS if needed
 #define MBEDTLS_CTR_DRBG_C
 #define MBEDTLS_ECJPAKE_C
 #define MBEDTLS_ECP_C
