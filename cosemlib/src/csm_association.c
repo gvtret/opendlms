@@ -361,7 +361,9 @@ static csm_acse_code acse_user_info_decoder(csm_asso_state *state, csm_ber *ber,
                             // FIXME: copy the dedicated key
                         }
 
-                        valid = csm_axdr_rd_null(array); //  response-allowed
+                        // response-allowed: boolean (0 or 1), not null
+                        valid = csm_array_read_u8(array, &byte);
+                        CSM_LOG("[ACSE] Response allowed: %d", byte);
                     }
                     else
                     {
@@ -396,9 +398,9 @@ static csm_acse_code acse_user_info_decoder(csm_asso_state *state, csm_ber *ber,
                         }
                     }
 
-                    // proposed-dlms-version-number: always 6
+                    // proposed-dlms-version-number (typically 6 but not required)
                     valid = valid && csm_array_read_u8(array, &byte);
-                    valid = valid && (byte == 6U ? TRUE : FALSE);
+                    (void)byte; // accept any version for interop
 
                     valid = valid && acse_decode_conformance_block(state, ber, array, tag);
 
