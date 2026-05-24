@@ -4,7 +4,9 @@ cmake_minimum_required(VERSION 3.10)
 # Nom du projet
 project(cosemserver LANGUAGES C CXX)
 
-add_subdirectory(../cosemlib csm)
+if(NOT TARGET cosemlib)
+    add_subdirectory(../cosemlib ${CMAKE_BINARY_DIR}/cosemlib)
+endif()
 
 # Ajouter les fichiers sources
 add_library(${PROJECT_NAME}
