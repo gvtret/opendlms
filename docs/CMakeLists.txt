@@ -3,19 +3,25 @@ cmake_minimum_required(VERSION 3.10)
 # Nom du projet
 project(libmetersim LANGUAGES C CXX)
 
-add_subdirectory(../../../server csmsrv)
+if(NOT TARGET cosemlib)
+    add_subdirectory(../../../cosemlib ${CMAKE_BINARY_DIR}/cosemlib)
+endif()
+if(NOT TARGET cosemserver)
+    add_subdirectory(../../../server ${CMAKE_BINARY_DIR}/cosemserver)
+endif()
 
 # Ajouter les fichiers sources
+set(METER_SIM_SRC ${CMAKE_CURRENT_SOURCE_DIR}/../examples/metersimulator)
 add_executable(${PROJECT_NAME}
 
     libmetersim.c
-    ../src/cosem_server_hal.c
+    ${METER_SIM_SRC}/src/cosem_server_hal.c
 )
 
 # Inclure des répertoires d'en-têtes si nécessaire
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/../src
-    ${CMAKE_SOURCE_DIR}/../system
+    ${METER_SIM_SRC}/src
+    ${METER_SIM_SRC}/system
 )
 
 # External libraries

@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(cosemtest LANGUAGES C CXX)
 
-add_subdirectory(../cosemlib cosemlib)
+if(NOT TARGET cosemlib)
+    add_subdirectory(../cosemlib ${CMAKE_BINARY_DIR}/cosemlib)
+endif()
 
 add_executable(${PROJECT_NAME}
     main.cpp
