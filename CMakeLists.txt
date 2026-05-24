@@ -1,19 +1,44 @@
 cmake_minimum_required(VERSION 3.10)
+project(opendlms VERSION 1.0.0 LANGUAGES C CXX)
 
-project(opendlms)
+# ── Options ──────────────────────────────────────────────────────────────────
+option(OPEN_DLMS_BUILD_TESTS      "Build unit tests"             ON)
+option(OPEN_DLMS_BUILD_SERVER     "Build server library"         ON)
+option(OPEN_DLMS_BUILD_METER_SIM  "Build meter simulator exe"   ON)
+option(OPEN_DLMS_BUILD_CLIENT     "Build client tool (needs Gurux)" OFF)
+option(OPEN_DLMS_BUILD_STUDIO     "Build Shaddam Studio (needs Qt)" OFF)
+option(OPEN_DLMS_BUILD_DOCS       "Build WASM doc targets (needs Emscripten)" OFF)
 
-include(ExternalProject)
+# ── Core library ─────────────────────────────────────────────────────────────
+add_subdirectory(cosemlib)
 
-ExternalProject_Add(
-    tests 
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests"
-    PREFIX tests
-    INSTALL_COMMAND ""
-)
+# ── Server library ───────────────────────────────────────────────────────────
+if(OPEN_DLMS_BUILD_SERVER)
+    add_subdirectory(server)
+endif()
 
-ExternalProject_Add(
-    metersimulator 
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/metersimulator"
-    PREFIX metersimulator
-    INSTALL_COMMAND ""
-)
+# ── Unit tests ───────────────────────────────────────────────────────────────
+if(OPEN_DLMS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# ── Meter simulator example ──────────────────────────────────────────────────
+if(OPEN_DLMS_BUILD_METER_SIM)
+    add_subdirectory(examples/metersimulator)
+endif()
+
+# ── Client tool (requires external JSON libs, currently opt-in) ──────────────
+if(OPEN_DLMS_BUILD_CLIENT)
+    add_subdirectory(client)
+endif()
+
+# ── Shaddam Studio (requires Qt) ─────────────────────────────────────────────
+if(OPEN_DLMS_BUILD_STUDIO)
+    add_subdirectory(studio)
+endif()
+
+# ── WASM docs / libmetersim (requires Emscripten) ────────────────────────────
+if(OPEN_DLMS_BUILD_DOCS)
+    add_subdirectory(docs)
+endif()
