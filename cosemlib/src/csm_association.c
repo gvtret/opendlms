@@ -1113,9 +1113,10 @@ int csm_asso_decoder(csm_asso_state *state, csm_array *array, uint8_t tag)
                         CSM_LOG("Optional field not found");
                         eat_bytes = FALSE;
                     }
-                    else if ((state->auth_level < CSM_AUTH_LOWEST_LEVEL) && (codec[decoder_index].context == ACSE_SEC))
+                    else if (codec[decoder_index].context == ACSE_SEC)
                     {
-                        continue;
+                        // Security fields are optional in the frame — skip if not present
+                        eat_bytes = FALSE;
                     }
                     else
                     {
@@ -1162,8 +1163,8 @@ int csm_asso_encoder(csm_asso_state *state, csm_array *array, uint8_t tag)
                 // Don't encode optional data
                 if ((codec[i].insert_func != NULL) && (codec[i].context != ACSE_SKIP))
                 {
-                    // Don't encode some fields when no security is required
-                    if ((state->auth_level <= CSM_AUTH_LOW_LEVEL) && (codec[i].context == ACSE_SEC))
+                    // Don't encode security fields only when authentication is lowest level (none)
+                    if ((state->auth_level == CSM_AUTH_LOWEST_LEVEL) && (codec[i].context == ACSE_SEC))
                     {
                         continue;
                     }

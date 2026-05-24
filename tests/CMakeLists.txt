@@ -5,11 +5,11 @@ if(NOT TARGET cosemlib)
     add_subdirectory(../cosemlib ${CMAKE_BINARY_DIR}/cosemlib)
 endif()
 
-# test_association.cpp excluded (pre-existing decoder failures, tracked in Phase 1)
 add_executable(${PROJECT_NAME}
     main.cpp
     test_csm_array.cpp
     test_hdlc.cpp
+    test_association.cpp
     cosem_tests_hal.c
 )
 
