@@ -889,6 +889,7 @@ static csm_acse_code acse_user_info_encoder(csm_asso_state *state, csm_ber *ber,
     }
     else
     {
+        // AARQ is always plaintext per IEC 62056-5-3 — no glo-ciphering
         valid = valid && csm_array_write_u8(array, 0U); // null, no Dedicated key (FIXME: add dedicated key support)
         valid = valid && csm_array_write_u8(array, 0U); // response-allowed (false)
         valid = valid && csm_array_write_u8(array, 0U); // proposed-quality-of-service (false)

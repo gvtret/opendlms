@@ -10,6 +10,7 @@ add_executable(${PROJECT_NAME}
     test_csm_array.cpp
     test_hdlc.cpp
     test_association.cpp
+    test_gost.cpp
     cosem_tests_hal.c
 )
 

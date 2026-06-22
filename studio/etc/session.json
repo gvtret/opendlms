@@ -31,7 +31,7 @@
             "cosem": {
 				"_comment1": "LOW_LEVEL_SECURITY (LLS for SL7K), HIGH_LEVEL_SECURITY (HLS2 for Saphir)",
                 "auth_level": "HIGH_LEVEL_GMAC_SECURITY",
-                "auth_password": "ABCDEFGH",
+                "auth_password": "PLACEHOLDER_LLS",
 				"auth_hls_secret": "PLACEHOLDER_HLS",
                 "client": 1,
                 "logical_device": 1

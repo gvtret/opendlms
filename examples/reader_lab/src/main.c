@@ -1,0 +1,380 @@
+/**
+ * reader_lab — TCP client for lab meter (Public / Reader / Configurator profiles).
+ *
+ * Usage:
+ *   reader_lab public   [host] [port]
+ *   reader_lab reader   [host] [port]
+ *   reader_lab config   [host] [port]
+ *   reader_lab config   192.168.1.116 4059 0.0.1.0.0.255
+ *   reader_lab config   192.168.1.116 4059 0.0.1.0.0.255 sync-ic
+ *
+ * Defaults: host=192.168.1.116 port=4059
+ */
+
+#include "opendlms_reader.h"
+#include "reader_hal.h"
+
+#include "csm_association.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#if defined(_WIN32) || defined(WIN32)
+#include <winsock2.h>
+#include <ws2tcpip.h>
+typedef SOCKET reader_sock_t;
+#define READER_SOCK_INVALID INVALID_SOCKET
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+typedef int reader_sock_t;
+#define READER_SOCK_INVALID (-1)
+#endif
+
+static reader_sock_t g_sock = READER_SOCK_INVALID;
+
+static int platform_init(void)
+{
+#if defined(_WIN32) || defined(WIN32)
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
+    {
+        fprintf(stderr, "WSAStartup failed\n");
+        return -1;
+    }
+#endif
+    return 0;
+}
+
+static void platform_cleanup(void)
+{
+#if defined(_WIN32) || defined(WIN32)
+    WSACleanup();
+#endif
+}
+
+static int tcp_connect(const char *host, int port)
+{
+    struct sockaddr_in addr;
+
+    g_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (g_sock == READER_SOCK_INVALID)
+    {
+        perror("socket");
+        return -1;
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port   = htons((uint16_t)port);
+
+    if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0)
+    {
+        fprintf(stderr, "Invalid host: %s\n", host);
+        return -1;
+    }
+
+    if (connect(g_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0)
+    {
+        perror("connect");
+        return -1;
+    }
+
+#if defined(_WIN32) || defined(WIN32)
+    {
+        DWORD tv_ms = OPENDLMS_READER_RX_TIMEOUT_MS;
+        setsockopt(g_sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv_ms, sizeof(tv_ms));
+    }
+#else
+    {
+        struct timeval tv;
+        tv.tv_sec  = (time_t)(OPENDLMS_READER_RX_TIMEOUT_MS / 1000U);
+        tv.tv_usec = (suseconds_t)((OPENDLMS_READER_RX_TIMEOUT_MS % 1000U) * 1000U);
+        setsockopt(g_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    }
+#endif
+
+    printf("Connected to %s:%d\n", host, port);
+    return 0;
+}
+
+static void tcp_close(void)
+{
+    if (g_sock != READER_SOCK_INVALID)
+    {
+#if defined(_WIN32) || defined(WIN32)
+        shutdown(g_sock, SD_BOTH);
+        closesocket(g_sock);
+#else
+        shutdown(g_sock, SHUT_RDWR);
+        close(g_sock);
+#endif
+        g_sock = READER_SOCK_INVALID;
+    }
+}
+
+static int tcp_io_write(void *ctx, const uint8_t *buf, uint32_t len)
+{
+    (void)ctx;
+#if defined(_WIN32) || defined(WIN32)
+    int sent = send(g_sock, (const char *)buf, (int)len, 0);
+#else
+    ssize_t sent = send(g_sock, buf, len, 0);
+#endif
+    return (sent == (int)len) ? (int)len : -1;
+}
+
+static int tcp_io_read(void *ctx, uint8_t *buf, uint32_t len, uint32_t timeout_ms)
+{
+    (void)ctx;
+#if defined(_WIN32) || defined(WIN32)
+    DWORD tv_ms = timeout_ms;
+    setsockopt(g_sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv_ms, sizeof(tv_ms));
+    int n = recv(g_sock, (char *)buf, (int)len, 0);
+#else
+    struct timeval tv;
+    tv.tv_sec  = (time_t)(timeout_ms / 1000U);
+    tv.tv_usec = (suseconds_t)((timeout_ms % 1000U) * 1000U);
+    setsockopt(g_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    ssize_t n = recv(g_sock, buf, len, MSG_WAITALL);
+#endif
+    return (int)n;
+}
+
+static int parse_obis(const char *str, csm_obis_code *obis, uint16_t *class_id)
+{
+    unsigned int vals[6];
+
+    if (sscanf(str, "%u.%u.%u.%u.%u.%u", &vals[0], &vals[1], &vals[2], &vals[3], &vals[4],
+               &vals[5]) != 6)
+    {
+        return -1;
+    }
+
+    obis->A = (uint8_t)vals[0];
+    obis->B = (uint8_t)vals[1];
+    obis->C = (uint8_t)vals[2];
+    obis->D = (uint8_t)vals[3];
+    obis->E = (uint8_t)vals[4];
+    obis->F = (uint8_t)vals[5];
+
+    if (vals[2] == 1U)
+    {
+        *class_id = 8U;
+    }
+    else if (vals[2] == 40U)
+    {
+        *class_id = 15U;
+    }
+    else if (vals[2] == 43U)
+    {
+        *class_id = 1U;
+    }
+    else
+    {
+        *class_id = (uint16_t)vals[2];
+    }
+
+    return 0;
+}
+
+static void setup_profile(const char *profile,
+                          opendlms_reader_auth_t *auth,
+                          csm_asso_config *asso_cfg,
+                          uint8_t plain_hls)
+{
+    memset(asso_cfg, 0, sizeof(*asso_cfg));
+
+    if (strcmp(profile, "reader") == 0)
+    {
+        opendlms_reader_auth_reader(auth);
+        asso_cfg->llc.ssap               = 32U;
+        asso_cfg->llc.dsap               = 32U;
+        asso_cfg->application_context    = (uint8_t)LN_REF;
+        reader_hal_set_lls_password(32U, "password");
+    }
+    else if (strcmp(profile, "config") == 0 || strcmp(profile, "configurator") == 0)
+    {
+        static const uint8_t lab_client_title[8] = {
+            0x41U, 0x42U, 0x43U, 0x44U, 0x45U, 0x46U, 0x47U, 0x48U
+        };
+
+        opendlms_reader_auth_configurator(auth);
+        if (plain_hls != 0U)
+        {
+            auth->ciphering           = 0U;
+            auth->application_context = (uint8_t)LN_REF;
+        }
+        asso_cfg->llc.ssap            = 48U;
+        asso_cfg->llc.dsap            = 48U;
+        asso_cfg->application_context = plain_hls ? (uint8_t)LN_REF : (uint8_t)LN_REF_WITH_CYPHERING;
+        reader_hal_set_system_title(lab_client_title);
+        reader_hal_keyring_set_hex(48U, "303132333435363738393A3B3C3D3E3F",
+                                   "404142434445464748494A4B4C4D4E4F",
+                                   "31313131313131313131313131313131");
+        reader_hal_set_dedicated_key_hex(48U, "31313131313131313131313131313131");
+        reader_hal_set_invocation_counter(48U, plain_hls ? 1U : 2U);
+    }
+    else
+    {
+        opendlms_reader_auth_public(auth);
+        asso_cfg->llc.ssap            = 16U;
+        asso_cfg->llc.dsap            = 16U;
+        asso_cfg->application_context = (uint8_t)LN_REF;
+    }
+
+    asso_cfg->conformance       = 0xFFFFFFFFU;
+    asso_cfg->is_auto_connected = 0U;
+}
+
+int main(int argc, char **argv)
+{
+    const char *profile = "public";
+    const char *host    = "192.168.1.116";
+    int           port  = 4059;
+    int           obis_arg = -1;
+    uint8_t       sync_ic = 0U;
+    uint8_t       plain_hls = 0U;
+
+    opendlms_reader_t            reader;
+    opendlms_reader_session_t    session;
+    opendlms_reader_auth_t       auth;
+    csm_asso_config              asso_cfg;
+    opendlms_reader_io_t         io;
+    csm_response                 response;
+    csm_obis_code                obis;
+    uint16_t                     class_id;
+
+    if (argc < 2)
+    {
+        printf("Usage: %s <public|reader|config> [host] [port] [obis] [plain|sync-ic]\n", argv[0]);
+        return 1;
+    }
+
+    profile = argv[1];
+
+    if (argc >= 3)
+    {
+        host = argv[2];
+    }
+    if (argc >= 4)
+    {
+        port = atoi(argv[3]);
+    }
+
+    for (int i = 4; i < argc; i++)
+    {
+        if (strcmp(argv[i], "sync-ic") == 0)
+        {
+            sync_ic = 1U;
+        }
+        else if (strcmp(argv[i], "plain") == 0)
+        {
+            plain_hls = 1U;
+        }
+        else
+        {
+            obis_arg = i;
+        }
+    }
+
+    if (platform_init() < 0)
+    {
+        return 1;
+    }
+
+    reader_hal_init();
+    reader_hal_sys_init();
+    setup_profile(profile, &auth, &asso_cfg, plain_hls);
+
+    if (tcp_connect(host, port) < 0)
+    {
+        platform_cleanup();
+        return 1;
+    }
+
+    if (opendlms_reader_init(&reader, &asso_cfg, 1U) < 0)
+    {
+        tcp_close();
+        platform_cleanup();
+        return 1;
+    }
+
+    io.ctx            = NULL;
+    io.write          = tcp_io_write;
+    io.read           = tcp_io_read;
+    io.rx_timeout_ms  = OPENDLMS_READER_RX_TIMEOUT_MS;
+
+    opendlms_reader_session_init(&session, &reader, io, &asso_cfg);
+    opendlms_reader_session_set_transport(&session, OPENDLMS_READER_TRANSPORT_TCP_WRAPPER,
+                                          asso_cfg.llc.ssap,
+                                          OPENDLMS_READER_TCP_LOGICAL_DEVICE);
+    opendlms_reader_session_set_auth(&session, &auth);
+    if (sync_ic != 0U)
+    {
+        opendlms_reader_session_set_invocation_counter_sync(&session, 1U);
+        printf("Invocation counter sync: enabled\n");
+    }
+
+    if (plain_hls != 0U)
+    {
+        printf("Configurator: plain HLS (context 1)\n");
+    }
+    else if (strcmp(profile, "config") == 0 || strcmp(profile, "configurator") == 0)
+    {
+        printf("Configurator: glo-ciphering (context 3)\n");
+    }
+
+    printf("=== Profile: %s (SAP %u) ===\n", profile, (unsigned)asso_cfg.llc.ssap);
+
+    if (opendlms_reader_connect(&session) < 0)
+    {
+        fprintf(stderr, "Connect failed\n");
+        opendlms_reader_disconnect(&session);
+        tcp_close();
+        platform_cleanup();
+        return 1;
+    }
+
+    printf("Association OK\n");
+
+    if (obis_arg < 0)
+    {
+        obis.A = 0U;
+        obis.B = 0U;
+        obis.C = 1U;
+        obis.D = 0U;
+        obis.E = 0U;
+        obis.F = 255U;
+        class_id = 8U;
+    }
+    else if (parse_obis(argv[obis_arg], &obis, &class_id) < 0)
+    {
+        fprintf(stderr, "Bad OBIS: %s\n", argv[obis_arg]);
+        opendlms_reader_disconnect(&session);
+        tcp_close();
+        platform_cleanup();
+        return 1;
+    }
+
+    printf("GET %u.%u.%u.%u.%u.%u class=%u attr=2\n", obis.A, obis.B, obis.C, obis.D, obis.E,
+           obis.F, (unsigned)class_id);
+
+    if (opendlms_reader_get(&session, class_id, &obis, 2U, &response) < 0)
+    {
+        fprintf(stderr, "GET failed\n");
+    }
+    else
+    {
+        printf("GET OK: service=%d result=%u access=%u\n", (int)response.service,
+               (unsigned)response.result, (unsigned)response.access_result);
+    }
+
+    opendlms_reader_disconnect(&session);
+    tcp_close();
+    platform_cleanup();
+    return 0;
+}

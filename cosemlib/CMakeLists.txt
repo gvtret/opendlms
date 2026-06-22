@@ -20,6 +20,9 @@ target_sources(${PROJECT_NAME} PRIVATE
     crypto/sha1.c
     crypto/md5.c
     crypto/cmac.c
+    crypto/kuznyechik.c
+    crypto/kuznyechik_modes.c
+    crypto/streebog.c
     util/bitfield.c
     util/clock.c
     util/os_util.c

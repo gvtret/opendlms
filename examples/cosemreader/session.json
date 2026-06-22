@@ -30,7 +30,7 @@
             },
             "cosem": {
                 "auth_level": "LOW_LEVEL_SECURITY",
-                "auth_password": "ABCDEFGH",
+                "auth_password": "PLACEHOLDER_LLS",
 				"auth_hls_secret": "PLACEHOLDER_HLS",
                 "client": 1,
                 "logical_device": 1
