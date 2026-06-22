@@ -1,8 +1,11 @@
 # Build output
 build/
+build-*/
+build_*/
 
 # IDE / editor
 .vs/
+.cache/
 *.swp
 *.swo
 
@@ -22,6 +25,11 @@ cmake_install.cmake
 # OS
 .DS_Store
 Thumbs.db
+
+# Temp files
+tmp/
+tmp_*.log
+tmp_*.c
 
 # OpenClaw workspace
 .openclaw/
