@@ -37,6 +37,8 @@ static uint8_t single_action_data_count = 0U;
 static db_ic_inst_t single_action_inst_pool[SINGLE_ACTION_MAX_INSTANCES];
 static uint8_t single_action_inst_count = 0U;
 
+void db_ic_single_action_reset_count(void) { single_action_data_count = 0U; single_action_inst_count = 0U; }
+
 static const db_ic_attr_descr single_action_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_STRUCTURE },

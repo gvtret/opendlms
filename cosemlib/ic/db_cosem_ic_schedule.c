@@ -37,6 +37,8 @@ static uint8_t schedule_data_count = 0U;
 static db_ic_inst_t schedule_inst_pool[SCHEDULE_MAX_INSTANCES];
 static uint8_t schedule_inst_count = 0U;
 
+void db_ic_schedule_reset_count(void) { schedule_data_count = 0U; schedule_inst_count = 0U; }
+
 static const db_ic_attr_descr schedule_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_ARRAY },

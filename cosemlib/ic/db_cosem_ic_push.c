@@ -65,6 +65,8 @@ static db_ic_inst_t push_inst_tmp;
 static db_ic_inst_t push_inst_pool[PUSH_MAX_INSTANCES];
 static uint8_t push_inst_count = 0U;
 
+void db_ic_push_reset_count(void) { push_pool_count = 0U; push_inst_count = 0U; }
+
 static const db_ic_attr_descr push_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_ARRAY },

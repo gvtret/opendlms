@@ -36,6 +36,8 @@ static db_ic_inst_t data_inst_tmp;
 static db_ic_inst_t data_inst_pool[DATA_MAX_INSTANCES];
 static uint8_t data_inst_count = 0U;
 
+void db_ic_data_reset_count(void) { data_val_count = 0U; data_inst_count = 0U; }
+
 static const db_ic_attr_descr data_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_NULL },

@@ -50,6 +50,8 @@ static db_ic_inst_t demand_inst_tmp;
 static db_ic_inst_t demand_inst_pool[DEMAND_MAX_INSTANCES];
 static uint8_t demand_inst_count = 0U;
 
+void db_ic_demand_register_reset_count(void) { demand_val_count = 0U; demand_inst_count = 0U; }
+
 static const db_ic_attr_descr demand_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_NULL },

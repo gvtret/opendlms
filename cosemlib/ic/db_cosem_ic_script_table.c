@@ -33,6 +33,8 @@ static uint8_t script_table_data_count = 0U;
 static db_ic_inst_t script_table_inst_pool[SCRIPT_TABLE_MAX_INSTANCES];
 static uint8_t script_table_inst_count = 0U;
 
+void db_ic_script_table_reset_count(void) { script_table_data_count = 0U; script_table_inst_count = 0U; }
+
 static const db_ic_attr_descr script_table_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_ARRAY },

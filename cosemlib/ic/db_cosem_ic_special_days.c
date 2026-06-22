@@ -34,6 +34,8 @@ static uint8_t special_days_data_count = 0U;
 static db_ic_inst_t special_days_inst_pool[SPECIAL_DAYS_MAX_INSTANCES];
 static uint8_t special_days_inst_count = 0U;
 
+void db_ic_special_days_reset_count(void) { special_days_data_count = 0U; special_days_inst_count = 0U; }
+
 static const db_ic_attr_descr special_days_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_ARRAY },

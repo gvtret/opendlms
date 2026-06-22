@@ -126,6 +126,9 @@ void db_ic_register_limiter(void);
 /* Helper: register all built-in classes */
 void db_ic_register_all_builtins(void);
 
+/* Helper: reset all per-class instance counters (called by db_ic_init) */
+void db_ic_reset_all_counts(void);
+
 #ifdef __cplusplus
 }
 #endif

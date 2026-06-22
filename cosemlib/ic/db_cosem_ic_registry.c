@@ -20,6 +20,8 @@
 static db_ic_inst_t ic_stub_instances[DB_IC_MAX_INSTANCES];
 static uint8_t ic_stub_inst_count = 0U;
 
+void db_ic_stub_reset_count(void) { ic_stub_inst_count = 0U; }
+
 static db_ic_inst_t *ic_stub_create(const csm_obis_code *obis)
 {
     (void) obis;
@@ -218,6 +220,45 @@ static const db_ic_class ic_disc = {
 void db_ic_register_disconnect_control(void) { db_ic_register(&ic_disc); }
 
 /* Limiter (Class ID 71) — implemented in db_cosem_ic_limiter.c */
+
+/* Extern declarations for per-IC reset functions defined in other handler files */
+extern void db_ic_data_reset_count(void);
+extern void db_ic_register_reset_count(void);
+extern void db_ic_ext_register_reset_count(void);
+extern void db_ic_demand_register_reset_count(void);
+extern void db_ic_assoc_reset_count(void);
+extern void db_ic_push_reset_count(void);
+extern void db_ic_security_reset_count(void);
+extern void db_ic_limiter_reset_count(void);
+extern void db_ic_profile_reset_count(void);
+extern void db_ic_activity_cal_reset_count(void);
+extern void db_ic_reg_monitor_reset_count(void);
+extern void db_ic_schedule_reset_count(void);
+extern void db_ic_script_table_reset_count(void);
+extern void db_ic_single_action_reset_count(void);
+extern void db_ic_special_days_reset_count(void);
+
+/* ========================= Reset all counts ========================= */
+
+void db_ic_reset_all_counts(void)
+{
+    db_ic_stub_reset_count();
+    db_ic_data_reset_count();
+    db_ic_register_reset_count();
+    db_ic_ext_register_reset_count();
+    db_ic_demand_register_reset_count();
+    db_ic_assoc_reset_count();
+    db_ic_push_reset_count();
+    db_ic_security_reset_count();
+    db_ic_limiter_reset_count();
+    db_ic_profile_reset_count();
+    db_ic_activity_cal_reset_count();
+    db_ic_reg_monitor_reset_count();
+    db_ic_schedule_reset_count();
+    db_ic_script_table_reset_count();
+    db_ic_single_action_reset_count();
+    db_ic_special_days_reset_count();
+}
 
 /* ========================= Registration helper ========================= */
 

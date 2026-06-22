@@ -75,6 +75,8 @@ static db_ic_inst_t limiter_inst_tmp;
 static db_ic_inst_t limiter_inst_pool[LIMITER_MAX_INSTANCES];
 static uint8_t limiter_inst_count = 0U;
 
+void db_ic_limiter_reset_count(void) { limiter_pool_count = 0U; limiter_inst_count = 0U; }
+
 static const db_ic_attr_descr limiter_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_STRUCTURE },

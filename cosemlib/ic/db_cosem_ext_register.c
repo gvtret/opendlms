@@ -45,6 +45,8 @@ static db_ic_inst_t ext_inst_tmp;
 static db_ic_inst_t ext_inst_pool[EXT_MAX_INSTANCES];
 static uint8_t ext_inst_count = 0U;
 
+void db_ic_ext_register_reset_count(void) { ext_val_count = 0U; ext_inst_count = 0U; }
+
 static const db_ic_attr_descr ext_register_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_NULL },

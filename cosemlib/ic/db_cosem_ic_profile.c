@@ -74,6 +74,8 @@ static db_ic_inst_t pg_inst_tmp;
 static db_ic_inst_t pg_inst_pool[PG_MAX_INSTANCES];
 static uint8_t pg_inst_count = 0U;
 
+void db_ic_profile_reset_count(void) { pg_pool_count = 0U; pg_inst_count = 0U; }
+
 static const db_ic_attr_descr pg_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_ARRAY },

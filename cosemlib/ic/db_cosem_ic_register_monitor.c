@@ -41,6 +41,8 @@ static uint8_t reg_monitor_data_count = 0U;
 static db_ic_inst_t reg_monitor_inst_pool[REG_MONITOR_MAX_INSTANCES];
 static uint8_t reg_monitor_inst_count = 0U;
 
+void db_ic_reg_monitor_reset_count(void) { reg_monitor_data_count = 0U; reg_monitor_inst_count = 0U; }
+
 static const db_ic_attr_descr reg_monitor_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_ARRAY },

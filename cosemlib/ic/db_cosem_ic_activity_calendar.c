@@ -36,6 +36,8 @@ static uint8_t activity_cal_data_count = 0U;
 static db_ic_inst_t activity_cal_inst_pool[ACTIVITY_CAL_MAX_INSTANCES];
 static uint8_t activity_cal_inst_count = 0U;
 
+void db_ic_activity_cal_reset_count(void) { activity_cal_data_count = 0U; activity_cal_inst_count = 0U; }
+
 static const db_ic_attr_descr activity_cal_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_OCTETSTRING },

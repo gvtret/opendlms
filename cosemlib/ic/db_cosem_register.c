@@ -39,6 +39,8 @@ static db_ic_inst_t reg_inst_tmp;
 static db_ic_inst_t reg_inst_pool[REG_MAX_INSTANCES];
 static uint8_t reg_inst_count = 0U;
 
+void db_ic_register_reset_count(void) { reg_val_count = 0U; reg_inst_count = 0U; }
+
 static const db_ic_attr_descr register_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_NULL },

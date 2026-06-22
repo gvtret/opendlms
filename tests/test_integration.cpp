@@ -77,7 +77,8 @@ static csm_db_code test_db_access(csm_db_context_t *ctx, csm_array *in,
     default: return CSM_ERR_OBJECT_ERROR;
     }
 
-    return (csm_db_code) db_ic_dispatch(inst, op, attr_id, method_id, in, out);
+    csm_db_code rc = (csm_db_code) db_ic_dispatch(inst, op, attr_id, method_id, in, out);
+    return rc;
 }
 
 static void test_stack_setup(void)
@@ -991,7 +992,7 @@ TEST_CASE("Integration_AssocSnV4ObjectList", "[integration][assoc]")
     REQUIRE(csm_asso_encoder(&state, &pkt, CSM_ASSO_AARQ) == TRUE);
 
     test_channels[0].request.llc.ssap = 0x00;
-    test_channels[0].request.llc.dsap = 0x02;
+    test_channels[0].request.llc.dsap = 0x01;
 
     int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
     REQUIRE(ret > 0);
@@ -1014,7 +1015,7 @@ TEST_CASE("Integration_AssocSnV4ObjectListSelByBaseName", "[integration][assoc]"
     REQUIRE(csm_asso_encoder(&state, &pkt, CSM_ASSO_AARQ) == TRUE);
 
     test_channels[0].request.llc.ssap = 0x00;
-    test_channels[0].request.llc.dsap = 0x02;
+    test_channels[0].request.llc.dsap = 0x01;
 
     int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
     REQUIRE(ret > 0);
@@ -1123,7 +1124,7 @@ TEST_CASE("Integration_SecuritySetupSetSuite2ViaCoSem", "[integration][security]
     test_stack_setup();
     test_establish_association();
 
-    uint8_t set_data[] = { 0x11, 0x02 };
+    uint8_t set_data[] = { 0x16, 0x02 };
     uint8_t buf[1024];
     int ret = test_do_set(0x01, 64, &obis_security, 3,
                           set_data, sizeof(set_data), buf, sizeof(buf));
@@ -1134,7 +1135,7 @@ TEST_CASE("Integration_SecuritySetupSetSuite2ViaCoSem", "[integration][security]
     ret = test_do_get(0x02, 64, &obis_security, 3, get_buf, sizeof(get_buf));
     REQUIRE(ret > 0);
     REQUIRE(get_buf[0] == 0xC4);
-    REQUIRE(get_buf[4] == 0x11);
+    REQUIRE(get_buf[4] == 0x16);
     REQUIRE(get_buf[5] == 0x02);
 }
 
@@ -1147,7 +1148,7 @@ TEST_CASE("Integration_SecuritySetupGetPolicy", "[integration][security]")
     int ret = test_do_get(0x01, 64, &obis_security, 2, buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC4);
-    REQUIRE(buf[4] == 0x11);
+    REQUIRE(buf[4] == 0x16);
 }
 
 TEST_CASE("Integration_SecuritySetupSecurityActivate", "[integration][security]")
