@@ -88,6 +88,7 @@ typedef struct {
     uint16_t class_id;
     const char *name;
     uint8_t version;
+    const db_ic_object_descr *descr;  /* optional: used if create() doesn't set descr */
     db_ic_create_fn  create;
     db_ic_dispatch_fn dispatch;
 } db_ic_class;

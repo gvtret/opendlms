@@ -99,6 +99,12 @@ int db_ic_create_inst(uint16_t class_id, const csm_obis_code *obis,
         }
     }
 
+    /* Fallback: if create() didn't set descr, use the class descriptor */
+    if (inst->descr == NULL)
+    {
+        inst->descr = cls->descr;
+    }
+
     inst->user_ctx = user_ctx;
 
     /* Store OBIS override in the instance (avoids modifying const descriptor) */

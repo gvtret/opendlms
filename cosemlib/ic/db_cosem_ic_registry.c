@@ -82,6 +82,7 @@ static const db_ic_class ic_reg_act = {
     .class_id  = 6,
     .name      = "Register Activation",
     .version   = 0,
+    .descr     = &reg_act_descr,
     .create    = ic_stub_create,
     .dispatch  = ic_stub_dispatch
 };
@@ -123,6 +124,7 @@ static const db_ic_class ic_clock = {
     .class_id  = 8,
     .name      = "Clock",
     .version   = 0,
+    .descr     = &clock_descr,
     .create    = ic_stub_create,
     .dispatch  = ic_stub_dispatch
 };
@@ -166,6 +168,7 @@ static const db_ic_class ic_img_xfer = {
     .class_id  = 18,
     .name      = "Image Transfer",
     .version   = 0,
+    .descr     = &img_xfer_descr,
     .create    = ic_stub_create,
     .dispatch  = ic_stub_dispatch
 };
@@ -207,6 +210,7 @@ static const db_ic_class ic_disc = {
     .class_id  = 70,
     .name      = "Disconnect Control",
     .version   = 0,
+    .descr     = &disc_descr,
     .create    = ic_stub_create,
     .dispatch  = ic_stub_dispatch
 };
