@@ -15,10 +15,12 @@ add_library(${PROJECT_NAME}
     application/app_calendar.c
     application/app_database.c
 
-    # Class IDs
-    database/db_cosem_associations.c
-    database/db_cosem_clock.c
-    database/db_cosem_image_transfer.c
+    # Server wiring
+    lib/opendlms_meter.c
+    lib/db_cosem_associations.c
+    lib/db_cosem_push.c
+    lib/db_cosem_event_notify.c
+    lib/db_cosem_catalog_legacy.c
 
 )
 
