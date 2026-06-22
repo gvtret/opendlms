@@ -60,6 +60,13 @@ void kuznyechik_crypt_ecb(const kuznyechik_context *ctx,
                            const uint8_t input[16],
                            uint8_t output[16]);
 
+/**
+ * \brief          Decrypt a single 16-byte block
+ */
+void kuznyechik_decrypt_ecb(const kuznyechik_context *ctx,
+                            const uint8_t input[16],
+                            uint8_t output[16]);
+
 #ifdef __cplusplus
 }
 #endif
