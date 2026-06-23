@@ -1,0 +1,309 @@
+/**
+ * \file csm_server.c
+ * \brief High-level DLMS/COSEM server and client implementation
+ *
+ *  Copyright (c) 2024, OpenDLMS contributors
+ *  SPDX-License-Identifier: MIT
+ */
+
+#include "csm_server.h"
+#include "csm_channel.h"
+#include "csm_services.h"
+#include "csm_definitions.h"
+#include "csm_association.h"
+#include <string.h>
+
+/* ── Server internals ───────────────────────────────────────────────────── */
+
+struct csm_server {
+    csm_transport     *transport;
+    csm_framing_type   framing;
+    uint8_t            channel;
+    csm_channel        channels[CSM_SERVER_MAX_CHANNELS];
+    csm_asso_state     asso_states[CSM_SERVER_MAX_CHANNELS];
+    csm_asso_config    asso_configs[CSM_SERVER_MAX_CHANNELS];
+    csm_db_context_t   db_ctx;
+    uint8_t            rx_buf[CSM_SERVER_MAX_PDU];
+    uint8_t            tx_buf[CSM_SERVER_MAX_PDU];
+};
+
+int csm_server_init(csm_server *server, csm_transport *transport,
+                    uint8_t channel, csm_framing_type framing)
+{
+    if (!server || !transport) return -1;
+
+    memset(server, 0, sizeof(*server));
+    server->transport = transport;
+    server->framing = framing;
+    server->channel = channel;
+
+    /* Initialize default association configs */
+    for (uint8_t i = 0; i < CSM_SERVER_MAX_CHANNELS; i++)
+    {
+        server->asso_configs[i].llc.ssap = 0x00;
+        server->asso_configs[i].llc.dsap = 0x01;
+        server->asso_configs[i].conformance = 0xFFFFFFFFU;
+        server->asso_configs[i].is_auto_connected = 0;
+    }
+
+    csm_channel_init(server->channels, CSM_SERVER_MAX_CHANNELS,
+                     server->asso_states, server->asso_configs, CSM_SERVER_MAX_CHANNELS);
+
+    memset(&server->db_ctx, 0, sizeof(server->db_ctx));
+
+    return 0;
+}
+
+void csm_server_register_db(csm_server *server, csm_db_access_handler handler)
+{
+    if (server)
+    {
+        csm_services_init(handler);
+    }
+}
+
+int csm_server_poll(csm_server *server, uint32_t timeout_ms)
+{
+    if (!server || !server->transport) return -1;
+
+    uint8_t ch = server->channel;
+
+    /* Receive PDU from transport */
+    int recv_len = CSM_TRANSPORT_RECV(server->transport, ch,
+                                       server->rx_buf, sizeof(server->rx_buf),
+                                       timeout_ms);
+
+    if (recv_len <= 0) return recv_len;  /* Timeout or error */
+
+    /* Deframe if needed */
+    const uint8_t *apdu;
+    uint32_t apdu_len;
+    int rc = csm_framing_deframe(server->framing, server->rx_buf, recv_len,
+                                  &apdu, &apdu_len);
+    if (rc != 0) return -1;
+
+    /* Build a csm_array pointing to the PDU (will be overwritten with response) */
+    csm_array pkt;
+    csm_array_init(&pkt, server->tx_buf, sizeof(server->tx_buf), 0, 0);
+
+    /* Copy APDU into tx_buf for processing (csm_channel_execute reuses the buffer) */
+    if (apdu_len > sizeof(server->tx_buf)) return -1;
+    memcpy(server->tx_buf, apdu, apdu_len);
+
+    /* Process through channel/association layer */
+    int resp_len = csm_channel_execute(&server->db_ctx, ch, &pkt);
+
+    if (resp_len > 0)
+    {
+        /* Frame the response */
+        uint8_t framed[CSM_WRAPPER_MAX_LEN];
+        int framed_len = csm_framing_frame(server->framing, 1,
+                                            server->tx_buf, resp_len,
+                                            framed, sizeof(framed));
+
+        if (framed_len > 0)
+        {
+            /* Send response back */
+            CSM_TRANSPORT_SEND(server->transport, ch, framed, framed_len);
+        }
+    }
+
+    return resp_len;
+}
+
+int csm_server_send(csm_server *server, uint8_t channel,
+                    const uint8_t *apdu, uint32_t apdu_len)
+{
+    if (!server || !server->transport) return -1;
+
+    uint8_t framed[CSM_WRAPPER_MAX_LEN];
+    int framed_len = csm_framing_frame(server->framing, 1,
+                                        apdu, apdu_len,
+                                        framed, sizeof(framed));
+    if (framed_len < 0) return framed_len;
+
+    return CSM_TRANSPORT_SEND(server->transport, channel, framed, framed_len);
+}
+
+void csm_server_destroy(csm_server *server)
+{
+    if (!server) return;
+    memset(server, 0, sizeof(*server));
+}
+
+/* ── Client internals ───────────────────────────────────────────────────── */
+
+struct csm_client {
+    csm_transport     *transport;
+    csm_framing_type   framing;
+    uint8_t            channel;
+    csm_channel        channels[CSM_SERVER_MAX_CHANNELS];
+    csm_asso_state     asso_states[CSM_SERVER_MAX_CHANNELS];
+    csm_asso_config    asso_configs[CSM_SERVER_MAX_CHANNELS];
+    csm_db_context_t   db_ctx;
+    uint8_t            rx_buf[CSM_SERVER_MAX_PDU];
+    uint8_t            tx_buf[CSM_SERVER_MAX_PDU];
+};
+
+int csm_dlms_client_init(csm_client *client, csm_transport *transport,
+                    uint8_t channel, csm_framing_type framing)
+{
+    if (!client || !transport) return -1;
+
+    memset(client, 0, sizeof(*client));
+    client->transport = transport;
+    client->framing = framing;
+    client->channel = channel;
+
+    for (uint8_t i = 0; i < CSM_SERVER_MAX_CHANNELS; i++)
+    {
+        client->asso_configs[i].llc.ssap = 0x01;
+        client->asso_configs[i].llc.dsap = 0x00;
+        client->asso_configs[i].conformance = 0xFFFFFFFFU;
+        client->asso_configs[i].is_auto_connected = 0;
+    }
+
+    csm_channel_init(client->channels, CSM_SERVER_MAX_CHANNELS,
+                     client->asso_states, client->asso_configs, CSM_SERVER_MAX_CHANNELS);
+
+    memset(&client->db_ctx, 0, sizeof(client->db_ctx));
+
+    return 0;
+}
+
+int csm_client_connect(csm_client *client, uint32_t timeout_ms)
+{
+    if (!client || !client->transport) return -1;
+    return CSM_TRANSPORT_OPEN(client->transport, client->channel);
+}
+
+static int client_send_recv(csm_client *client, uint8_t *apdu, uint32_t apdu_len,
+                            uint8_t *resp_buf, uint32_t resp_size)
+{
+    uint8_t ch = client->channel;
+
+    /* Frame and send */
+    uint8_t framed[CSM_WRAPPER_MAX_LEN];
+    int framed_len = csm_framing_frame(client->framing, 0,
+                                        apdu, apdu_len,
+                                        framed, sizeof(framed));
+    if (framed_len < 0) return framed_len;
+
+    int sent = CSM_TRANSPORT_SEND(client->transport, ch, framed, framed_len);
+    if (sent < 0) return sent;
+
+    /* Receive response */
+    uint8_t rx_framed[CSM_WRAPPER_MAX_LEN];
+    int recv_len = CSM_TRANSPORT_RECV(client->transport, ch,
+                                       rx_framed, sizeof(rx_framed), 5000);
+    if (recv_len <= 0) return recv_len;
+
+    /* Deframe */
+    const uint8_t *resp_apdu;
+    uint32_t resp_apdu_len;
+    int rc = csm_framing_deframe(client->framing, rx_framed, recv_len,
+                                  &resp_apdu, &resp_apdu_len);
+    if (rc != 0) return -1;
+
+    if (resp_apdu_len > resp_size) return -1;
+    memcpy(resp_buf, resp_apdu, resp_apdu_len);
+    return (int)resp_apdu_len;
+}
+
+int csm_client_get(csm_client *client, uint8_t invoke_id,
+                   uint16_t class_id, const csm_obis_code *obis,
+                   uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size)
+{
+    if (!client) return -1;
+
+    /* Build GET request */
+    csm_array req;
+    csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
+
+    csm_array_write_u8(&req, 0xC0);  /* GET-request */
+    csm_array_write_u8(&req, 0x01);  /* type: normal */
+    csm_array_write_u8(&req, invoke_id);
+    csm_array_write_u16(&req, class_id);
+    csm_array_write_u8(&req, obis->A);
+    csm_array_write_u8(&req, obis->B);
+    csm_array_write_u8(&req, obis->C);
+    csm_array_write_u8(&req, obis->D);
+    csm_array_write_u8(&req, obis->E);
+    csm_array_write_u8(&req, obis->F);
+    csm_array_write_u8(&req, attr_id);
+    csm_array_write_u8(&req, 0x00);  /* No selective access */
+
+    return client_send_recv(client, client->tx_buf, req.wr_index,
+                            resp_buf, resp_size);
+}
+
+int csm_client_set(csm_client *client, uint8_t invoke_id,
+                   uint16_t class_id, const csm_obis_code *obis,
+                   uint8_t attr_id, const uint8_t *data, uint32_t data_len,
+                   uint8_t *resp_buf, uint32_t resp_size)
+{
+    if (!client) return -1;
+
+    csm_array req;
+    csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
+
+    csm_array_write_u8(&req, 0xC1);  /* SET-request */
+    csm_array_write_u8(&req, 0x01);  /* type: normal */
+    csm_array_write_u8(&req, invoke_id);
+    csm_array_write_u16(&req, class_id);
+    csm_array_write_u8(&req, obis->A);
+    csm_array_write_u8(&req, obis->B);
+    csm_array_write_u8(&req, obis->C);
+    csm_array_write_u8(&req, obis->D);
+    csm_array_write_u8(&req, obis->E);
+    csm_array_write_u8(&req, obis->F);
+    csm_array_write_u8(&req, attr_id);
+    csm_array_write_u8(&req, 0x00);  /* No selective access */
+    csm_array_write_buff(&req, data, data_len);
+
+    return client_send_recv(client, client->tx_buf, req.wr_index,
+                            resp_buf, resp_size);
+}
+
+int csm_client_action(csm_client *client, uint8_t invoke_id,
+                      uint16_t class_id, const csm_obis_code *obis,
+                      uint8_t method_id, const uint8_t *data, uint32_t data_len,
+                      uint8_t *resp_buf, uint32_t resp_size)
+{
+    if (!client) return -1;
+
+    csm_array req;
+    csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
+
+    csm_array_write_u8(&req, 0xC3);  /* ACTION-request */
+    csm_array_write_u8(&req, 0x01);  /* type: normal */
+    csm_array_write_u8(&req, invoke_id);
+    csm_array_write_u16(&req, class_id);
+    csm_array_write_u8(&req, obis->A);
+    csm_array_write_u8(&req, obis->B);
+    csm_array_write_u8(&req, obis->C);
+    csm_array_write_u8(&req, obis->D);
+    csm_array_write_u8(&req, obis->E);
+    csm_array_write_u8(&req, obis->F);
+    csm_array_write_u8(&req, method_id);
+    if (data && data_len > 0)
+    {
+        csm_array_write_buff(&req, data, data_len);
+    }
+
+    return client_send_recv(client, client->tx_buf, req.wr_index,
+                            resp_buf, resp_size);
+}
+
+int csm_client_disconnect(csm_client *client)
+{
+    if (!client || !client->transport) return -1;
+    CSM_TRANSPORT_CLOSE(client->transport, client->channel);
+    return 0;
+}
+
+void csm_client_destroy(csm_client *client)
+{
+    if (!client) return;
+    memset(client, 0, sizeof(*client));
+}

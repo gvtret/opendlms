@@ -9,8 +9,11 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/csm_axdr_codec.c
     src/csm_ber.c
     src/csm_channel.c
+    src/csm_framing.c
     src/csm_security.c
+    src/csm_server.c
     src/csm_services.c
+    src/csm_transport_tcp.c
     hdlc/hdlc.c
     crypto/aes.c
     crypto/cipher.c

@@ -12,6 +12,7 @@ add_executable(${PROJECT_NAME}
     test_association.cpp
     test_gost.cpp
     test_integration.cpp
+    test_transport.cpp
     cosem_tests_hal.c
 )
 
