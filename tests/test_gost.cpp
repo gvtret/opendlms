@@ -141,15 +141,16 @@ TEST_CASE("Kuznyechik-CTR — encrypt/decrypt round-trip", "[kuznyechik][ctr]")
 TEST_CASE("Streebog-256 — empty hash", "[streebog]")
 {
     /*
-     * Expected (R 1323565.1 §A.5.2):
-     * 3f5b11e2a8c30975dc351857a5f55932
-     * 71c4d34499eaff0e8459894c5a896e47
+     * RFC 6986 verified: M1 passes. Empty hash computed
+     * by both C and Python reference implementations:
+     * bbe19c8d2025d99f943a932a0b365a822aa36a4c
+     * 479d22cc02c8973e219a533f
      */
     uint8_t expected[32];
     uint8_t digest[32];
 
-    hex_to_bytes("3f5b11e2a8c30975dc351857a5f55932"
-                 "71c4d34499eaff0e8459894c5a896e47", expected, 32);
+    hex_to_bytes("bbe19c8d2025d99f943a932a0b365a82"
+                 "2aa36a4c479d22cc02c8973e219a533f", expected, 32);
 
     streebog256(NULL, 0, digest);
 

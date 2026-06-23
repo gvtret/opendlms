@@ -104,10 +104,14 @@ static const uint64_t l_matrix[64] = {
 /* ── IV for Streebog-256 and Streebog-512 — §6.1 ───────────────────────── */
 
 static const uint8_t iv_256[64] = {
-    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
-    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1
+    0x01,0x01,0x01,0x01, 0x01,0x01,0x01,0x01,
+    0x01,0x01,0x01,0x01, 0x01,0x01,0x01,0x01,
+    0x01,0x01,0x01,0x01, 0x01,0x01,0x01,0x01,
+    0x01,0x01,0x01,0x01, 0x01,0x01,0x01,0x01,
+    0x01,0x01,0x01,0x01, 0x01,0x01,0x01,0x01,
+    0x01,0x01,0x01,0x01, 0x01,0x01,0x01,0x01,
+    0x01,0x01,0x01,0x01, 0x01,0x01,0x01,0x01,
+    0x01,0x01,0x01,0x01, 0x01,0x01,0x01,0x01
 };
 
 /* ── Iteration constants C[1..12] from RFC 6986 §6.5 ───────────────────── */
@@ -235,7 +239,18 @@ static const uint8_t C[12][64] = {
     }
 };
 
-/* ── Big-endian 64-bit access ────────────────────────────────────────────── */
+/* ── Big-endian 512-bit integer addition: Σ += m ─────────────────────────── */
+
+static void streebog_sigma_add(uint8_t sigma[64], const uint8_t m[64])
+{
+    uint8_t carry = 0;
+    for (int i = 63; i >= 0; i--)
+    {
+        uint16_t sum = (uint16_t)sigma[i] + m[i] + carry;
+        sigma[i] = (uint8_t)sum;
+        carry = (uint8_t)(sum >> 8);
+    }
+}
 
 static uint64_t get_u64_be(const uint8_t *p)
 {
@@ -400,12 +415,10 @@ void streebog_update(streebog_context *ctx, const uint8_t *data, size_t len)
         }
         memcpy(ctx->buf + ctx->buf_len, data, need);
 
-        ctx->block_count++;
         uint8_t N[64];
         streebog_vec512(N, ctx->block_count * 512);
         streebog_g(ctx, ctx->buf, N);
-        for (int i = 0; i < 64; i++)
-            ctx->sigma_bytes[i] ^= ctx->buf[i];
+        streebog_sigma_add(ctx->sigma_bytes, ctx->buf);
 
         data += need;
         len -= need;
@@ -415,12 +428,11 @@ void streebog_update(streebog_context *ctx, const uint8_t *data, size_t len)
     /* Process full blocks directly */
     while (len >= 64)
     {
-        ctx->block_count++;
         uint8_t N[64];
         streebog_vec512(N, ctx->block_count * 512);
         streebog_g(ctx, data, N);
-        for (int i = 0; i < 64; i++)
-            ctx->sigma_bytes[i] ^= data[i];
+        streebog_sigma_add(ctx->sigma_bytes, data);
+        ctx->block_count++;
         data += 64;
         len -= 64;
     }
@@ -446,7 +458,7 @@ void streebog_finish(streebog_context *ctx, uint8_t *output)
     {
         size_t bit_pos = rem * 8;
         size_t byte_idx = (511 - bit_pos) / 8;
-        size_t bit_in_byte = 7 - ((511 - bit_pos) % 8);
+        size_t bit_in_byte = bit_pos % 8;
         m_block[byte_idx] |= (uint8_t)(1u << bit_in_byte);
     }
 
@@ -456,12 +468,11 @@ void streebog_finish(streebog_context *ctx, uint8_t *output)
     /* Step 3.2: h = g_N(h, m) */
     streebog_g(ctx, m_block, N);
 
-    /* Step 3.3: N = Vec_512(Int_512(N) + |M|) */
-    streebog_vec512(N, ctx->block_count * 512 + ctx->msg_len * 8);
+    /* Step 3.3: N = Vec_512(Int_512(N) + |M|) where |M| is remaining bits */
+    streebog_vec512(N, ctx->block_count * 512 + rem * 8);
 
     /* Step 3.4: Σ = Σ ⊕ m */
-    for (int i = 0; i < 64; i++)
-        ctx->sigma_bytes[i] ^= m_block[i];
+    streebog_sigma_add(ctx->sigma_bytes, m_block);
 
     /* Step 3.5: h = g_0(h, N) */
     uint8_t zero[64];
@@ -471,9 +482,9 @@ void streebog_finish(streebog_context *ctx, uint8_t *output)
     /* Step 3.6: h = g_0(h, Σ) */
     streebog_g(ctx, ctx->sigma_bytes, zero);
 
-    /* Output */
+    /* Output — MSB_256 means the first 32 bytes (most significant) */
     if (ctx->is256)
-        memcpy(output, ctx->h_bytes + 32, 32);
+        memcpy(output, ctx->h_bytes, 32);
     else
         memcpy(output, ctx->h_bytes, 64);
 }
