@@ -35,6 +35,7 @@ typedef struct
     uint8_t  buf[64];       /*!< Partial block buffer */
     size_t   buf_len;       /*!< Bytes in buffer */
     size_t   msg_len;       /*!< Total message length in bytes */
+    uint64_t block_count;   /*!< Number of full blocks processed */
     int      is256;         /*!< 1 = Streebog-256, 0 = Streebog-512 */
 }
 streebog_context;

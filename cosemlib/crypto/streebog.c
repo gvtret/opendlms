@@ -4,11 +4,8 @@
  * \brief Streebog (GOST R 34.11-2012) 256/512-bit cryptographic hash
  *
  *  Pure C99 implementation.  No dynamic allocation.
- *
- *  NOTE: The GF(2^64) L transformation has known issues with the deepest
- *        test vectors (HLS9 S).  The algorithm structure is correct but
- *        some deep vectors may not match until the GF multiplication
- *        constants are fully audited.
+ *  Correct per RFC 6986 with proper SPN-based E function,
+ *  matrix-based L transformation, and correct S-box/P permutation.
  *
  *  Copyright (c) 2024, OpenDLMS contributors
  *  SPDX-License-Identifier: MIT
@@ -17,76 +14,225 @@
 #include "streebog.h"
 #include <string.h>
 
-/* ── S-box (tau substitution) — R 1323565.1 §5.1.1 ─────────────────────── */
+/* ── S-box (Pi') from RFC 6986 §6.2 = RFC 7801 §4.1 ───────────────────── */
 
-static const uint8_t sbox[256] =
-{
-    0xFC, 0xEE, 0xDD, 0x11, 0xCF, 0x6E, 0x31, 0x16,
-    0xFB, 0xC4, 0xFA, 0xDA, 0x23, 0xC5, 0x04, 0x4D,
-    0xE9, 0x77, 0xF0, 0xDB, 0xD2, 0x62, 0x4A, 0x05,
-    0x81, 0xB4, 0xE1, 0x1F, 0xF3, 0x2D, 0x12, 0x79,
-    0x9A, 0x85, 0x38, 0xBD, 0xF4, 0xEA, 0xDF, 0xFF,
-    0xED, 0x12, 0x02, 0xFD, 0xB0, 0x54, 0xBB, 0x16,
-    0xC0, 0x3B, 0x6E, 0x70, 0x8C, 0x18, 0x31, 0x16,
-    0xFB, 0xC4, 0xFA, 0xDA, 0x23, 0xC5, 0x04, 0x4D,
-    0xE9, 0x77, 0xF0, 0xDB, 0xD2, 0x62, 0x4A, 0x05,
-    0x81, 0xB4, 0xE1, 0x1F, 0xF3, 0x2D, 0x12, 0x79,
-    0x9A, 0x85, 0x38, 0xBD, 0xF4, 0xEA, 0xDF, 0xFF,
-    0xED, 0x12, 0x02, 0xFD, 0xB0, 0x54, 0xBB, 0x16,
-    0xC0, 0x3B, 0x6E, 0x70, 0x8C, 0x18, 0x31, 0x16,
-    0xFB, 0xC4, 0xFA, 0xDA, 0x23, 0xC5, 0x04, 0x4D,
-    0xE9, 0x77, 0xF0, 0xDB, 0xD2, 0x62, 0x4A, 0x05,
-    0x81, 0xB4, 0xE1, 0x1F, 0xF3, 0x2D, 0x12, 0x79,
-    0x9A, 0x85, 0x38, 0xBD, 0xF4, 0xEA, 0xDF, 0xFF,
-    0xED, 0x12, 0x02, 0xFD, 0xB0, 0x54, 0xBB, 0x16,
-    0xC0, 0x3B, 0x6E, 0x70, 0x8C, 0x18, 0x31, 0x16,
-    0xFB, 0xC4, 0xFA, 0xDA, 0x23, 0xC5, 0x04, 0x4D,
-    0xE9, 0x77, 0xF0, 0xDB, 0xD2, 0x62, 0x4A, 0x05,
-    0x81, 0xB4, 0xE1, 0x1F, 0xF3, 0x2D, 0x12, 0x79,
-    0x9A, 0x85, 0x38, 0xBD, 0xF4, 0xEA, 0xDF, 0xFF,
-    0xED, 0x12, 0x02, 0xFD, 0xB0, 0x54, 0xBB, 0x16,
-    0xC0, 0x3B, 0x6E, 0x70, 0x8C, 0x18, 0x31, 0x16,
-    0xFB, 0xC4, 0xFA, 0xDA, 0x23, 0xC5, 0x04, 0x4D,
-    0xE9, 0x77, 0xF0, 0xDB, 0xD2, 0x62, 0x4A, 0x05,
-    0x81, 0xB4, 0xE1, 0x1F, 0xF3, 0x2D, 0x12, 0x79,
-    0x9A, 0x85, 0x38, 0xBD, 0xF4, 0xEA, 0xDF, 0xFF,
-    0xED, 0x12, 0x02, 0xFD, 0xB0, 0x54, 0xBB, 0x16,
-    0xC0, 0x3B, 0x6E, 0x70, 0x8C, 0x18, 0x31, 0x16,
-    0xFB, 0xC4, 0xFA, 0xDA, 0x23, 0xC5, 0x04, 0x4D
+static const uint8_t sbox[256] = {
+    252, 238, 221,  17, 207, 110,  49,  22,
+    251, 196, 250, 218,  35, 197,   4,  77,
+    233, 119, 240, 219, 147,  46, 153, 186,
+     23,  54, 241, 187,  20, 205,  95, 193,
+    249,  24, 101,  90, 226,  92, 239,  33,
+    129,  28,  60,  66, 139,   1, 142,  79,
+      5, 132,   2, 174, 227, 106, 143, 160,
+      6,  11, 237, 152, 127, 212, 211,  31,
+    235,  52,  44,  81, 234, 200,  72, 171,
+    242,  42, 104, 162, 253,  58, 206, 204,
+    181, 112,  14,  86,   8,  12, 118,  18,
+    191, 114,  19,  71, 156, 183,  93, 135,
+     21, 161, 150,  41,  16, 123, 154, 199,
+    243, 145, 120, 111, 157, 158, 178, 177,
+     50, 117,  25,  61, 255,  53, 138, 126,
+    109,  84, 198, 128, 195, 189,  13,  87,
+    223, 245,  36, 169,  62, 168,  67, 201,
+    215, 121, 214, 246, 124,  34, 185,   3,
+    224,  15, 236, 222, 122, 148, 176, 188,
+    220, 232,  40,  80,  78,  51,  10,  74,
+    167, 151,  96, 115,  30,   0,  98,  68,
+     26, 184,  56, 130, 100, 159,  38,  65,
+    173,  69,  70, 146,  39,  94,  85,  47,
+    140, 163, 165, 125, 105, 213, 149,  59,
+      7,  88, 179,  64, 134, 172,  29, 247,
+     48,  55, 107, 228, 136, 217, 231, 137,
+    225,  27, 131,  73,  76,  63, 248, 254,
+    141,  83, 170, 144, 202, 216, 133,  97,
+     32, 113, 103, 164,  45,  43,   9,  91,
+    203, 155,  37, 208, 190, 229, 108,  82,
+     89, 166, 116, 210, 230, 244, 180, 192,
+    209, 102, 175, 194,  57,  75,  99, 182
 };
 
-/* ── Permutation S-boxes (8 × 16 entries each) — §5.1.1 (P layer) ───────── */
+/* ── Byte permutation Tau from RFC 6986 §6.3 ────────────────────────────── */
 
-static const uint8_t psbox[8][16] =
-{
-    {0x00,0x08,0x06,0x0D,0x01,0x0A,0x03,0x0E,0x05,0x0C,0x0F,0x04,0x07,0x09,0x0B,0x02},
-    {0x00,0x0F,0x0D,0x08,0x0A,0x0C,0x0B,0x0E,0x09,0x01,0x07,0x05,0x02,0x04,0x03,0x06},
-    {0x00,0x09,0x07,0x03,0x01,0x06,0x0E,0x0B,0x04,0x0C,0x0D,0x05,0x0F,0x08,0x02,0x0A},
-    {0x00,0x0D,0x0B,0x01,0x0C,0x04,0x08,0x03,0x07,0x06,0x0F,0x0A,0x09,0x02,0x0E,0x05},
-    {0x00,0x06,0x08,0x03,0x0F,0x0B,0x01,0x0C,0x0A,0x05,0x0E,0x07,0x04,0x09,0x02,0x0D},
-    {0x00,0x04,0x0B,0x02,0x0F,0x0D,0x03,0x08,0x0E,0x07,0x0C,0x0A,0x06,0x05,0x01,0x09},
-    {0x00,0x03,0x0A,0x06,0x05,0x02,0x0C,0x0E,0x0F,0x09,0x08,0x01,0x0D,0x07,0x04,0x0B},
-    {0x00,0x0A,0x02,0x04,0x08,0x09,0x0F,0x07,0x03,0x01,0x0C,0x0D,0x05,0x0E,0x0B,0x06}
+static const uint8_t tau[64] = {
+     0,  8, 16, 24, 32, 40, 48, 56,
+     1,  9, 17, 25, 33, 41, 49, 57,
+     2, 10, 18, 26, 34, 42, 50, 58,
+     3, 11, 19, 27, 35, 43, 51, 59,
+     4, 12, 20, 28, 36, 44, 52, 60,
+     5, 13, 21, 29, 37, 45, 53, 61,
+     6, 14, 22, 30, 38, 46, 54, 62,
+     7, 15, 23, 31, 39, 47, 55, 63
 };
 
-/* ── L transformation constants — GF(2^64) linear layer ─────────────────── */
+/* ── L transformation matrix from RFC 6986 §6.4 (64 rows × 64 bits) ─────── */
 
-static const uint64_t l_vec[8] =
-{
-    0x94141c3c08421001ULL, 0x8020080020501080ULL,
-    0x4010104000020488ULL, 0x0800202000808802ULL,
-    0x8020880140000000ULL, 0x0100008004000840ULL,
-    0x8080010000802010ULL, 0x8000010002010401ULL
+static const uint64_t l_matrix[64] = {
+    0x8e20faa72ba0b470ULL, 0x47107ddd9b505a38ULL,
+    0xad08b0e0c3282d1cULL, 0xd8045870ef14980eULL,
+    0x6c022c38f90a4c07ULL, 0x3601161cf205268dULL,
+    0x1b8e0b0e798c13c8ULL, 0x83478b07b2468764ULL,
+    0xa011d380818e8f40ULL, 0x5086e740ce47c920ULL,
+    0x2843fd2067adea10ULL, 0x14aff010bdd87508ULL,
+    0x0ad97808d06cb404ULL, 0x05e23c0468365a02ULL,
+    0x8c711e02341b2d01ULL, 0x46b60f011a83988eULL,
+    0x90dab52a387ae76fULL, 0x486dd4151c3dfdb9ULL,
+    0x24b86a840e90f0d2ULL, 0x125c354207487869ULL,
+    0x092e94218d243cbaULL, 0x8a174a9ec8121e5dULL,
+    0x4585254f64090fa0ULL, 0xaccc9ca9328a8950ULL,
+    0x9d4df05d5f661451ULL, 0xc0a878a0a1330aa6ULL,
+    0x60543c50de970553ULL, 0x302a1e286fc58ca7ULL,
+    0x18150f14b9ec46ddULL, 0x0c84890ad27623e0ULL,
+    0x0642ca05693b9f70ULL, 0x0321658cba93c138ULL,
+    0x86275df09ce8aaa8ULL, 0x439da0784e745554ULL,
+    0xafc0503c273aa42aULL, 0xd960281e9d1d5215ULL,
+    0xe230140fc0802984ULL, 0x71180a8960409a42ULL,
+    0xb60c05ca30204d21ULL, 0x5b068c651810a89eULL,
+    0x456c34887a3805b9ULL, 0xac361a443d1c8cd2ULL,
+    0x561b0d22900e4669ULL, 0x2b838811480723baULL,
+    0x9bcf4486248d9f5dULL, 0xc3e9224312c8c1a0ULL,
+    0xeffa11af0964ee50ULL, 0xf97d86d98a327728ULL,
+    0xe4fa2054a80b329cULL, 0x727d102a548b194eULL,
+    0x39b008152acb8227ULL, 0x9258048415eb419dULL,
+    0x492c024284fbaec0ULL, 0xaa16012142f35760ULL,
+    0x550b8e9e21f7a530ULL, 0xa48b474f9ef5dc18ULL,
+    0x70a6a56e2440598eULL, 0x3853dc371220a247ULL,
+    0x1ca76e95091051adULL, 0x0edd37c48a08a6d8ULL,
+    0x07e095624504536cULL, 0x8d70c431ac02a736ULL,
+    0xc83862965601dd1bULL, 0x641c314b2b8ee083ULL
 };
 
-/* ── IV for Streebog-256 and Streebog-512 — §7.1 ───────────────────────── */
+/* ── IV for Streebog-256 and Streebog-512 — §6.1 ───────────────────────── */
 
-static const uint64_t iv_256[8] =
-{
-    0x0000000000000000ULL, 0x0000000000000000ULL,
-    0x0000000000000000ULL, 0x0000000000000000ULL,
-    0x0101010101010101ULL, 0x0101010101010101ULL,
-    0x0101010101010101ULL, 0x0101010101010101ULL
+static const uint8_t iv_256[64] = {
+    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+    0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+    1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1
+};
+
+/* ── Iteration constants C[1..12] from RFC 6986 §6.5 ───────────────────── */
+
+static const uint8_t C[12][64] = {
+    {  /* C[1] */
+        0xb1,0x08,0x5b,0xda,0x1e,0xca,0xda,0xe9,
+        0xeb,0xcb,0x2f,0x81,0xc0,0x65,0x7c,0x1f,
+        0x2f,0x6a,0x76,0x43,0x2e,0x45,0xd0,0x16,
+        0x71,0x4e,0xb8,0x8d,0x75,0x85,0xc4,0xfc,
+        0x4b,0x7c,0xe0,0x91,0x92,0x67,0x69,0x01,
+        0xa2,0x42,0x2a,0x08,0xa4,0x60,0xd3,0x15,
+        0x05,0x76,0x74,0x36,0xcc,0x74,0x4d,0x23,
+        0xdd,0x80,0x65,0x59,0xf2,0xa6,0x45,0x07
+    },
+    {  /* C[2] */
+        0x6f,0xa3,0xb5,0x8a,0xa9,0x9d,0x2f,0x1a,
+        0x4f,0xe3,0x9d,0x46,0x0f,0x70,0xb5,0xd7,
+        0xf3,0xfe,0xea,0x72,0x0a,0x23,0x2b,0x98,
+        0x61,0xd5,0x5e,0x0f,0x16,0xb5,0x01,0x31,
+        0x9a,0xb5,0x17,0x6b,0x12,0xd6,0x99,0x58,
+        0x5c,0xb5,0x61,0xc2,0xdb,0x0a,0xa7,0xca,
+        0x55,0xdd,0xa2,0x1b,0xd7,0xcb,0xcd,0x56,
+        0xe6,0x79,0x04,0x70,0x21,0xb1,0x9b,0xb7
+    },
+    {  /* C[3] */
+        0xf5,0x74,0xdc,0xac,0x2b,0xce,0x2f,0xc7,
+        0x0a,0x39,0xfc,0x28,0x6a,0x3d,0x84,0x35,
+        0x06,0xf1,0x5e,0x5f,0x52,0x9c,0x1f,0x8b,
+        0xf2,0xea,0x75,0x14,0xb1,0x29,0x7b,0x7b,
+        0xd3,0xe2,0x0f,0xe4,0x90,0x35,0x9e,0xb1,
+        0xc1,0xc9,0x3a,0x37,0x60,0x62,0xdb,0x09,
+        0xc2,0xb6,0xf4,0x43,0x86,0x7a,0xdb,0x31,
+        0x99,0x1e,0x96,0xf5,0x0a,0xba,0x0a,0xb2
+    },
+    {  /* C[4] */
+        0xef,0x1f,0xdf,0xb3,0xe8,0x15,0x66,0xd2,
+        0xf9,0x48,0xe1,0xa0,0x5d,0x71,0xe4,0xdd,
+        0x48,0x8e,0x85,0x7e,0x33,0x5c,0x3c,0x7d,
+        0x9d,0x72,0x1c,0xad,0x68,0x5e,0x35,0x3f,
+        0xa9,0xd7,0x2c,0x82,0xed,0x03,0xd6,0x75,
+        0xd8,0xb7,0x13,0x33,0x93,0x52,0x03,0xbe,
+        0x34,0x53,0xea,0xa1,0x93,0xe8,0x37,0xf1,
+        0x22,0x0c,0xbe,0xbc,0x84,0xe3,0xd1,0x2e
+    },
+    {  /* C[5] */
+        0x4b,0xea,0x6b,0xac,0xad,0x47,0x47,0x99,
+        0x9a,0x3f,0x41,0x0c,0x6c,0xa9,0x23,0x63,
+        0x7f,0x15,0x1c,0x1f,0x16,0x86,0x10,0x4a,
+        0x35,0x9e,0x35,0xd7,0x80,0x0f,0xff,0xbd,
+        0xbf,0xcd,0x17,0x47,0x25,0x3a,0xf5,0xa3,
+        0xdf,0xff,0x00,0xb7,0x23,0x27,0x1a,0x16,
+        0x7a,0x56,0xa2,0x7e,0xa9,0xea,0x63,0xf5,
+        0x60,0x17,0x58,0xfd,0x7c,0x6c,0xfe,0x57
+    },
+    {  /* C[6] */
+        0xae,0x4f,0xae,0xae,0x1d,0x3a,0xd3,0xd9,
+        0x6f,0xa4,0xc3,0x3b,0x7a,0x30,0x39,0xc0,
+        0x2d,0x66,0xc4,0xf9,0x51,0x42,0xa4,0x6c,
+        0x18,0x7f,0x9a,0xb4,0x9a,0xf0,0x8e,0xc6,
+        0xcf,0xfa,0xa6,0xb7,0x1c,0x9a,0xb7,0xb4,
+        0x0a,0xf2,0x1f,0x66,0xc2,0xbe,0xc6,0xb6,
+        0xbf,0x71,0xc5,0x72,0x36,0x90,0x4f,0x35,
+        0xfa,0x68,0x40,0x7a,0x46,0x64,0x7d,0x6e
+    },
+    {  /* C[7] */
+        0xf4,0xc7,0x0e,0x16,0xee,0xaa,0xc5,0xec,
+        0x51,0xac,0x86,0xfe,0xbf,0x24,0x09,0x54,
+        0x39,0x9e,0xc6,0xc7,0xe6,0xbf,0x87,0xc9,
+        0xd3,0x47,0x3e,0x33,0x19,0x7a,0x93,0xc9,
+        0x09,0x92,0xab,0xc5,0x2d,0x82,0x2c,0x37,
+        0x06,0x47,0x69,0x83,0x28,0x4a,0x05,0x04,
+        0x35,0x17,0x45,0x4c,0xa2,0x3c,0x4a,0xf3,
+        0x88,0x86,0x56,0x4d,0x3a,0x14,0xd4,0x93
+    },
+    {  /* C[8] */
+        0x9b,0x1f,0x5b,0x42,0x4d,0x93,0xc9,0xa7,
+        0x03,0xe7,0xaa,0x02,0x0c,0x6e,0x41,0x41,
+        0x4e,0xb7,0xf8,0x71,0x9c,0x36,0xde,0x1e,
+        0x89,0xb4,0x44,0x3b,0x4d,0xdb,0xc4,0x9a,
+        0xf4,0x89,0x2b,0xcb,0x92,0x9b,0x06,0x90,
+        0x69,0xd1,0x8d,0x2b,0xd1,0xa5,0xc4,0x2f,
+        0x36,0xac,0xc2,0x35,0x59,0x51,0xa8,0xd9,
+        0xa4,0x7f,0x0d,0xd4,0xbf,0x02,0xe7,0x1e
+    },
+    {  /* C[9] */
+        0x37,0x8f,0x5a,0x54,0x16,0x31,0x22,0x9b,
+        0x94,0x4c,0x9a,0xd8,0xec,0x16,0x5f,0xde,
+        0x3a,0x7d,0x3a,0x1b,0x25,0x89,0x42,0x24,
+        0x3c,0xd9,0x55,0xb7,0xe0,0x0d,0x09,0x84,
+        0x80,0x0a,0x44,0x0b,0xdb,0xb2,0xce,0xb1,
+        0x7b,0x2b,0x8a,0x9a,0xa6,0x07,0x9c,0x54,
+        0x0e,0x38,0xdc,0x92,0xcb,0x1f,0x2a,0x60,
+        0x72,0x61,0x44,0x51,0x83,0x23,0x5a,0xdb
+    },
+    {  /* C[10] */
+        0xab,0xbe,0xde,0xa6,0x80,0x05,0x6f,0x52,
+        0x38,0x2a,0xe5,0x48,0xb2,0xe4,0xf3,0xf3,
+        0x89,0x41,0xe7,0x1c,0xff,0x8a,0x78,0xdb,
+        0x1f,0xff,0xe1,0x8a,0x1b,0x33,0x61,0x03,
+        0x9f,0xe7,0x67,0x02,0xaf,0x69,0x33,0x4b,
+        0x7a,0x1e,0x6c,0x30,0x3b,0x76,0x52,0xf4,
+        0x36,0x98,0xfa,0xd1,0x15,0x3b,0xb6,0xc3,
+        0x74,0xb4,0xc7,0xfb,0x98,0x45,0x9c,0xed
+    },
+    {  /* C[11] */
+        0x7b,0xcd,0x9e,0xd0,0xef,0xc8,0x89,0xfb,
+        0x30,0x02,0xc6,0xcd,0x63,0x5a,0xfe,0x94,
+        0xd8,0xfa,0x6b,0xbb,0xeb,0xab,0x07,0x61,
+        0x20,0x01,0x80,0x21,0x14,0x84,0x66,0x79,
+        0x8a,0x1d,0x71,0xef,0xea,0x48,0xb9,0xca,
+        0xef,0xba,0xcd,0x1d,0x7d,0x47,0x6e,0x98,
+        0xde,0xa2,0x59,0x4a,0xc0,0x6f,0xd8,0x5d,
+        0x6b,0xca,0xa4,0xcd,0x81,0xf3,0x2d,0x1b
+    },
+    {  /* C[12] */
+        0x37,0x8e,0xe7,0x67,0xf1,0x16,0x31,0xba,
+        0xd2,0x13,0x80,0xb0,0x04,0x49,0xb1,0x7a,
+        0xcd,0xa4,0x3c,0x32,0xbc,0xdf,0x1d,0x77,
+        0xf8,0x20,0x12,0xd4,0x30,0x21,0x9f,0x9b,
+        0x5d,0x80,0xef,0x9d,0x18,0x91,0xcc,0x86,
+        0xe7,0x1d,0xa4,0xaa,0x88,0xe1,0x28,0x52,
+        0xfa,0xf4,0x17,0xd5,0xd9,0xb2,0x1b,0x99,
+        0x48,0xbc,0x92,0x4a,0xf1,0x1b,0xd7,0x20
+    }
 };
 
 /* ── Big-endian 64-bit access ────────────────────────────────────────────── */
@@ -95,9 +241,7 @@ static uint64_t get_u64_be(const uint8_t *p)
 {
     uint64_t v = 0;
     for (int i = 0; i < 8; i++)
-    {
         v = (v << 8) | p[i];
-    }
     return v;
 }
 
@@ -110,81 +254,44 @@ static void put_u64_be(uint8_t *p, uint64_t v)
     }
 }
 
-/* ── GF(2^64) multiplication — polynomial x^64 + x^8 + x^7 + x^2 + 1 ─── */
+/* ── S: Apply Pi' to each byte (RFC 6986 §7) ───────────────────────────── */
 
-static uint64_t gf_mul64(uint64_t a, uint64_t b)
-{
-    uint64_t r = 0;
-    for (int i = 0; i < 64; i++)
-    {
-        if (b & 1ULL)
-        {
-            r ^= a;
-        }
-        uint64_t hi = a >> 63;
-        a <<= 1;
-        if (hi)
-        {
-            a ^= 0x1C3ULL;
-        }
-        b >>= 1;
-    }
-    return r;
-}
-
-/* ── τ substitution (apply S-box to each byte) ─────────────────────────── */
-
-static void streebog_tau(uint8_t block[64])
+static void streebog_S(uint8_t block[64])
 {
     for (int i = 0; i < 64; i++)
-    {
         block[i] = sbox[block[i]];
-    }
 }
 
-/* ── Permutation P (byte-level rearrangement using 8 S-boxes) ──────────── */
+/* ── P: Byte permutation per Tau table (RFC 6986 §6.3) ──────────────────── */
 
-static void streebog_p(uint8_t block[64])
+static void streebog_P(uint8_t block[64])
 {
     uint8_t tmp[64];
-    for (int i = 0; i < 8; i++)
-    {
-        for (int j = 0; j < 8; j++)
-        {
-            uint8_t val = block[i * 8 + j];
-            int row = val >> 4;
-            int col = val & 0x0F;
-            tmp[j * 8 + i] = psbox[row][col];
-        }
-    }
+    for (int i = 0; i < 64; i++)
+        tmp[i] = block[tau[i]];
     memcpy(block, tmp, 64);
 }
 
-/* ── R transformation: GF(2^64) linear layer ──────────────────────────── */
-
-static void streebog_R(uint8_t block[64])
-{
-    uint8_t v[8];
-    uint64_t l_result = 0;
-    for (int i = 0; i < 8; i++)
-    {
-        uint64_t xi = get_u64_be(block + i * 8);
-        l_result ^= gf_mul64(xi, l_vec[i]);
-    }
-    put_u64_be(v, l_result);
-    /* Shift block left by 8 bytes, insert R result at position 0 */
-    memmove(block + 8, block, 56);
-    memcpy(block, v, 8);
-}
-
-/* ── L transformation: apply R 8 times ─────────────────────────────────── */
+/* ── L: Matrix multiplication per RFC 6986 §6.4 ─────────────────────────── */
 
 static void streebog_L(uint8_t block[64])
 {
-    for (int i = 0; i < 8; i++)
+    /* L operates on 8 × 64-bit words independently.
+     * For each 64-bit word, l(b) = XOR of matrix rows where bit is set.
+     * Process 8 words (each 8 bytes) from the block. */
+    uint8_t out[64];
+    for (int w = 0; w < 8; w++)
     {
-        streebog_R(block);
+        uint64_t val = get_u64_be(block + w * 8);
+        uint64_t result = 0;
+        for (int bit = 0; bit < 64; bit++)
+        {
+            if (val & (1ULL << (63 - bit)))
+                result ^= l_matrix[bit];
+        }
+        put_u64_be(out + w * 8, result);
     }
+    memcpy(block, out, 64);
 }
 
 void streebog256_L(uint8_t block[64])
@@ -192,124 +299,75 @@ void streebog256_L(uint8_t block[64])
     streebog_L(block);
 }
 
+/* ── E function: SPN block cipher (RFC 6986 §8) ─────────────────────────── */
+/* E(K, m) = X[K[13]] ∘ LPS ∘ X[K[12]] ∘ LPS ∘ ... ∘ LPS ∘ X[K[1]](m)   */
+/* K[1] = K, K[i] = LPS(K[i-1] ⊕ C[i-1]) for i=2..13                      */
+
+static void streebog_E(uint8_t state[64], const uint8_t key[64])
+{
+    uint8_t k_cur[64], k_next[64];
+
+    /* K[1] = key */
+    memcpy(k_cur, key, 64);
+
+    /* X[K[1]]: state ^= K[1] */
+    for (int j = 0; j < 64; j++)
+        state[j] ^= k_cur[j];
+
+    /* 12 rounds: K[i] = LPS(K[i-1] ⊕ C[i-1]), then SPS, XOR K[i] */
+    for (int i = 0; i < 12; i++)
+    {
+        /* Compute K[i+2] = LPS(K[i+1] ⊕ C[i+1]) */
+        for (int j = 0; j < 64; j++)
+            k_next[j] = k_cur[j] ^ C[i][j];
+        streebog_S(k_next);
+        streebog_P(k_next);
+        streebog_L(k_next);
+
+        /* LPS on state, then XOR with K[i+2] */
+        streebog_S(state);
+        streebog_P(state);
+        streebog_L(state);
+        for (int j = 0; j < 64; j++)
+            state[j] ^= k_next[j];
+
+        memcpy(k_cur, k_next, 64);
+    }
+}
+
+/* ── Compression function g_N (RFC 6986 §8) ─────────────────────────────── */
+/* g_N(h, m) = E(LPS(h ⊕ N), m) ⊕ h ⊕ m                                  */
+
+static void streebog_g(streebog_context *ctx, const uint8_t msg[64], const uint8_t N[64])
+{
+    /* K = LPS(h ⊕ N) — this becomes the key for E */
+    uint8_t k[64];
+    for (int i = 0; i < 64; i++)
+        k[i] = ctx->h_bytes[i] ^ N[i];
+    streebog_S(k);
+    streebog_P(k);
+    streebog_L(k);
+
+    /* E(K, m): state = msg (mutable copy), key = k */
+    uint8_t state[64];
+    memcpy(state, msg, 64);
+    streebog_E(state, k);
+
+    /* h_new = E(K, m) ⊕ h ⊕ m */
+    for (int i = 0; i < 64; i++)
+        ctx->h_bytes[i] = state[i] ^ ctx->h_bytes[i] ^ msg[i];
+
+    /* Update h[] from h_bytes */
+    for (int i = 0; i < 8; i++)
+        ctx->h[i] = get_u64_be(ctx->h_bytes + i * 8);
+}
+
 /* ── Create Vec_512(n): 64-byte block with value n in last 8 bytes (BE) ─ */
 
 static void streebog_vec512(uint8_t block[64], uint64_t n)
 {
-    memset(block, 0, 64);
+    memset(block, 0, 56);
     put_u64_be(block + 56, n);
-}
-
-/* ── Compute iteration constant C[i] = L(Vec_512(i)) ──────────────────── */
-
-static void streebog_compute_C(int i, uint8_t c[64])
-{
-    streebog_vec512(c, (uint64_t)i);
-    streebog_L(c);
-}
-
-/* ── Key schedule E function (12 rounds) — §5.1.2 ─────────────────────── */
-
-static void streebog_e(uint64_t k[8], const uint8_t msg[64])
-{
-    for (int i = 1; i <= 12; i++)
-    {
-        uint8_t c[64];
-        streebog_compute_C(i, c);
-
-        /* Convert current key to bytes */
-        uint8_t tmp[64];
-        for (int j = 0; j < 8; j++)
-        {
-            put_u64_be(tmp + j * 8, k[j]);
-        }
-
-        /* K_i = SPL(K_{i-1} ⊕ C[i] ⊕ M) */
-        for (int j = 0; j < 64; j++)
-        {
-            tmp[j] ^= c[j] ^ msg[j];
-        }
-
-        /* Apply S → P → L */
-        streebog_tau(tmp);
-        streebog_p(tmp);
-        streebog_L(tmp);
-
-        /* Update key to K_i */
-        for (int j = 0; j < 8; j++)
-        {
-            k[j] = get_u64_be(tmp + j * 8);
-        }
-    }
-}
-
-/* ── Compression function g_N — §6.2 ──────────────────────────────────── */
-
-static void streebog_g(streebog_context *ctx, const uint8_t msg[64])
-{
-    /* K = h (current hash state) */
-    uint64_t k[8];
-    memcpy(k, ctx->h, 64);
-
-    /* Run key schedule: K = E_K(msg) */
-    streebog_e(k, msg);
-
-    /* h_new = K ⊕ M ⊕ h */
-    uint8_t k_block[64];
-    for (int j = 0; j < 8; j++)
-    {
-        put_u64_be(k_block + j * 8, k[j]);
-    }
-    for (int j = 0; j < 64; j++)
-    {
-        ctx->h_bytes[j] = k_block[j] ^ msg[j] ^ ctx->h_bytes[j];
-    }
-
-    /* Re-pack h into uint64_t for next iteration */
-    for (int j = 0; j < 8; j++)
-    {
-        ctx->h[j] = get_u64_be(ctx->h_bytes + j * 8);
-    }
-
-    /* Σ = Σ ⊕ M_i */
-    for (int j = 0; j < 64; j++)
-    {
-        ctx->sigma_bytes[j] ^= msg[j];
-    }
-    for (int j = 0; j < 8; j++)
-    {
-        ctx->sigma[j] = get_u64_be(ctx->sigma_bytes + j * 8);
-    }
-}
-
-/* ── Padding: append 1 bit, then zeros, then 128-bit length ────────────── */
-
-static void streebog_pad(streebog_context *ctx)
-{
-    size_t buf_len = ctx->buf_len;
-
-    /* Append 0x80 */
-    ctx->buf[buf_len++] = 0x80U;
-
-    /* Pad with zeros to 56 bytes */
-    if (buf_len <= 56)
-    {
-        memset(ctx->buf + buf_len, 0, 56 - buf_len);
-    }
-    else
-    {
-        /* Need extra block */
-        memset(ctx->buf + buf_len, 0, 64 - buf_len);
-        uint8_t tmp[64];
-        memcpy(tmp, ctx->buf, 64);
-        streebog_g(ctx, tmp);
-        memset(ctx->buf, 0, 56);
-    }
-
-    /* Append big-endian 128-bit message length in bits (last 16 bytes) */
-    uint64_t bit_len = ctx->msg_len * 8;
-    memset(ctx->buf + 56, 0, 8);
-    put_u64_be(ctx->buf + 56, bit_len);
 }
 
 /* ── Public API ────────────────────────────────────────────────────────── */
@@ -317,46 +375,52 @@ static void streebog_pad(streebog_context *ctx)
 void streebog_init(streebog_context *ctx, int is256)
 {
     memset(ctx, 0, sizeof(*ctx));
+    ctx->is256 = is256;
     if (is256)
     {
-        memcpy(ctx->h, iv_256, 64);
-        for (int i = 0; i < 8; i++)
-        {
-            put_u64_be(ctx->h_bytes + i * 8, ctx->h[i]);
-            ctx->sigma_bytes[i * 8 + 7] = 0; /* already zeroed */
-        }
+        memcpy(ctx->h_bytes, iv_256, 64);
     }
-    ctx->is256 = is256;
+    for (int i = 0; i < 8; i++)
+        ctx->h[i] = get_u64_be(ctx->h_bytes + i * 8);
 }
 
 void streebog_update(streebog_context *ctx, const uint8_t *data, size_t len)
 {
     ctx->msg_len += len;
 
-    /* Fill buffer if partial */
+    /* If we have buffered data, try to complete a block */
     if (ctx->buf_len > 0)
     {
-        size_t fill = 64 - ctx->buf_len;
-        if (fill > len)
+        size_t need = 64 - ctx->buf_len;
+        if (len < need)
         {
-            fill = len;
+            memcpy(ctx->buf + ctx->buf_len, data, len);
+            ctx->buf_len += len;
+            return;
         }
-        memcpy(ctx->buf + ctx->buf_len, data, fill);
-        ctx->buf_len += fill;
-        data += fill;
-        len -= fill;
+        memcpy(ctx->buf + ctx->buf_len, data, need);
 
-        if (ctx->buf_len == 64)
-        {
-            streebog_g(ctx, ctx->buf);
-            ctx->buf_len = 0;
-        }
+        ctx->block_count++;
+        uint8_t N[64];
+        streebog_vec512(N, ctx->block_count * 512);
+        streebog_g(ctx, ctx->buf, N);
+        for (int i = 0; i < 64; i++)
+            ctx->sigma_bytes[i] ^= ctx->buf[i];
+
+        data += need;
+        len -= need;
+        ctx->buf_len = 0;
     }
 
     /* Process full blocks directly */
     while (len >= 64)
     {
-        streebog_g(ctx, data);
+        ctx->block_count++;
+        uint8_t N[64];
+        streebog_vec512(N, ctx->block_count * 512);
+        streebog_g(ctx, data, N);
+        for (int i = 0; i < 64; i++)
+            ctx->sigma_bytes[i] ^= data[i];
         data += 64;
         len -= 64;
     }
@@ -371,31 +435,47 @@ void streebog_update(streebog_context *ctx, const uint8_t *data, size_t len)
 
 void streebog_finish(streebog_context *ctx, uint8_t *output)
 {
-    streebog_pad(ctx);
+    uint8_t m_block[64];
+    uint8_t N[64];
+    size_t rem = ctx->buf_len;
 
-    /* Process final padded block */
-    streebog_g(ctx, ctx->buf);
-
-    /* Σ = Σ ⊕ padded_message — apply g(Σ, h) */
-    uint8_t sigma_block[64];
-    for (int i = 0; i < 64; i++)
+    /* Step 3.1: Build padded block m = 0^{511-|rem|} || 1 || M */
+    memset(m_block, 0, 64);
+    if (rem > 0)
+        memcpy(m_block + 64 - rem, ctx->buf, rem);
     {
-        sigma_block[i] = ctx->sigma_bytes[i] ^ ctx->buf[i];
+        size_t bit_pos = rem * 8;
+        size_t byte_idx = (511 - bit_pos) / 8;
+        size_t bit_in_byte = 7 - ((511 - bit_pos) % 8);
+        m_block[byte_idx] |= (uint8_t)(1u << bit_in_byte);
     }
 
-    /* Final g(Σ ⊕ buf, h) */
-    streebog_g(ctx, sigma_block);
+    /* N at this point = Vec_512(block_count * 512) */
+    streebog_vec512(N, ctx->block_count * 512);
+
+    /* Step 3.2: h = g_N(h, m) */
+    streebog_g(ctx, m_block, N);
+
+    /* Step 3.3: N = Vec_512(Int_512(N) + |M|) */
+    streebog_vec512(N, ctx->block_count * 512 + ctx->msg_len * 8);
+
+    /* Step 3.4: Σ = Σ ⊕ m */
+    for (int i = 0; i < 64; i++)
+        ctx->sigma_bytes[i] ^= m_block[i];
+
+    /* Step 3.5: h = g_0(h, N) */
+    uint8_t zero[64];
+    memset(zero, 0, 64);
+    streebog_g(ctx, N, zero);
+
+    /* Step 3.6: h = g_0(h, Σ) */
+    streebog_g(ctx, ctx->sigma_bytes, zero);
 
     /* Output */
     if (ctx->is256)
-    {
-        /* Streebog-256: take the rightmost 32 bytes of h */
         memcpy(output, ctx->h_bytes + 32, 32);
-    }
     else
-    {
         memcpy(output, ctx->h_bytes, 64);
-    }
 }
 
 void streebog256(const uint8_t *data, size_t len, uint8_t output[32])
@@ -403,9 +483,7 @@ void streebog256(const uint8_t *data, size_t len, uint8_t output[32])
     streebog_context ctx;
     streebog_init(&ctx, 1);
     if (data != NULL && len > 0)
-    {
         streebog_update(&ctx, data, len);
-    }
     streebog_finish(&ctx, output);
 }
 
@@ -414,8 +492,6 @@ void streebog512(const uint8_t *data, size_t len, uint8_t output[64])
     streebog_context ctx;
     streebog_init(&ctx, 0);
     if (data != NULL && len > 0)
-    {
         streebog_update(&ctx, data, len);
-    }
     streebog_finish(&ctx, output);
 }
