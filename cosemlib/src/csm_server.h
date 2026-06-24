@@ -140,6 +140,50 @@ int csm_client_action(csm_client *client, uint8_t invoke_id,
                       uint8_t method_id, const uint8_t *data, uint32_t data_len,
                       uint8_t *resp_buf, uint32_t resp_size);
 
+/* ── Block Transfer Client API ──────────────────────────────────────────── */
+
+/**
+ * \brief GET with automatic block transfer collection
+ *
+ *  Sends a GET request and automatically collects all blocks
+ *  if the response is a Get-Response-With-DataBlock.
+ *  Assembles the complete response into resp_buf.
+ *
+ * \param client     Client context
+ * \param invoke_id  Invoke ID for the request
+ * \param class_id   COSEM class ID
+ * \param obis       OBIS code of the target object
+ * \param attr_id    Attribute index
+ * \param resp_buf   Output buffer for assembled response
+ * \param resp_size  Size of output buffer
+ * \return > 0 on success (total data length), < 0 on error
+ */
+int csm_client_get_block(csm_client *client, uint8_t invoke_id,
+                         uint16_t class_id, const csm_obis_code *obis,
+                         uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size);
+
+/**
+ * \brief SET with automatic block transfer
+ *
+ *  Sends data in blocks if data_len exceeds PDU capacity.
+ *  Automatically handles block numbering and acknowledgments.
+ *
+ * \param client     Client context
+ * \param invoke_id  Invoke ID for the request
+ * \param class_id   COSEM class ID
+ * \param obis       OBIS code of the target object
+ * \param attr_id    Attribute index
+ * \param data       Data to write
+ * \param data_len   Length of data
+ * \param resp_buf   Output buffer for final response
+ * \param resp_size  Size of output buffer
+ * \return > 0 on success, < 0 on error
+ */
+int csm_client_set_block(csm_client *client, uint8_t invoke_id,
+                         uint16_t class_id, const csm_obis_code *obis,
+                         uint8_t attr_id, const uint8_t *data, uint32_t data_len,
+                         uint8_t *resp_buf, uint32_t resp_size);
+
 /**
  * \brief Disconnect and release the association
  */

@@ -567,3 +567,74 @@ TEST_CASE("Block can receive", "[block_transfer]")
     csm_block_abort(&state);
     REQUIRE(csm_block_can_receive(&state) == 0);
 }
+
+/* ── Client-side SET block encoding tests ───────────────────────────────── */
+
+TEST_CASE("Block encode SET next - multi-block", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    /* 10 bytes, block size = 4 */
+    static const uint8_t test_data[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A};
+
+    csm_block_start_client(&state, 0x01U, test_data, sizeof(test_data), 4U);
+
+    uint8_t buf[64];
+    csm_array array;
+
+    /* First block (with object info) */
+    csm_request request;
+    memset(&request, 0, sizeof(request));
+    request.db_request.logical_name.class_id = 0x0003U;
+    request.db_request.logical_name.id = 2U;
+
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    csm_block_encode_set_request(&state, &array, &request, sizeof(buf));
+
+    REQUIRE(state.active == 1U);
+    REQUIRE(state.offset == 4U);
+
+    /* Second block (no object info) */
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    int result = csm_block_encode_set_next(&state, &array, sizeof(buf));
+
+    REQUIRE(result == 1);
+    REQUIRE(array.buff[0] == 0xC1U); /* AXDR_SET_REQUEST */
+    REQUIRE(array.buff[1] == 0x02U); /* with block */
+    REQUIRE(array.buff[2] == 0x01U); /* invoke_id */
+    REQUIRE(array.buff[3] == 0x00U); /* last_block = false */
+    REQUIRE(array.buff[4] == 0x00U); /* block_number = 1 */
+    REQUIRE(array.buff[5] == 0x00U);
+    REQUIRE(array.buff[6] == 0x00U);
+    REQUIRE(array.buff[7] == 0x01U);
+
+    REQUIRE(state.active == 1U);
+    REQUIRE(state.offset == 8U);
+    REQUIRE(state.block_number == 2U);
+}
+
+TEST_CASE("Block encode SET next - inactive", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    uint8_t buf[64];
+    csm_array array;
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+
+    int result = csm_block_encode_set_next(&state, &array, sizeof(buf));
+    REQUIRE(result == 0);
+}
+
+TEST_CASE("Block start client - invalid params", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    static const uint8_t test_data[] = {0x01};
+
+    REQUIRE(csm_block_start_client(NULL, 0x01U, test_data, 1U, 0U) == 0);
+    REQUIRE(csm_block_start_client(&state, 0x01U, NULL, 1U, 0U) == 0);
+    REQUIRE(csm_block_start_client(&state, 0x01U, test_data, 0U, 0U) == 0);
+}

@@ -307,3 +307,223 @@ void csm_client_destroy(csm_client *client)
     if (!client) return;
     memset(client, 0, sizeof(*client));
 }
+
+/* ── Block Transfer Client API ──────────────────────────────────────────── */
+
+#include "csm_block_transfer.h"
+
+/* Block transfer limits */
+#define CSM_CLIENT_MAX_BLOCK_SIZE   512U
+#define CSM_CLIENT_MAX_PDU          CSM_SERVER_MAX_PDU
+
+/*
+ * Decode response type to check if it's a block response.
+ * Returns:
+ *   0 = normal response (data follows)
+ *   1 = block response (need to collect more blocks)
+ *  -1 = error
+ */
+static int client_decode_response_type(const uint8_t *resp, uint32_t resp_len,
+                                       uint8_t *invoke_id, uint8_t *last_block,
+                                       uint32_t *block_number)
+{
+    if (resp_len < 8U) return -1;
+
+    uint8_t tag = resp[0];
+    uint8_t type = resp[1];
+
+    /* Check for GET/SET/ACTION response with block */
+    if ((tag == 0xC4U) || (tag == 0xC5U) || (tag == 0xC7U))
+    {
+        if (type == 0x04U) /* With DataBlock */
+        {
+            *invoke_id = resp[2];
+            *last_block = resp[3];
+            *block_number = ((uint32_t)resp[4] << 24) |
+                           ((uint32_t)resp[5] << 16) |
+                           ((uint32_t)resp[6] << 8) |
+                           (uint32_t)resp[7];
+            return 1; /* Block response */
+        }
+        else if (type == 0x01U) /* Normal response */
+        {
+            return 0; /* Normal response */
+        }
+    }
+
+    return -1; /* Unknown/error */
+}
+
+int csm_client_get_block(csm_client *client, uint8_t invoke_id,
+                         uint16_t class_id, const csm_obis_code *obis,
+                         uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size)
+{
+    if (!client || !resp_buf || resp_size == 0U) return -1;
+
+    /* Build and send initial GET request */
+    int resp_len = csm_client_get(client, invoke_id, class_id, obis, attr_id,
+                                  resp_buf, resp_size);
+    if (resp_len <= 0) return resp_len;
+
+    /* Check if response is a block response */
+    uint8_t resp_invoke_id;
+    uint8_t last_block;
+    uint32_t block_number;
+    int type = client_decode_response_type(resp_buf, (uint32_t)resp_len,
+                                           &resp_invoke_id, &last_block, &block_number);
+
+    if (type != 1)
+    {
+        /* Normal response - return as-is (skip first 6 bytes: tag+type+invoke_id+result) */
+        return resp_len;
+    }
+
+    /* Block response - collect all blocks */
+    uint32_t total_offset = 0U;
+
+    /* Copy data from first block (skip 8-byte header) */
+    if ((uint32_t)resp_len > 8U)
+    {
+        uint32_t data_len = (uint32_t)resp_len - 8U;
+        if (data_len > resp_size) return -1;
+        memmove(resp_buf, resp_buf + 8U, data_len);
+        total_offset = data_len;
+    }
+
+    /* Collect remaining blocks */
+    while (!last_block)
+    {
+        /* Build GET-Request-Next */
+        csm_array req;
+        csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
+
+        csm_array_write_u8(&req, 0xC0U);  /* GET-request */
+        csm_array_write_u8(&req, 0x02U);  /* type: next */
+        csm_array_write_u8(&req, invoke_id);
+        csm_array_write_u32(&req, block_number);
+
+        /* Send and receive */
+        uint8_t rx_buf[CSM_CLIENT_MAX_PDU];
+        int rx_len = client_send_recv(client, client->tx_buf, req.wr_index,
+                                      rx_buf, sizeof(rx_buf));
+        if (rx_len <= 0) return rx_len;
+
+        /* Decode block response */
+        type = client_decode_response_type(rx_buf, (uint32_t)rx_len,
+                                           &resp_invoke_id, &last_block, &block_number);
+        if (type != 1) return -1; /* Expected block response */
+
+        /* Copy data from this block (skip 8-byte header) */
+        if ((uint32_t)rx_len > 8U)
+        {
+            uint32_t data_len = (uint32_t)rx_len - 8U;
+            if ((total_offset + data_len) > resp_size) return -1;
+            memcpy(resp_buf + total_offset, rx_buf + 8U, data_len);
+            total_offset += data_len;
+        }
+    }
+
+    return (int)total_offset;
+}
+
+int csm_client_set_block(csm_client *client, uint8_t invoke_id,
+                         uint16_t class_id, const csm_obis_code *obis,
+                         uint8_t attr_id, const uint8_t *data, uint32_t data_len,
+                         uint8_t *resp_buf, uint32_t resp_size)
+{
+    if (!client) return -1;
+
+    /* Calculate overhead: tag(1) + type(1) + invoke_id(1) + last_block(1) +
+     * block_number(4) + class_id(2) + obis(6) + id(1) + sel_access(1) = 18 bytes */
+    const uint32_t header_overhead = 18U;
+
+    /* Check if data fits in a single block */
+    if ((header_overhead + data_len) <= CSM_CLIENT_MAX_BLOCK_SIZE)
+    {
+        /* Single block - use normal SET */
+        return csm_client_set(client, invoke_id, class_id, obis, attr_id,
+                              data, data_len, resp_buf, resp_size);
+    }
+
+    /* Multi-block transfer needed */
+    csm_block_state block_state;
+    csm_block_init(&block_state);
+
+    uint32_t offset = 0U;
+    uint32_t block_number = 0U;
+    uint8_t last_block = 0U;
+
+    while (!last_block)
+    {
+        /* Calculate chunk size */
+        uint32_t remaining = data_len - offset;
+        uint32_t max_chunk = CSM_CLIENT_MAX_BLOCK_SIZE - header_overhead;
+        uint32_t chunk = (remaining < max_chunk) ? remaining : max_chunk;
+        last_block = ((offset + chunk) >= data_len) ? 1U : 0U;
+
+        /* Build SET-Request-With-DataBlock */
+        csm_array req;
+        csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
+
+        csm_array_write_u8(&req, 0xC1U);  /* SET-request */
+        csm_array_write_u8(&req, 0x02U);  /* type: with block */
+        csm_array_write_u8(&req, invoke_id);
+        csm_array_write_u8(&req, last_block);
+        csm_array_write_u32(&req, block_number);
+
+        /* Object identification (first block only) */
+        if (block_number == 0U)
+        {
+            csm_array_write_u16(&req, class_id);
+            csm_array_write_u8(&req, obis->A);
+            csm_array_write_u8(&req, obis->B);
+            csm_array_write_u8(&req, obis->C);
+            csm_array_write_u8(&req, obis->D);
+            csm_array_write_u8(&req, obis->E);
+            csm_array_write_u8(&req, obis->F);
+            csm_array_write_u8(&req, attr_id);
+            csm_array_write_u8(&req, 0x00U);  /* No selective access */
+        }
+
+        /* Data chunk */
+        csm_array_write_u8(&req, 0x09U);  /* Octet-string tag */
+        csm_array_write_u8(&req, (uint8_t)chunk);
+        csm_array_write_buff(&req, data + offset, chunk);
+
+        /* Send and receive acknowledgment */
+        uint8_t rx_buf[CSM_CLIENT_MAX_PDU];
+        int rx_len = client_send_recv(client, client->tx_buf, req.wr_index,
+                                      rx_buf, sizeof(rx_buf));
+        if (rx_len <= 0) return rx_len;
+
+        /* Verify response is SET-Response-With-DataBlock */
+        if ((rx_len >= 9U) && (rx_buf[0] == 0xC5U) && (rx_buf[1] == 0x02U))
+        {
+            /* Check access result */
+            if (rx_buf[8] != 0x00U)
+            {
+                return -1; /* Access error */
+            }
+        }
+        else
+        {
+            return -1; /* Unexpected response */
+        }
+
+        offset += chunk;
+        block_number++;
+    }
+
+    /* Copy final response to output buffer */
+    if (resp_buf && resp_size > 0U)
+    {
+        /* Build a normal response for the caller */
+        resp_buf[0] = 0xC5U;  /* SET-response */
+        resp_buf[1] = 0x01U;  /* Normal response */
+        resp_buf[2] = invoke_id;
+        resp_buf[3] = 0x00U;  /* Success */
+        return 4;
+    }
+
+    return 0;
+}
