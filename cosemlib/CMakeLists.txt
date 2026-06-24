@@ -8,6 +8,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/csm_association.c
     src/csm_axdr_codec.c
     src/csm_ber.c
+    src/csm_block_transfer.c
     src/csm_channel.c
     src/csm_framing.c
     src/csm_security.c

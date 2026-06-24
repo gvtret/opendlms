@@ -1002,6 +1002,9 @@ void csm_asso_init(csm_asso_state *state)
     state->auth_level = CSM_AUTH_LOWEST_LEVEL;
     state->ref = NO_REF;
     state->handshake.result = CSM_ASSO_ERR_NULL;
+
+    /* Initialize block transfer state */
+    csm_block_init(&state->block_transfer);
 }
 
 // Check is association is granted

@@ -22,6 +22,7 @@ extern "C" {
 #include "csm_config.h"
 #include "csm_ber.h"
 #include "csm_definitions.h"
+#include "csm_block_transfer.h"
 
 // States machine of the Control Function
 enum state_cf { CF_INACTIVE, CF_IDLE, CF_ASSOCIATION_PENDING, CF_ASSOCIATED, CF_ASSOCIATION_RELEASE_PENDING };
@@ -185,6 +186,9 @@ typedef struct
 
     // Pointer to the configuration structure in ROM
     const csm_asso_config *config;
+
+    // Block transfer state (GBT)
+    csm_block_state block_transfer;
 } csm_asso_state;
 
 void csm_asso_init(csm_asso_state *state);

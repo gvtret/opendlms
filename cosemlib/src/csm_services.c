@@ -11,8 +11,15 @@
 
 #include "csm_services.h"
 #include "csm_axdr_codec.h"
+#include "csm_block_transfer.h"
+#include <string.h>
 
 static csm_db_access_handler database = NULL;
+
+/* ── Block transfer constants ───────────────────────────────────────────── */
+
+#define SVC_GET_RESPONSE_WITH_BLOCK    0x04U
+#define SVC_MAX_BLOCK_DATA_SIZE        1024U  ///< Max data to buffer for block transfer
 
 // FIXME: add parameters to specialize the exception response
 int svc_exception_response_encoder(csm_array *array)
@@ -123,7 +130,6 @@ int svc_decode_request(csm_request *request, csm_array *array)
 static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
     csm_db_code code = CSM_ERR_BAD_ENCODING;
-    (void) state;
 
     CSM_LOG("[SVC] Decoding GET.request");
 
@@ -131,22 +137,98 @@ static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state
 
     if (svc_decode_request(request, array))
     {
+        /* Handle Get-Request-Next (block transfer continuation) */
+        if (request->type == SVC_REQUEST_NEXT)
+        {
+            if (csm_block_is_active(&state->block_transfer) &&
+                (state->block_transfer.invoke_id == request->sender_invoke_id))
+            {
+                CSM_LOG("[SVC] GET-Request-Next, block %lu",
+                        (unsigned long)state->block_transfer.block_number);
+
+                array->wr_index = 0U;
+                if (csm_block_encode_next(&state->block_transfer, array, SVC_MAX_BLOCK_DATA_SIZE))
+                {
+                    code = CSM_OK;
+                }
+                else
+                {
+                    CSM_ERR("[SVC] Block encoding failed");
+                    code = CSM_ERR_BAD_ENCODING;
+                }
+            }
+            else
+            {
+                CSM_LOG("[SVC] No active block transfer for invoke_id %u", request->sender_invoke_id);
+                array->wr_index = 0U;
+                if (svc_exception_response_encoder(array))
+                {
+                    code = CSM_OK;
+                }
+            }
+            return code;
+        }
+
+        /* Normal GET request */
         if (database != NULL)
         {
-            // Prepare the response
+            /* Try normal response first */
             array->wr_index = 0U;
-            CSM_LOG("[SVC] Encoding GET.response");
+            CSM_LOG("[SVC] Encoding GET.response (normal)");
 
             int valid = csm_array_write_u8(array, AXDR_GET_RESPONSE);
-            valid = valid && csm_array_write_u8(array, 1U); // FIXME: we support only get response normal for now
+            valid = valid && csm_array_write_u8(array, 1U); /* Response-Normal */
             valid = valid && csm_array_write_u8(array, request->sender_invoke_id);
-            valid = valid && csm_array_write_u8(array, 0U); // data result
+            valid = valid && csm_array_write_u8(array, 0U); /* data result */
 
-            // Actually append the data
             if (valid)
             {
                 code = database(ctx, array, array, request);
-                // FIXME: update the code according to the DB result
+            }
+
+            /* If data too large, start block transfer */
+            if (code == CSM_OK_BLOCK)
+            {
+                CSM_LOG("[SVC] Data too large, starting block transfer");
+
+                /* Re-encode with the full data using a temporary buffer */
+                csm_array temp;
+                uint8_t temp_buf[SVC_MAX_BLOCK_DATA_SIZE];
+                temp.buff = temp_buf;
+                temp.size = SVC_MAX_BLOCK_DATA_SIZE;
+                temp.rd_index = 0U;
+                temp.wr_index = 0U;
+                temp.offset = 0U;
+
+                /* Get the data from the database */
+                code = database(ctx, &temp, &temp, request);
+
+                if ((code == CSM_OK) || (code == CSM_OK_BLOCK))
+                {
+                    /* Start block transfer */
+                    if (csm_block_start_server(&state->block_transfer,
+                                               request->sender_invoke_id,
+                                               temp.buff, temp.wr_index,
+                                               0U))
+                    {
+                        /* Encode first block */
+                        array->wr_index = 0U;
+                        if (csm_block_encode_first(&state->block_transfer, array, SVC_MAX_BLOCK_DATA_SIZE))
+                        {
+                            code = CSM_OK;
+                        }
+                        else
+                        {
+                            CSM_ERR("[SVC] First block encoding failed");
+                            code = CSM_ERR_BAD_ENCODING;
+                        }
+                    }
+                    else
+                    {
+                        CSM_ERR("[SVC] Failed to start block transfer");
+                        code = CSM_ERR_OBJECT_ERROR;
+                    }
+                }
             }
         }
         else
@@ -165,7 +247,7 @@ static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state
         }
         else
         {
-            CSM_ERR("[SVC] Internal problem, cannot encore exception response");
+            CSM_ERR("[SVC] Internal problem, cannot encode exception response");
         }
     }
 
