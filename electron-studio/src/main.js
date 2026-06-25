@@ -8,6 +8,7 @@
 
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 /* Load native addon */
 let native;
@@ -20,6 +21,7 @@ try {
 }
 
 let mainWindow = null;
+let luaBridge = null;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -38,6 +40,9 @@ function createWindow() {
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
+
+    /* Create Lua bridge */
+    luaBridge = new native.LuaBridge();
 }
 
 /* ── IPC Handlers ────────────────────────────────────────────────────────── */
@@ -46,40 +51,83 @@ ipcMain.handle('get-version', () => {
     return native.VERSION;
 });
 
-ipcMain.handle('transport:create', (event, host, port) => {
-    try {
-        const transport = new native.Transport(host, port || 4056);
-        return { success: true, id: transportId++ };
-    } catch (e) {
-        return { success: false, error: e.message };
+/* ── Lua bridge IPC ──────────────────────────────────────────────────────── */
+
+ipcMain.handle('lua:exec', (event, script) => {
+    if (!luaBridge) {
+        return { success: false, error: 'Lua bridge not initialized' };
     }
+
+    const error = luaBridge.exec(script);
+    if (error) {
+        return { success: false, error };
+    }
+    return { success: true };
 });
 
-ipcMain.handle('client:create', () => {
+ipcMain.handle('lua:execFile', (event, filename) => {
+    if (!luaBridge) {
+        return { success: false, error: 'Lua bridge not initialized' };
+    }
+
+    /* Read file and execute */
     try {
-        const client = new native.Client();
+        const content = fs.readFileSync(filename, 'utf-8');
+        const error = luaBridge.exec(content);
+        if (error) {
+            return { success: false, error };
+        }
         return { success: true };
     } catch (e) {
         return { success: false, error: e.message };
     }
 });
 
-ipcMain.handle('client:get', (event, { invokeId, classId, obis, attrId }) => {
-    /* TODO: track client instances */
-    return { success: false, error: 'Not implemented' };
+ipcMain.handle('lua:isConnected', () => {
+    if (!luaBridge) return false;
+    return luaBridge.isConnected();
 });
 
-ipcMain.handle('client:getBlock', (event, { invokeId, classId, obis, attrId }) => {
-    return { success: false, error: 'Not implemented' };
+ipcMain.handle('lua:getError', () => {
+    if (!luaBridge) return '';
+    return luaBridge.getError();
+});
+
+ipcMain.handle('lua:disconnect', () => {
+    if (!luaBridge) return { success: false };
+    const error = luaBridge.exec('disconnect()');
+    return { success: !error, error };
+});
+
+/* ── Direct client API (for manual GET/SET) ──────────────────────────────── */
+
+ipcMain.handle('client:get', (event, { invokeId, classId, obis, attrId }) => {
+    if (!luaBridge) {
+        return { success: false, error: 'Not connected' };
+    }
+
+    /* Execute via Lua bridge */
+    const script = `
+        local data, err = getCosem(${classId}, obis(${JSON.stringify(obis.join('.'))}), ${attrId})
+        if data then
+            return hex(data)
+        else
+            error(err or "GET failed")
+        end
+    `;
+    /* TODO: implement direct API without Lua */
+    return { success: false, error: 'Use Lua script for now' });
 });
 
 ipcMain.handle('client:set', (event, { invokeId, classId, obis, attrId, data }) => {
-    return { success: false, error: 'Not implemented' };
+    if (!luaBridge) {
+        return { success: false, error: 'Not connected' };
+    }
+
+    return { success: false, error: 'Use Lua script for now' });
 });
 
-ipcMain.handle('client:setBlock', (event, { invokeId, classId, obis, attrId, data }) => {
-    return { success: false, error: 'Not implemented' };
-});
+/* ── Dialog ──────────────────────────────────────────────────────────────── */
 
 ipcMain.handle('dialog:open', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -98,6 +146,9 @@ ipcMain.handle('dialog:open', async () => {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
+    if (luaBridge) {
+        luaBridge = null;
+    }
     if (process.platform !== 'darwin') {
         app.quit();
     }

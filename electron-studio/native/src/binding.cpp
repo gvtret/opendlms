@@ -9,13 +9,18 @@
  */
 
 #include <napi.h>
+#include "transport_wrap.h"
+#include "server_wrap.h"
+#include "client_wrap.h"
+#include "lua_bridge_wrap.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports)
 {
     /* Register module classes */
-    exports.Set("Transport", Napi::Function::New(env, TransportWrap::Init));
-    exports.Set("Server", Napi::Function::New(env, ServerWrap::Init));
-    exports.Set("Client", Napi::Function::New(env, ClientWrap::Init));
+    exports.Set("Transport", TransportWrap::Init(env, exports));
+    exports.Set("Server", ServerWrap::Init(env, exports));
+    exports.Set("Client", ClientWrap::Init(env, exports));
+    exports.Set("LuaBridge", LuaBridgeWrap::Init(env, exports));
 
     /* Constants */
     exports.Set("VERSION", Napi::String::New(env, "1.1.0"));

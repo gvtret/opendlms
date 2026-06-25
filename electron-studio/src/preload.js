@@ -8,15 +8,16 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('openDLMS', {
     getVersion: () => ipcRenderer.invoke('get-version'),
 
-    /* Transport */
-    createTransport: (host, port) => ipcRenderer.invoke('transport:create', host, port),
+    /* Lua bridge */
+    execScript: (script) => ipcRenderer.invoke('lua:exec', script),
+    execFile: (filename) => ipcRenderer.invoke('lua:execFile', filename),
+    isConnected: () => ipcRenderer.invoke('lua:isConnected'),
+    getError: () => ipcRenderer.invoke('lua:getError'),
+    disconnect: () => ipcRenderer.invoke('lua:disconnect'),
 
-    /* Client */
-    createClient: () => ipcRenderer.invoke('client:create'),
+    /* Client API (via Lua) */
     clientGet: (opts) => ipcRenderer.invoke('client:get', opts),
-    clientGetBlock: (opts) => ipcRenderer.invoke('client:getBlock', opts),
     clientSet: (opts) => ipcRenderer.invoke('client:set', opts),
-    clientSetBlock: (opts) => ipcRenderer.invoke('client:setBlock', opts),
 
     /* Dialogs */
     openFile: () => ipcRenderer.invoke('dialog:open'),

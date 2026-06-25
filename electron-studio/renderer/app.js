@@ -85,9 +85,10 @@ async function handleConnect() {
     const port = parseInt($('#port').value, 10);
 
     setStatus('Connecting...');
+    log('info', `Connecting to ${host}:${port}...`);
 
     try {
-        const result = await openDLMS.createTransport(host, port);
+        const result = await openDLMS.execScript(`connect("${host}", ${port})`);
         if (result.success) {
             connected = true;
             $('#btn-connect').disabled = true;
@@ -105,7 +106,12 @@ async function handleConnect() {
     }
 }
 
-function handleDisconnect() {
+async function handleDisconnect() {
+    try {
+        await openDLMS.disconnect();
+    } catch (e) {
+        /* ignore */
+    }
     connected = false;
     $('#btn-connect').disabled = false;
     $('#btn-disconnect').disabled = true;
@@ -116,7 +122,7 @@ function handleDisconnect() {
 
 /* ── Script execution ────────────────────────────────────────────────────── */
 
-function handleRun() {
+async function handleRun() {
     const script = $('#script-editor').value;
     if (!script.trim()) {
         log('error', 'No script to run');
@@ -128,13 +134,22 @@ function handleRun() {
     $('#btn-run').disabled = true;
     $('#btn-stop').disabled = false;
 
-    /* TODO: execute Lua script via native addon */
-    setTimeout(() => {
-        log('info', 'Script execution not yet implemented');
-        setStatus('Ready');
-        $('#btn-run').disabled = false;
-        $('#btn-stop').disabled = true;
-    }, 100);
+    try {
+        const result = await openDLMS.execScript(script);
+        if (result.success) {
+            log('info', 'Script completed');
+            setStatus('Ready');
+        } else {
+            log('error', `Script error: ${result.error}`);
+            setStatus('Script error');
+        }
+    } catch (e) {
+        log('error', `Script error: ${e.message}`);
+        setStatus('Script error');
+    }
+
+    $('#btn-run').disabled = false;
+    $('#btn-stop').disabled = true;
 }
 
 function handleStop() {
