@@ -25,42 +25,11 @@ extern "C" {
 
 /* ── Limits ─────────────────────────────────────────────────────────────── */
 
-#define CSM_MAX_BLOCK_SIZE      512U   ///< Default block size for transfer
 #define CSM_MAX_BLOCK_TRANSFERS 64U    ///< Max concurrent block transfers per association
 
 /* ── Block Transfer State ───────────────────────────────────────────────── */
 
-/**
- * \brief Block transfer direction
- */
-typedef enum
-{
-    CSM_BLOCK_DIR_NONE = 0U,        ///< No active transfer
-    CSM_BLOCK_DIR_SERVER_TO_CLIENT, ///< Server sending data to client (GET)
-    CSM_BLOCK_DIR_CLIENT_TO_SERVER  ///< Client sending data to server (SET)
-} csm_block_direction;
-
-/**
- * \brief Active block transfer state per association
- *
- *  Tracks one in-progress block transfer. When a GET response
- *  exceeds the PDU size, the server stores the full response
- *  and sends it in blocks via Get-Response-With-DataBlock.
- *
- *  For SET: tracks client sending data in blocks to server.
- */
-typedef struct
-{
-    csm_block_direction direction;  ///< Transfer direction
-    uint32_t block_number;          ///< Current block number (0-based)
-    uint32_t total_size;            ///< Total data size in bytes
-    uint32_t offset;                ///< Current offset into buffer
-    uint32_t block_size;            ///< Max bytes per block
-    uint8_t invoke_id;              ///< Invoke ID for this transfer
-    uint8_t last_block;             ///< 1 if this is the last block
-    uint8_t active;                 ///< 1 if transfer is active
-    const uint8_t *data;            ///< Pointer to data buffer (server-owned for GET, client-owned for SET)
-} csm_block_state;
+/* Types csm_block_direction and csm_block_state are defined in csm_definitions.h */
 
 /* ── Server-Side Block Transfer API ─────────────────────────────────────── */
 
@@ -217,6 +186,59 @@ int csm_block_encode_set_response(csm_block_state *state, csm_array *array);
  * \brief Check if we can accept more blocks (buffer not full)
  */
 int csm_block_can_receive(const csm_block_state *state);
+
+/* ── Client-Side GET Block Reception API ─────────────────────────────────── */
+
+/**
+ * \brief Encode Get-Request-Next for block transfer continuation
+ *
+ *  Called by client when it receives Get-Response-With-DataBlock and
+ *  needs to request the next block from the server.
+ *
+ * \param state         Block transfer state (tracks block_number)
+ * \param array         Output array to encode into
+ * \param invoke_id     Invoke ID from the original request
+ * \param block_number  Block number to request next
+ * \return 1 on success, 0 on error
+ */
+int csm_block_encode_get_next(csm_block_state *state, csm_array *array,
+                              uint8_t invoke_id, uint32_t block_number);
+
+/**
+ * \brief Start accumulating GET blocks from server
+ *
+ *  Called when client receives first Get-Response-With-DataBlock.
+ *
+ * \param state        Block transfer state
+ * \param invoke_id    Invoke ID from the response
+ * \param block_size   Expected block size (0 = use default)
+ * \return 1 on success, 0 on error
+ */
+int csm_block_start_get_receive(csm_block_state *state, uint8_t invoke_id,
+                                uint32_t block_size);
+
+/**
+ * \brief Add received GET block data to accumulation buffer
+ *
+ * \param state     Block transfer state
+ * \param data      Data chunk from this block
+ * \param data_size Size of the data chunk
+ * \param is_last   1 if this is the last block
+ * \return 1 on success, 0 on error
+ */
+int csm_block_get_receive_data(csm_block_state *state, const uint8_t *data,
+                               uint32_t data_size, uint8_t is_last);
+
+/**
+ * \brief Get accumulated GET data after transfer complete
+ *
+ * \param state     Block transfer state
+ * \param data      Pointer to receive data pointer
+ * \param data_size Pointer to receive total size
+ * \return 1 if data available, 0 if transfer not complete
+ */
+int csm_block_get_received_data(const csm_block_state *state, const uint8_t **data,
+                                uint32_t *data_size);
 
 #ifdef __cplusplus
 }

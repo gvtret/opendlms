@@ -427,3 +427,100 @@ int csm_block_can_receive(const csm_block_state *state)
 
     return (state->offset < CSM_BLOCK_MAX_RECEIVE_SIZE) ? 1U : 0U;
 }
+
+/* ── Client-side GET block reception ─────────────────────────────────────── */
+
+int csm_block_encode_get_next(csm_block_state *state, csm_array *array,
+                              uint8_t invoke_id, uint32_t block_number)
+{
+    if ((state == NULL) || (array == NULL))
+    {
+        return 0;
+    }
+
+    /*
+     * Get-Request-Next (IEC 62056-5-3):
+     * AXDR_GET_REQUEST (0xC0) | 02 (type = next) | invoke_id | block_number (4 bytes)
+     */
+    int valid = csm_array_write_u8(array, AXDR_GET_REQUEST);
+    valid = valid && csm_array_write_u8(array, 0x02U); /* type: next */
+    valid = valid && csm_array_write_u8(array, invoke_id);
+    valid = valid && csm_array_write_u32(array, block_number);
+
+    return valid;
+}
+
+int csm_block_start_get_receive(csm_block_state *state, uint8_t invoke_id,
+                                uint32_t block_size)
+{
+    if (state == NULL)
+    {
+        return 0;
+    }
+
+    state->direction = CSM_BLOCK_DIR_SERVER_TO_CLIENT;
+    state->block_number = 0U;
+    state->total_size = 0U;
+    state->offset = 0U;
+    state->block_size = (block_size > 0U) ? block_size : CSM_MAX_BLOCK_SIZE;
+    state->invoke_id = invoke_id;
+    state->last_block = 0U;
+    state->active = 1U;
+    state->data = g_block_receive_buf;
+
+    return 1;
+}
+
+int csm_block_get_receive_data(csm_block_state *state, const uint8_t *data,
+                               uint32_t data_size, uint8_t is_last)
+{
+    if ((state == NULL) || (data == NULL) || (!state->active))
+    {
+        return 0;
+    }
+
+    /* Check if we have enough space */
+    if ((state->offset + data_size) > CSM_BLOCK_MAX_RECEIVE_SIZE)
+    {
+        return 0; /* Buffer overflow */
+    }
+
+    /* Copy data into receive buffer */
+    if (data_size > 0U)
+    {
+        memcpy((void *)&g_block_receive_buf[state->offset], data, data_size);
+    }
+
+    state->offset += data_size;
+    state->total_size = state->offset;
+    state->last_block = is_last;
+    state->block_number++;
+
+    /* Complete if this was the last block */
+    if (is_last)
+    {
+        state->active = 0U;
+    }
+
+    return 1;
+}
+
+int csm_block_get_received_data(const csm_block_state *state, const uint8_t **data,
+                                uint32_t *data_size)
+{
+    if ((state == NULL) || (data == NULL) || (data_size == NULL))
+    {
+        return 0;
+    }
+
+    /* Transfer must be complete (not active) and have data */
+    if (state->active || (state->total_size == 0U))
+    {
+        return 0;
+    }
+
+    *data = g_block_receive_buf;
+    *data_size = state->total_size;
+
+    return 1;
+}

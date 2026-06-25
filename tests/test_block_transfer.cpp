@@ -638,3 +638,324 @@ TEST_CASE("Block start client - invalid params", "[block_transfer]")
     REQUIRE(csm_block_start_client(&state, 0x01U, NULL, 1U, 0U) == 0);
     REQUIRE(csm_block_start_client(&state, 0x01U, test_data, 0U, 0U) == 0);
 }
+
+/* ── Client-side GET block reception tests ───────────────────────────────── */
+
+TEST_CASE("Block encode GET next", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    uint8_t buf[32];
+    csm_array array;
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+
+    int result = csm_block_encode_get_next(&state, &array, 0x01U, 0U);
+
+    REQUIRE(result == 1);
+
+    /*
+     * Get-Request-Next format:
+     * Byte 0: AXDR_GET_REQUEST (0xC0)
+     * Byte 1: 0x02 (type = next)
+     * Byte 2: invoke_id (0x01)
+     * Byte 3-6: block_number (0x00000000)
+     */
+    uint32_t written = csm_array_written(&array);
+    REQUIRE(written == 7U);
+
+    REQUIRE(array.buff[0] == 0xC0U); /* AXDR_GET_REQUEST */
+    REQUIRE(array.buff[1] == 0x02U); /* type: next */
+    REQUIRE(array.buff[2] == 0x01U); /* invoke_id */
+    REQUIRE(array.buff[3] == 0x00U); /* block_number = 0 */
+    REQUIRE(array.buff[4] == 0x00U);
+    REQUIRE(array.buff[5] == 0x00U);
+    REQUIRE(array.buff[6] == 0x00U);
+}
+
+TEST_CASE("Block start GET receive - valid", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    int result = csm_block_start_get_receive(&state, 0x01U, 0U);
+
+    REQUIRE(result == 1);
+    REQUIRE(state.direction == CSM_BLOCK_DIR_SERVER_TO_CLIENT);
+    REQUIRE(state.active == 1U);
+    REQUIRE(state.invoke_id == 0x01U);
+}
+
+TEST_CASE("Block GET receive data - multi-block", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    csm_block_start_get_receive(&state, 0x01U, 0U);
+
+    /* Receive first block */
+    static const uint8_t block1[] = {0x01, 0x02, 0x03, 0x04};
+    int result = csm_block_get_receive_data(&state, block1, sizeof(block1), 0);
+
+    REQUIRE(result == 1);
+    REQUIRE(state.offset == 4U);
+    REQUIRE(state.active == 1U);
+
+    /* Receive second block (last) */
+    static const uint8_t block2[] = {0x05, 0x06};
+    result = csm_block_get_receive_data(&state, block2, sizeof(block2), 1);
+
+    REQUIRE(result == 1);
+    REQUIRE(state.offset == 6U);
+    REQUIRE(state.active == 0U);
+    REQUIRE(state.last_block == 1U);
+
+    /* Get accumulated data */
+    const uint8_t *received_data;
+    uint32_t received_size;
+    result = csm_block_get_received_data(&state, &received_data, &received_size);
+
+    REQUIRE(result == 1);
+    REQUIRE(received_size == 6U);
+    REQUIRE(received_data[0] == 0x01U);
+    REQUIRE(received_data[1] == 0x02U);
+    REQUIRE(received_data[2] == 0x03U);
+    REQUIRE(received_data[3] == 0x04U);
+    REQUIRE(received_data[4] == 0x05U);
+    REQUIRE(received_data[5] == 0x06U);
+}
+
+TEST_CASE("Block GET receive data - invalid params", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    static const uint8_t data[] = {0x01};
+
+    REQUIRE(csm_block_get_receive_data(NULL, data, 1U, 0) == 0);
+    REQUIRE(csm_block_get_receive_data(&state, NULL, 1U, 0) == 0);
+    REQUIRE(csm_block_get_receive_data(&state, data, 1U, 0) == 0); /* not active */
+}
+
+TEST_CASE("Block GET received data - not complete", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    csm_block_start_get_receive(&state, 0x01U, 0U);
+
+    const uint8_t *data;
+    uint32_t size;
+
+    /* Should fail - still active */
+    REQUIRE(csm_block_get_received_data(&state, &data, &size) == 0);
+}
+
+/* ── Full Round-Trip Test: SET block → GET block ─────────────────────────── */
+
+TEST_CASE("Round-trip: SET block transfer then GET block reception", "[block_transfer][roundtrip]")
+{
+    /*
+     * Simulates full round-trip:
+     * 1. Client sends 20 bytes in 8-byte blocks via SET
+     * 2. Server accumulates and stores the data
+     * 3. Server sends data back in 8-byte blocks via GET
+     * 4. Client accumulates and verifies complete data
+     */
+
+    /* ── Phase 1: Client sends SET blocks ──────────────────────────────── */
+
+    static const uint8_t original_data[] = {
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+        0x11, 0x12, 0x13, 0x14
+    };
+    const uint32_t data_len = sizeof(original_data);
+    const uint32_t block_size = 8U;
+
+    /* Client-side: start block transfer */
+    csm_block_state client_tx;
+    csm_block_init(&client_tx);
+    REQUIRE(csm_block_start_client(&client_tx, 0x01U, original_data, data_len, block_size) == 1);
+
+    /* Server-side: prepare to receive */
+    csm_block_state server_rx;
+    csm_block_init(&server_rx);
+    REQUIRE(csm_block_start_receive(&server_rx, 0x01U, block_size) == 1);
+
+    uint8_t buf[128];
+    csm_array array;
+    csm_request request;
+    memset(&request, 0, sizeof(request));
+    request.db_request.logical_name.class_id = 0x0003U;
+    request.db_request.logical_name.id = 2U;
+
+    uint32_t total_sent = 0U;
+    uint8_t block_num = 0U;
+
+    /* Send blocks until complete */
+    while (csm_block_is_active(&client_tx))
+    {
+        csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+
+        int encoded;
+        if (block_num == 0U)
+        {
+            encoded = csm_block_encode_set_request(&client_tx, &array, &request, block_size);
+        }
+        else
+        {
+            encoded = csm_block_encode_set_next(&client_tx, &array, block_size);
+        }
+        REQUIRE(encoded == 1);
+
+        /* Verify block header */
+        REQUIRE(array.buff[0] == 0xC1U); /* AXDR_SET_REQUEST */
+        REQUIRE(array.buff[1] == 0x02U); /* with block */
+        REQUIRE(array.buff[2] == 0x01U); /* invoke_id */
+
+        /* Extract data portion (skip header) */
+        uint32_t header_size = (block_num == 0U) ? 18U : 8U;
+        uint32_t chunk_size = csm_array_written(&array) - header_size;
+
+        REQUIRE(chunk_size <= block_size);
+
+        /* Server receives this block */
+        int is_last = (block_num == 2U) ? 1 : 0; /* 20 bytes / 8 = 3 blocks */
+        REQUIRE(csm_block_receive_data(&server_rx, &array.buff[header_size], chunk_size, is_last) == 1);
+
+        total_sent += chunk_size;
+        block_num++;
+    }
+
+    REQUIRE(total_sent == data_len);
+    REQUIRE(server_rx.active == 0U);
+    REQUIRE(server_rx.last_block == 1U);
+
+    /* Verify server received correct data */
+    const uint8_t *server_data;
+    uint32_t server_size;
+    REQUIRE(csm_block_get_received(&server_rx, &server_data, &server_size) == 1);
+    REQUIRE(server_size == data_len);
+    REQUIRE(memcmp(server_data, original_data, data_len) == 0);
+
+    /* ── Phase 2: Server sends GET blocks back ─────────────────────────── */
+
+    /* Server-side: start block transfer with same data */
+    csm_block_state server_tx;
+    csm_block_init(&server_tx);
+    REQUIRE(csm_block_start_server(&server_tx, 0x02U, server_data, server_size, block_size) == 1);
+
+    /* Client-side: prepare to receive */
+    csm_block_state client_rx;
+    csm_block_init(&client_rx);
+    REQUIRE(csm_block_start_get_receive(&client_rx, 0x02U, block_size) == 1);
+
+    block_num = 0U;
+    uint32_t total_received = 0U;
+
+    while (csm_block_is_active(&server_tx))
+    {
+        /* Server encodes block */
+        csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+
+        int encoded;
+        if (block_num == 0U)
+        {
+            encoded = csm_block_encode_first(&server_tx, &array, block_size);
+        }
+        else
+        {
+            encoded = csm_block_encode_next(&server_tx, &array, block_size);
+        }
+        REQUIRE(encoded == 1);
+
+        /* Verify block header */
+        REQUIRE(array.buff[0] == 0xC4U); /* AXDR_GET_RESPONSE */
+        REQUIRE(array.buff[1] == 0x04U); /* with block */
+
+        /* Extract data portion (skip 8-byte header) */
+        uint32_t chunk_size = csm_array_written(&array) - 8U;
+        REQUIRE(chunk_size <= block_size);
+
+        /* Client receives this block */
+        int is_last = (array.buff[3] == 0x01U) ? 1 : 0;
+        REQUIRE(csm_block_get_receive_data(&client_rx, &array.buff[8U], chunk_size, is_last) == 1);
+
+        total_received += chunk_size;
+        block_num++;
+    }
+
+    REQUIRE(total_received == data_len);
+
+    /* Verify client received correct data */
+    const uint8_t *client_data;
+    uint32_t client_size;
+    REQUIRE(csm_block_get_received_data(&client_rx, &client_data, &client_size) == 1);
+    REQUIRE(client_size == data_len);
+    REQUIRE(memcmp(client_data, original_data, data_len) == 0);
+}
+
+TEST_CASE("Round-trip: single block SET then single block GET", "[block_transfer][roundtrip]")
+{
+    /* Data fits in one block */
+    static const uint8_t small_data[] = {0xAA, 0xBB, 0xCC};
+
+    /* ── Phase 1: Client sends single SET block ────────────────────────── */
+
+    csm_block_state client_tx;
+    csm_block_init(&client_tx);
+    REQUIRE(csm_block_start_client(&client_tx, 0x01U, small_data, sizeof(small_data), 0U) == 1);
+
+    csm_block_state server_rx;
+    csm_block_init(&server_rx);
+    REQUIRE(csm_block_start_receive(&server_rx, 0x01U, 0U) == 1);
+
+    uint8_t buf[64];
+    csm_array array;
+    csm_request request;
+    memset(&request, 0, sizeof(request));
+    request.db_request.logical_name.class_id = 0x0003U;
+    request.db_request.logical_name.id = 2U;
+
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    REQUIRE(csm_block_encode_set_request(&client_tx, &array, &request, sizeof(buf)) == 1);
+
+    /* Single block - last_block should be set */
+    REQUIRE(array.buff[3] == 0x01U); /* last_block */
+
+    uint32_t chunk_size = csm_array_written(&array) - 18U;
+    REQUIRE(csm_block_receive_data(&server_rx, &array.buff[18U], chunk_size, 1) == 1);
+    REQUIRE(server_rx.active == 0U);
+
+    const uint8_t *server_data;
+    uint32_t server_size;
+    REQUIRE(csm_block_get_received(&server_rx, &server_data, &server_size) == 1);
+    REQUIRE(server_size == sizeof(small_data));
+    REQUIRE(memcmp(server_data, small_data, sizeof(small_data)) == 0);
+
+    /* ── Phase 2: Server sends single GET block back ───────────────────── */
+
+    csm_block_state server_tx;
+    csm_block_init(&server_tx);
+    REQUIRE(csm_block_start_server(&server_tx, 0x02U, server_data, server_size, 0U) == 1);
+
+    csm_block_state client_rx;
+    csm_block_init(&client_rx);
+    REQUIRE(csm_block_start_get_receive(&client_rx, 0x02U, 0U) == 1);
+
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    REQUIRE(csm_block_encode_first(&server_tx, &array, sizeof(buf)) == 1);
+
+    REQUIRE(array.buff[3] == 0x01U); /* last_block */
+
+    chunk_size = csm_array_written(&array) - 8U;
+    REQUIRE(csm_block_get_receive_data(&client_rx, &array.buff[8U], chunk_size, 1) == 1);
+    REQUIRE(client_rx.active == 0U);
+
+    const uint8_t *client_data;
+    uint32_t client_size;
+    REQUIRE(csm_block_get_received_data(&client_rx, &client_data, &client_size) == 1);
+    REQUIRE(client_size == sizeof(small_data));
+    REQUIRE(memcmp(client_data, small_data, sizeof(small_data)) == 0);
+}

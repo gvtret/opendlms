@@ -346,9 +346,183 @@ static csm_db_code svc_set_or_action_decoder(csm_db_context_t *ctx, csm_asso_sta
 
 static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
+    csm_db_code code = CSM_ERR_BAD_ENCODING;
+
     request->db_request.service = SVC_SET;
     CSM_LOG("[SVC] Decoding SET.request");
-    return svc_set_or_action_decoder(ctx, state, request, array);
+
+    if (svc_decode_request(request, array))
+    {
+        /* Handle Set-Request-Next (block transfer continuation) */
+        if (request->type == SVC_REQUEST_NEXT)
+        {
+            if (csm_block_is_active(&state->block_transfer) &&
+                (state->block_transfer.invoke_id == request->sender_invoke_id))
+            {
+                CSM_LOG("[SVC] SET-Request-Next, block %lu",
+                        (unsigned long)state->block_transfer.block_number);
+
+                /* Extract data from this block */
+                const uint8_t *data_ptr = &array->buff[array->rd_index];
+                uint32_t data_size = array->wr_index - array->rd_index;
+
+                /* Add data to receive buffer */
+                if (csm_block_receive_data(&state->block_transfer, data_ptr, data_size, request->db_request.block_number))
+                {
+                    /* Encode response acknowledgment */
+                    array->wr_index = 0U;
+                    if (csm_block_encode_set_response(&state->block_transfer, array))
+                    {
+                        /* If this was the last block, process the accumulated data */
+                        if (state->block_transfer.last_block)
+                        {
+                            const uint8_t *accumulated_data;
+                            uint32_t accumulated_size;
+
+                            if (csm_block_get_received(&state->block_transfer, &accumulated_data, &accumulated_size))
+                            {
+                                /* Create a temporary array with accumulated data */
+                                csm_array data_array;
+                                data_array.buff = (uint8_t *)accumulated_data;
+                                data_array.size = accumulated_size;
+                                data_array.rd_index = 0U;
+                                data_array.wr_index = accumulated_size;
+                                data_array.offset = 0U;
+
+                                /* Invoke database handler */
+                                if (database != NULL)
+                                {
+                                    csm_array output = *array;
+                                    uint32_t reply_size = 0U;
+                                    output.offset += gResponseNormalHeaderSize;
+                                    output.rd_index = 0U;
+                                    output.wr_index = 0U;
+
+                                    code = database(ctx, &data_array, &output, request);
+                                    reply_size = output.wr_index;
+
+                                    /* Update array with response */
+                                    array->wr_index = 0U;
+                                    output.offset -= gResponseNormalHeaderSize;
+                                    output.rd_index = 0U;
+                                    output.wr_index = 0U;
+
+                                    int valid = csm_array_write_u8(&output, AXDR_SET_RESPONSE);
+                                    valid = valid && csm_array_write_u8(&output, 1U); /* Response-Normal */
+                                    valid = valid && csm_array_write_u8(&output, request->sender_invoke_id);
+                                    valid = svc_data_access_result_encoder(&output, code);
+
+                                    array->wr_index = output.wr_index;
+                                }
+                                else
+                                {
+                                    code = CSM_ERR_OBJECT_ERROR;
+                                }
+                            }
+                            else
+                            {
+                                code = CSM_ERR_BAD_ENCODING;
+                            }
+                        }
+                        else
+                        {
+                            code = CSM_OK;
+                        }
+                    }
+                    else
+                    {
+                        CSM_ERR("[SVC] Block encoding failed");
+                        code = CSM_ERR_BAD_ENCODING;
+                    }
+                }
+                else
+                {
+                    CSM_ERR("[SVC] Block receive failed");
+                    code = CSM_ERR_BAD_ENCODING;
+                }
+            }
+            else
+            {
+                CSM_LOG("[SVC] No active block transfer for invoke_id %u", request->sender_invoke_id);
+                array->wr_index = 0U;
+                if (svc_exception_response_encoder(array))
+                {
+                    code = CSM_OK;
+                }
+            }
+            return code;
+        }
+
+        /* Normal SET request */
+        if (database != NULL)
+        {
+            /* Check if data needs block transfer */
+            uint32_t data_size = csm_array_written(&request->db_request.additional_data.data);
+
+            if (data_size > SVC_MAX_BLOCK_DATA_SIZE)
+            {
+                CSM_LOG("[SVC] Data too large for single SET, starting block transfer");
+
+                /* Start receive mode */
+                if (csm_block_start_receive(&state->block_transfer, request->sender_invoke_id, 0U))
+                {
+                    /* Add the initial data chunk */
+                    const uint8_t *initial_data = request->db_request.additional_data.data.buff;
+                    uint32_t initial_size = request->db_request.additional_data.data.wr_index;
+
+                    if (csm_block_receive_data(&state->block_transfer, initial_data, initial_size, 0U))
+                    {
+                        /* Encode acknowledgment for first block */
+                        array->wr_index = 0U;
+                        if (csm_block_encode_set_response(&state->block_transfer, array))
+                        {
+                            code = CSM_OK;
+                        }
+                        else
+                        {
+                            CSM_ERR("[SVC] First block encoding failed");
+                            code = CSM_ERR_BAD_ENCODING;
+                        }
+                    }
+                    else
+                    {
+                        CSM_ERR("[SVC] Initial data receive failed");
+                        code = CSM_ERR_BAD_ENCODING;
+                    }
+                }
+                else
+                {
+                    CSM_ERR("[SVC] Failed to start block receive");
+                    code = CSM_ERR_OBJECT_ERROR;
+                }
+            }
+            else
+            {
+                /* Data fits in single block, use normal SET */
+                return svc_set_or_action_decoder(ctx, state, request, array);
+            }
+        }
+        else
+        {
+            CSM_ERR("[SVC][SET] Database pointer not set");
+            code = CSM_ERR_OBJECT_ERROR;
+        }
+    }
+
+    if (code != CSM_OK)
+    {
+        array->wr_index = 0U;
+        if (svc_exception_response_encoder(array))
+        {
+            code = CSM_OK;
+        }
+        else
+        {
+            CSM_ERR("[SVC][SET] Internal problem, cannot encode exception response");
+        }
+    }
+
+    return code;
 }
 
 
@@ -784,7 +958,45 @@ static int svc_get_response_decoder(csm_response *response, csm_array *array)
 {
     response->service = SVC_GET;
     CSM_LOG("[SVC] Decoding GET.response");
-    return svc_response_decoder(response, array);
+
+    int valid = svc_response_decoder(response, array);
+
+    /* If block response, accumulate data */
+    if (valid && (response->type == SVC_RESPONSE_WITH_DATABLOCK))
+    {
+        /* Data starts at current read position */
+        uint32_t data_offset = array->rd_index;
+        uint32_t data_size = array->wr_index - data_offset;
+
+        if (data_size > 0U)
+        {
+            /* Start receive if not already active */
+            if (!csm_block_is_active(&response->block_state))
+            {
+                csm_block_start_get_receive(&response->block_state,
+                                           response->invoke_id, 0U);
+            }
+
+            /* Accumulate this block's data */
+            const uint8_t *data_ptr = &array->buff[data_offset];
+            if (csm_block_get_receive_data(&response->block_state,
+                                          data_ptr, data_size,
+                                          response->last_block))
+            {
+                CSM_LOG("[SVC/GET] Accumulated %lu bytes, block %lu, last=%d",
+                        (unsigned long)data_size,
+                        (unsigned long)response->block_number,
+                        (int)response->last_block);
+            }
+            else
+            {
+                CSM_ERR("[SVC/GET] Block accumulation failed");
+                valid = 0;
+            }
+        }
+    }
+
+    return valid;
 }
 
 static int svc_set_response_decoder(csm_response *response, csm_array *array)
@@ -928,6 +1140,7 @@ void csm_client_init(csm_request *request, csm_response *response)
     response->block_number = 0U;
     response->invoke_id = 0U;
     response->last_block = 0U;
+    csm_block_init(&response->block_state);
 }
 
 int csm_client_has_more_data(csm_response *response)
@@ -939,6 +1152,17 @@ int csm_client_has_more_data(csm_response *response)
         more_data = 1;
     }
     return more_data;
+}
+
+int csm_client_get_block_data(csm_response *response, const uint8_t **data,
+                              uint32_t *data_size)
+{
+    if (response == NULL || data == NULL || data_size == NULL)
+    {
+        return 0;
+    }
+
+    return csm_block_get_received_data(&response->block_state, data, data_size);
 }
 
 

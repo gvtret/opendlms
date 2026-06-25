@@ -189,6 +189,30 @@ typedef struct
 
 enum svc_response   { SVC_RESPONSE_NORMAL, SVC_RESPONSE_WITH_DATABLOCK };
 
+/* ── Block Transfer Types (minimal definitions for csm_response) ─────────── */
+
+#define CSM_MAX_BLOCK_SIZE      512U
+
+typedef enum
+{
+    CSM_BLOCK_DIR_NONE = 0U,
+    CSM_BLOCK_DIR_SERVER_TO_CLIENT,
+    CSM_BLOCK_DIR_CLIENT_TO_SERVER
+} csm_block_direction;
+
+typedef struct
+{
+    csm_block_direction direction;
+    uint32_t block_number;
+    uint32_t total_size;
+    uint32_t offset;
+    uint32_t block_size;
+    uint8_t invoke_id;
+    uint8_t last_block;
+    uint8_t active;
+    const uint8_t *data;
+} csm_block_state;
+
 typedef struct
 {
     enum csm_service service;
@@ -201,6 +225,7 @@ typedef struct
     uint32_t block_number;
     csm_exception exception;
     uint8_t has_data;
+    csm_block_state block_state; ///< Block transfer state for accumulating GET blocks
 } csm_response;
 
 // ----------------------------- IMPLEMENTATION SPECIFIC INTERFACE -----------------------------
