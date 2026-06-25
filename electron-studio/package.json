@@ -1,0 +1,41 @@
+{
+  "name": "opendlms-studio",
+  "version": "1.1.0",
+  "description": "DLMS/COSEM protocol studio — Electron.js GUI for meter configuration and scripting",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:native": "cmake-js build --directory native",
+    "rebuild": "electron-rebuild -f -w opendlms-native",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "electron": "^28.0.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "cmake-js": "^7.3.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.opendlms.studio",
+    "productName": "OpenDLMS Studio",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "renderer/**/*",
+      "native/build/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  }
+}

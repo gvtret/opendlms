@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenDLMS Studio</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header id="header">
+            <div class="header-left">
+                <h1>OpenDLMS Studio</h1>
+                <span id="version" class="version"></span>
+            </div>
+            <div class="header-right">
+                <button id="btn-connect" class="btn btn-primary">Connect</button>
+                <button id="btn-disconnect" class="btn btn-secondary" disabled>Disconnect</button>
+            </div>
+        </header>
+
+        <!-- Main content -->
+        <div id="main">
+            <!-- Sidebar -->
+            <aside id="sidebar">
+                <div class="panel">
+                    <h3>Connection</h3>
+                    <div class="form-group">
+                        <label for="host">Host</label>
+                        <input type="text" id="host" value="127.0.0.1" placeholder="Host">
+                    </div>
+                    <div class="form-group">
+                        <label for="port">Port</label>
+                        <input type="number" id="port" value="4056" placeholder="Port">
+                    </div>
+                    <div class="form-group">
+                        <label for="framing">Framing</label>
+                        <select id="framing">
+                            <option value="wrapper">COSEM-TCP Wrapper</option>
+                            <option value="hdlc">HDLC</option>
+                            <option value="none">None</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3>Object Browser</h3>
+                    <div id="object-tree" class="tree">
+                        <div class="tree-empty">Connect to a meter to browse objects</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center area -->
+            <div id="center">
+                <!-- Tabs -->
+                <div id="tabs">
+                    <button class="tab active" data-tab="script">Script</button>
+                    <button class="tab" data-tab="requests">Requests</button>
+                    <button class="tab" data-tab="log">Packet Log</button>
+                </div>
+
+                <!-- Tab content -->
+                <div id="tab-content">
+                    <!-- Script editor -->
+                    <div id="tab-script" class="tab-panel active">
+                        <div class="toolbar">
+                            <button id="btn-run" class="btn btn-success">▶ Run (F5)</button>
+                            <button id="btn-stop" class="btn btn-danger" disabled>⏹ Stop</button>
+                            <button id="btn-open" class="btn">Open</button>
+                            <button id="btn-save" class="btn">Save</button>
+                            <span id="script-file" class="file-name">Untitled</span>
+                        </div>
+                        <textarea id="script-editor" class="editor" placeholder="-- Lua script here
+-- Available functions:
+--   connect(host, port)
+--   disconnect()
+--   getCosem(classId, obis, attrId)
+--   setCosem(classId, obis, attrId, data)
+--   print(...)
+" spellcheck="false"></textarea>
+                    </div>
+
+                    <!-- Manual requests -->
+                    <div id="tab-requests" class="tab-panel">
+                        <div class="panel">
+                            <h3>GET Request</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Class ID</label>
+                                    <input type="number" id="get-class" value="8" min="1" max="65535">
+                                </div>
+                                <div class="form-group">
+                                    <label>OBIS</label>
+                                    <input type="text" id="get-obis" value="0.0.1.0.0.255" placeholder="A.B.C.D.E.F">
+                                </div>
+                                <div class="form-group">
+                                    <label>Attribute</label>
+                                    <input type="number" id="get-attr" value="2" min="1" max="255">
+                                </div>
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button id="btn-get" class="btn btn-primary">GET</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Result</label>
+                                <pre id="get-result" class="result-box">No result</pre>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h3>SET Request</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Class ID</label>
+                                    <input type="number" id="set-class" value="8" min="1" max="65535">
+                                </div>
+                                <div class="form-group">
+                                    <label>OBIS</label>
+                                    <input type="text" id="set-obis" value="0.0.1.0.0.255" placeholder="A.B.C.D.E.F">
+                                </div>
+                                <div class="form-group">
+                                    <label>Attribute</label>
+                                    <input type="number" id="set-attr" value="2" min="1" max="255">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Data (hex)</label>
+                                <input type="text" id="set-data" placeholder="09 0C 07 E1 01 01 07 00 00 00 FF 80 00 00">
+                            </div>
+                            <div class="form-group">
+                                <button id="btn-set" class="btn btn-primary">SET</button>
+                            </div>
+                            <div class="form-group">
+                                <label>Result</label>
+                                <pre id="set-result" class="result-box">No result</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Packet log -->
+                    <div id="tab-log" class="tab-panel">
+                        <div class="toolbar">
+                            <button id="btn-clear-log" class="btn">Clear</button>
+                            <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
+                        </div>
+                        <div id="packet-log" class="log"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status bar -->
+        <footer id="statusbar">
+            <span id="status-connection" class="status-item">Disconnected</span>
+            <span id="status-protocol" class="status-item"></span>
+            <span class="status-spacer"></span>
+            <span id="status-ready" class="status-item">Ready</span>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
