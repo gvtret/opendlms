@@ -21,13 +21,17 @@ static csm_db_access_handler database = NULL;
 #define SVC_GET_RESPONSE_WITH_BLOCK    0x04U
 #define SVC_MAX_BLOCK_DATA_SIZE        1024U  ///< Max data to buffer for block transfer
 
-// FIXME: add parameters to specialize the exception response
-int svc_exception_response_encoder(csm_array *array)
+int svc_exception_response_encoder_ex(csm_array *array, uint8_t state_err, uint8_t service_err)
 {
     int valid = csm_array_write_u8(array, AXDR_EXCEPTION_RESPONSE);
-    valid = valid && csm_array_write_u8(array, 1U);
-    valid = valid && csm_array_write_u8(array, 1U);
+    valid = valid && csm_array_write_u8(array, state_err);
+    valid = valid && csm_array_write_u8(array, service_err);
     return valid;
+}
+
+int svc_exception_response_encoder(csm_array *array)
+{
+    return svc_exception_response_encoder_ex(array, 1U, 1U);
 }
 
 
@@ -286,7 +290,7 @@ static csm_db_code svc_set_or_action_decoder(csm_db_context_t *ctx, csm_asso_sta
 
             uint8_t service_resp = (request->db_request.service == SVC_SET) ? AXDR_SET_RESPONSE : AXDR_ACTION_RESPONSE;
             int valid = csm_array_write_u8(&output, service_resp);
-            valid = valid && csm_array_write_u8(&output, 1U); // FIXME: use proper service tag according to service type
+            valid = valid && csm_array_write_u8(&output, 1U); /* Response-Normal (type 1) */
             valid = valid && csm_array_write_u8(&output, request->sender_invoke_id);
             valid = svc_data_access_result_encoder(&output, code);
 
@@ -536,16 +540,15 @@ static csm_db_code svc_action_request_decoder(csm_db_context_t *ctx, csm_asso_st
 
 uint8_t csm_get_request_type(csm_request *request)
 {
-    uint8_t type = 0U; // Bad type
+    uint8_t type = 0U; /* Invalid type */
 
-    // FIXME: set different values according to ASN.1 description and services
+    /* IEC 62056-5-3: type 1 = Normal, type 2 = With DataBlock (Next) */
     if (request->type == SVC_REQUEST_NORMAL)
     {
         type = 1U;
     }
     else
     {
-        // Next
         type = 2U;
     }
 
@@ -689,8 +692,9 @@ int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_co
 {
     int number_of_bytes = 0;
 
-    /* Temporarily set global for service decoders that use it directly */
-    /* TODO: refactor service decoders to accept handler parameter */
+    /* Temporarily set global for service decoders that use it directly.
+     * Future improvement: refactor service decoders to accept handler as parameter
+     * to eliminate this thread-safety workaround. */
     csm_db_access_handler saved_db = database;
     database = handler;
 
@@ -820,54 +824,10 @@ int svc_result_decoder(csm_response *response, csm_array *array)
 
     if (response->service == SVC_ACTION)
     {
-        // Action is a SET followed by a GET
-        // So we have two statuses: the Action-Result (for the SET part) and the Get-Data-Result (for the GET part)
-
-        // C7 ActionResponse
-        // 01 Normal
-        // C1 Invoke id
-        // 00 Result success
-        // 01 Get-Data-Result = true
-        // 01 Data-Access-Result (0 == Data)
-        // 0B  OBJECT_UNAVAILABLE
-
-/*
-        // FIXME: support this?
-
-        ACTION test:
-
-        C701C1FA00
-        <ActionResponse>
-          <ActionResponseNormal>
-            <InvokeIdAndPriority Value="C1" />
-            <Result Value="OtherReason" />
-          </ActionResponseNormal>
-        </ActionResponse>
-
-        // In case of data:
-         C7 01 C1
-
-           00 Action result Success
-           01 Access-Data result
-           00 It is Data
-               09 20 619446AE4664788D7C2FF7517C53C0CD44F7B4A5EF3BE9CA08B8A262FE985924
-
-    // OTHER :
-      C701C1FA00
-
-<ActionResponse>
-  <ActionResponseNormal>
-    <InvokeIdAndPriority Value="C1" />
-    <Result Value="OtherReason" />
-    <ReturnParameters>
-      <Result Value="OtherReason" />
-    </ReturnParameters>
-  </ActionResponseNormal>
-</ActionResponse>
-
-
-*/
-
+        /* Action is a SET followed by a GET
+         * Two statuses: Action-Result (SET part) and Get-Data-Result (GET part)
+         * Format: C7 01 <invoke_id> <action_result> <presence_flag> [<data_or_result>]
+         */
 
         valid = valid && svc_is_valid_action_result(result);
         if (valid)
