@@ -1,0 +1,133 @@
+/**
+ * \file test_cosemlib.cpp
+ * \brief Tests for cosemlib umbrella header and basic API
+ *
+ *  Copyright (c) 2024, OpenDLMS contributors
+ *  SPDX-License-Identifier: MIT
+ */
+
+#include "catch.hpp"
+#include "cosemlib.h"
+#include <cstring>
+
+extern "C" void csm_sys_init();
+
+/* ── Umbrella header tests ───────────────────────────────────────────────── */
+
+TEST_CASE("cosemlib.h compiles and provides version info", "[cosemlib]")
+{
+    REQUIRE(COSEMLIB_VERSION_MAJOR == 1);
+    REQUIRE(COSEMLIB_VERSION_MINOR == 1);
+    REQUIRE(COSEMLIB_VERSION_PATCH == 0);
+    REQUIRE(strcmp(COSEMLIB_VERSION_STRING, "1.1.0") == 0);
+}
+
+TEST_CASE("cosemlib.h provides all core types", "[cosemlib]")
+{
+    /* Verify all core types are accessible via umbrella header */
+    csm_block_state bs;
+    csm_block_init(&bs);
+    REQUIRE(bs.direction == CSM_BLOCK_DIR_NONE);
+
+    csm_array arr;
+    uint8_t buf[32];
+    csm_array_init(&arr, buf, sizeof(buf), 0, 0);
+    REQUIRE(csm_array_written(&arr) == 0);
+
+    csm_response resp;
+    csm_client_init(NULL, &resp);
+    REQUIRE(resp.type == 0U);
+}
+
+TEST_CASE("cosemlib.h provides server/client API", "[cosemlib]")
+{
+    /* Verify server/client types are forward-declared (opaque, pointer-only) */
+    csm_server *server = NULL;
+    csm_client *client = NULL;
+    (void)server;
+    (void)client;
+
+    /* Types compile — actual functionality tested in integration tests */
+    REQUIRE(true);
+}
+
+/* ── Basic API smoke tests ───────────────────────────────────────────────── */
+
+TEST_CASE("csm_array basic operations", "[cosemlib][array]")
+{
+    uint8_t buf[64];
+    csm_array arr;
+    csm_array_init(&arr, buf, sizeof(buf), 0, 0);
+
+    /* Write some data */
+    REQUIRE(csm_array_write_u8(&arr, 0xC0) == 1);
+    REQUIRE(csm_array_write_u8(&arr, 0x01) == 1);
+    REQUIRE(csm_array_write_u16(&arr, 0x1234) == 1);
+    REQUIRE(csm_array_written(&arr) == 4);
+
+    /* Read it back */
+    uint8_t u8;
+    uint16_t u16;
+    arr.rd_index = 0;
+    REQUIRE(csm_array_read_u8(&arr, &u8) == 1);
+    REQUIRE(u8 == 0xC0);
+    REQUIRE(csm_array_read_u8(&arr, &u8) == 1);
+    REQUIRE(u8 == 0x01);
+    REQUIRE(csm_array_read_u16(&arr, &u16) == 1);
+    REQUIRE(u16 == 0x1234);
+}
+
+TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    REQUIRE(state.direction == CSM_BLOCK_DIR_NONE);
+    REQUIRE(state.active == 0U);
+    REQUIRE(state.data == NULL);
+
+    /* Start a server→client transfer */
+    static const uint8_t data[] = {1, 2, 3, 4, 5};
+    REQUIRE(csm_block_start_server(&state, 0x01, data, sizeof(data), 0) == 1);
+    REQUIRE(state.active == 1U);
+    REQUIRE(state.direction == CSM_BLOCK_DIR_SERVER_TO_CLIENT);
+
+    /* Encode in one block */
+    uint8_t buf[32];
+    csm_array arr;
+    csm_array_init(&arr, buf, sizeof(buf), 0, 0);
+    REQUIRE(csm_block_encode_first(&state, &arr, sizeof(buf)) == 1);
+    REQUIRE(state.active == 0U);
+    REQUIRE(csm_array_written(&arr) == 8 + sizeof(data));
+}
+
+TEST_CASE("csm_channel_ctx API", "[cosemlib][channel]")
+{
+    csm_channel channels[2];
+    csm_asso_state assos[2];
+    csm_asso_config configs[2];
+
+    configs[0].llc.ssap = 0;
+    configs[0].llc.dsap = 1;
+    configs[1].llc.ssap = 1;
+    configs[1].llc.dsap = 0;
+
+    csm_channel_ctx ctx;
+    csm_channel_ctx_init(&ctx, channels, 2, assos, configs, 2);
+
+    REQUIRE(ctx.channels == channels);
+    REQUIRE(ctx.channel_size == 2);
+    REQUIRE(ctx.asso_states == assos);
+    REQUIRE(ctx.asso_configs == configs);
+    REQUIRE(ctx.asso_size == 2);
+    REQUIRE(ctx.db_handler == NULL);
+
+    /* New channel */
+    uint8_t ch = csm_channel_new_ctx(&ctx);
+    REQUIRE(ch == 1U);
+    REQUIRE(channels[0].request.channel_id == 1U);
+
+    /* Disconnect */
+    csm_channel_disconnect_ctx(&ctx, ch);
+    REQUIRE(channels[0].request.channel_id == INVALID_CHANNEL_ID);
+}

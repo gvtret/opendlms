@@ -94,7 +94,7 @@ target_include_directories(${PROJECT_NAME}
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-    PUBLIC_HEADER "src/csm_definitions.h;src/csm_array.h;src/csm_services.h;src/csm_server.h;src/csm_block_transfer.h;src/csm_channel.h"
+    PUBLIC_HEADER "src/cosemlib.h;src/csm_definitions.h;src/csm_array.h;src/csm_services.h;src/csm_server.h;src/csm_block_transfer.h;src/csm_channel.h"
     C_STANDARD 99
     C_STANDARD_REQUIRED ON
 )
