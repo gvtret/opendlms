@@ -183,13 +183,15 @@ int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
     sc.sh_byte = 0U;
     sc.sh_bit_field.authentication = 1U;
 
-    /* FIXME: get the IC from the vital data manager */
-    uint32_t ic = 0x01234567U;
     uint32_t offset = array->offset;
 
     if ((ctx != NULL) && (offset >= CSM_DEF_MAX_HLS_SIZE))
     {
         csm_asso_state *asso = ctx->channels[request->channel_id - 1U].asso;
+
+        /* Use per-association invocation counter */
+        uint32_t ic = asso->invocation_counter;
+        asso->invocation_counter++;
 
         array->offset = offset - (asso->handshake.ctos.size - CSM_DEF_SEC_HDR_SIZE - 2U);
         csm_array_write_buff(array, &asso->handshake.ctos.value[0], asso->handshake.ctos.size);

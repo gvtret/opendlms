@@ -358,7 +358,23 @@ static csm_acse_code acse_user_info_decoder(csm_asso_state *state, csm_ber *ber,
                     {
                         if (byte != AXDR_TAG_NULL)
                         {
-                            // FIXME: copy the dedicated key
+                            /* Dedicated key: octet-string (tag 0x09) */
+                            if (byte == AXDR_TAG_OCTETSTRING)
+                            {
+                                uint8_t key_len = 0;
+                                if (csm_array_read_u8(array, &key_len) && (key_len <= 16U))
+                                {
+                                    memcpy(state->dedicated_key, &array->buff[array->rd_index], key_len);
+                                    state->dedicated_key_size = key_len;
+                                    csm_array_reader_jump(array, key_len);
+                                    CSM_LOG("[ACSE] Dedicated key received (%d bytes)", key_len);
+                                }
+                            }
+                            else
+                            {
+                                /* Skip unknown data */
+                                csm_array_read_u8(array, &byte);
+                            }
                         }
 
                         // response-allowed: boolean (0 or 1), not null
@@ -889,14 +905,24 @@ static csm_acse_code acse_user_info_encoder(csm_asso_state *state, csm_ber *ber,
     }
     else
     {
-        // AARQ is always plaintext per IEC 62056-5-3 — no glo-ciphering
-        valid = valid && csm_array_write_u8(array, 0U); // null, no Dedicated key (FIXME: add dedicated key support)
+        /* AARQ is always plaintext per IEC 62056-5-3 — no glo-ciphering */
+        if (state->dedicated_key_size > 0U)
+        {
+            /* Encode dedicated key as octet-string */
+            valid = valid && csm_array_write_u8(array, AXDR_TAG_OCTETSTRING);
+            valid = valid && csm_array_write_u8(array, state->dedicated_key_size);
+            valid = valid && csm_array_write_buff(array, state->dedicated_key, state->dedicated_key_size);
+        }
+        else
+        {
+            valid = valid && csm_array_write_u8(array, 0U); /* null, no dedicated key */
+        }
         valid = valid && csm_array_write_u8(array, 0U); // response-allowed (false)
         valid = valid && csm_array_write_u8(array, 0U); // proposed-quality-of-service (false)
         valid = valid && csm_array_write_u8(array, 6U);// proposed-dlms-version-number
     }
 
-    // Conformance block   FIXME: to be clean, rely on a real BER encoder for the long TAG
+    // Conformance block — use proper BER long tag encoding (0x5F 0x1F)
     valid = valid && csm_array_write_u8(array, 0x5FU);
     valid = valid && csm_array_write_u8(array, 0x1FU);
     valid = valid && csm_array_write_u8(array, 4U); // Size of the conformance block data

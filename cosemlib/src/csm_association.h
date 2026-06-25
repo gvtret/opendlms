@@ -189,6 +189,13 @@ typedef struct
 
     // Block transfer state (GBT)
     csm_block_state block_transfer;
+
+    // Security: invocation counter (monotonically increasing, per-association)
+    uint32_t invocation_counter;
+
+    // Security: dedicated key (optional, for negotiated security)
+    uint8_t dedicated_key[16];
+    uint8_t dedicated_key_size;
 } csm_asso_state;
 
 void csm_asso_init(csm_asso_state *state);
