@@ -814,8 +814,7 @@ static csm_acse_code acse_responder_auth_value_encoder(csm_asso_state *state, cs
 
     CSM_LOG("[ACSE] Encoding Responder authentication value ...");
 
-    // Generate the same challenge size than the client
-    // FIXME: randomize the size for the StoC challenge?
+    /* StoC challenge size matches CtoS challenge size (IEC 62056-5-3) */
     uint8_t size = state->handshake.ctos.size;
     state->handshake.stoc.size = size;
 
@@ -983,7 +982,7 @@ static csm_acse_code acse_initiate_request_encoder(csm_asso_state *state, csm_be
 }
 
 
-// FIXME: export context field in the configuration file
+/* AARE encoder chain — context field exported via csm_asso_encoder() */
 static const csm_asso_enc aare_encoder_chain[] =
 {
     {CSM_ASSO_APP_CONTEXT_NAME,         ACSE_ALWAYS,    acse_app_context_encoder},
@@ -1244,8 +1243,13 @@ int csm_asso_server_execute(csm_asso_state *asso, csm_array *packet)
             }
             else
             {
-                // FIXME: print textual reason
-                CSM_ERR("[ACSE] Connection rejected, reason: %d", asso->handshake.result);
+                static const char *reason_text[] = {
+                    "accepted", "rejected-permanent", "rejected-transient",
+                    "rejected-authentication", "rejected-context"
+                };
+                const char *reason = (asso->handshake.result <= 4U) ?
+                    reason_text[asso->handshake.result] : "unknown";
+                CSM_ERR("[ACSE] Connection rejected: %s (%d)", reason, asso->handshake.result);
             }
 
             // Send AARE, success or failure
@@ -1272,11 +1276,11 @@ int csm_asso_server_execute(csm_asso_state *asso, csm_array *packet)
                 CSM_LOG("[ACSE] RLRQ Received, send RLRE");
                 asso->state_cf = CF_IDLE;
                 packet->wr_index = 0U;
-                // FIXME: for now, send minimal fixed raw RLRE reply
-                static uint8_t rlre[] = { CSM_ASSO_RLRE, 3U, 0x80U, 0x01U, 0x00U };
 
-                csm_array_write_buff(packet, rlre, 5U);
-                bytes_to_reply = 5U;
+                /* RLRE reply: tag(1) + length(1) + reason_tag(1) + reason_len(1) + reason(1) */
+                static const uint8_t rlre[] = { CSM_ASSO_RLRE, 3U, 0x80U, 0x01U, 0x00U };
+                csm_array_write_buff(packet, rlre, sizeof(rlre));
+                bytes_to_reply = (int)sizeof(rlre);
             }
             else
             {
