@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(opendlms VERSION 1.0.0 LANGUAGES C CXX)
+project(opendlms VERSION 1.1.0 LANGUAGES C CXX)
 
 # ── Options ──────────────────────────────────────────────────────────────────
 option(OPEN_DLMS_BUILD_TESTS      "Build unit tests"             ON)
@@ -8,6 +8,7 @@ option(OPEN_DLMS_BUILD_METER_SIM  "Build meter simulator exe"   OFF)
 option(OPEN_DLMS_BUILD_CLIENT     "Build client tool (needs Gurux)" OFF)
 option(OPEN_DLMS_BUILD_STUDIO     "Build Shaddam Studio (needs Qt)" OFF)
 option(OPEN_DLMS_BUILD_DOCS       "Build WASM doc targets (needs Emscripten)" OFF)
+option(COSEMLIB_SHARED             "Build cosemlib as shared library" OFF)
 
 # ── Core library ─────────────────────────────────────────────────────────────
 add_subdirectory(cosemlib)

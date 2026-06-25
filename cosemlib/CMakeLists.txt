@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 3.10)
-project(cosemlib LANGUAGES C)
+project(cosemlib VERSION 1.1.0 LANGUAGES C)
 
-add_library(${PROJECT_NAME} STATIC)
+option(COSEMLIB_SHARED "Build as shared library" OFF)
+
+if(COSEMLIB_SHARED)
+    add_library(${PROJECT_NAME} SHARED)
+else()
+    add_library(${PROJECT_NAME} STATIC)
+endif()
 
 target_sources(${PROJECT_NAME} PRIVATE
     src/csm_array.c
@@ -73,12 +79,59 @@ target_sources(${PROJECT_NAME} PRIVATE
     profile/csm_profile_row.c
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/util
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypto
-    ${CMAKE_CURRENT_SOURCE_DIR}/hdlc
-    ${CMAKE_CURRENT_SOURCE_DIR}/ic
-    ${CMAKE_CURRENT_SOURCE_DIR}/model
-    ${CMAKE_CURRENT_SOURCE_DIR}/profile
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/util>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/crypto>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/hdlc>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ic>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/model>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/profile>
+        $<INSTALL_INTERFACE:include/opendlms>
+)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    PUBLIC_HEADER "src/csm_definitions.h;src/csm_array.h;src/csm_services.h;src/csm_server.h;src/csm_block_transfer.h;src/csm_channel.h"
+    C_STANDARD 99
+    C_STANDARD_REQUIRED ON
+)
+
+if(COSEMLIB_SHARED)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE COSEMLIB_SHARED)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        DEFINE_SYMBOL COSEMLIB_EXPORT
+        WINDOWS_EXPORT_ALL_SYMBOLS ON
+    )
+endif()
+
+# ── Install ─────────────────────────────────────────────────────────────────
+
+include(GNUInstallDirs)
+
+install(TARGETS ${PROJECT_NAME}
+    EXPORT OpenDLMSConfig
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/opendlms
+)
+
+install(EXPORT OpenDLMSConfig
+    NAMESPACE OpenDLMS::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/opendlms
+)
+
+# ── pkg-config ──────────────────────────────────────────────────────────────
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/opendlms.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/opendlms.pc
+    @ONLY
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/opendlms.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
