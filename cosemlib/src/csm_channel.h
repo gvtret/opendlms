@@ -17,15 +17,44 @@
 
 #define INVALID_CHANNEL_ID 0U
 
-
-typedef struct
+typedef struct csm_channel_s
 {
     csm_request request;
     csm_asso_state *asso;   //!< Association used for that channel
 
 } csm_channel;
 
+/**
+ * \brief Channel context — holds all state previously stored as globals
+ *
+ *  Eliminates global mutable state for thread safety.
+ *  One context per server/client instance.
+ */
+typedef struct
+{
+    csm_channel             *channels;
+    uint8_t                  channel_size;
+    csm_asso_state          *asso_states;
+    const csm_asso_config   *asso_configs;
+    uint8_t                  asso_size;
+    csm_db_access_handler    db_handler;
+} csm_channel_ctx;
 
+
+void csm_channel_ctx_init(csm_channel_ctx *ctx,
+                          csm_channel *channels, uint8_t chan_size,
+                          csm_asso_state *assos, const csm_asso_config *assos_config,
+                          uint8_t asso_size);
+
+void csm_channel_ctx_set_db(csm_channel_ctx *ctx, csm_db_access_handler handler);
+
+void csm_channel_disconnect_ctx(csm_channel_ctx *ctx, uint8_t channel);
+int csm_channel_hls_pass3_ctx(csm_channel_ctx *ctx, csm_array *array, csm_request *request);
+int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_request *request);
+int csm_channel_execute_ctx(csm_channel_ctx *ctx, csm_db_context_t *db_ctx, uint8_t channel, csm_array *packet);
+uint8_t csm_channel_new_ctx(csm_channel_ctx *ctx);
+
+/* Backward-compatible API (uses static default context — single-instance only) */
 void csm_channel_init(csm_channel *channels, uint8_t chan_size, csm_asso_state *assos, const csm_asso_config *assos_config, uint8_t asso_size);
 void csm_channel_disconnect(uint8_t channel);
 int csm_channel_hls_pass3(csm_array *array, csm_request *request);

@@ -670,17 +670,31 @@ void csm_services_init(const csm_db_access_handler db_access)
 
 int csm_services_hls_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
-    // FIXME: restrict only to the current association object and reply_to_hls_authentication method
-    CSM_LOG("[SVC] Received HLS Pass 3 -- FIXME accept only current association object");
-
+    CSM_LOG("[SVC] Received HLS Pass 3");
     return csm_server_services_execute(ctx, state, request, array);
 }
 
 int csm_server_services_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
+    return csm_server_services_execute_handler(database, ctx, state, request, array);
+}
+
+int csm_services_hls_execute_handler(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+{
+    CSM_LOG("[SVC] Received HLS Pass 3 (handler)");
+    return csm_server_services_execute_handler(handler, ctx, state, request, array);
+}
+
+int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+{
     int number_of_bytes = 0;
-    // FIXME: test the array size: minimum/maximum data size allowed
-    if (database != NULL)
+
+    /* Temporarily set global for service decoders that use it directly */
+    /* TODO: refactor service decoders to accept handler parameter */
+    csm_db_access_handler saved_db = database;
+    database = handler;
+
+    if (handler != NULL)
     {
         uint8_t tag;
         if (csm_array_read_u8(array, &tag))
@@ -704,6 +718,10 @@ int csm_server_services_execute(csm_db_context_t *ctx, csm_asso_state *state, cs
             }
         }
     }
+
+    /* Restore global */
+    database = saved_db;
+
     return number_of_bytes;
 }
 

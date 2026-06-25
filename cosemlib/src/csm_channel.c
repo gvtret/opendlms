@@ -15,23 +15,21 @@
 #include "csm_security.h"
 #include "csm_axdr_codec.h"
 
-// List of channels
-static csm_channel *channel_list = NULL;
-static uint8_t channel_list_size;
+/* ── Context-based API (thread-safe) ─────────────────────────────────────── */
 
-// List of association state and ocnfiguration
-static csm_asso_state *asso_list = NULL;
-static const csm_asso_config *asso_conf_list = NULL;
-static uint8_t asso_list_size;
-
-void csm_channel_init(csm_channel *channels, uint8_t chan_size, csm_asso_state *assos, const csm_asso_config *assos_config, uint8_t asso_size)
+void csm_channel_ctx_init(csm_channel_ctx *ctx,
+                          csm_channel *channels, uint8_t chan_size,
+                          csm_asso_state *assos, const csm_asso_config *assos_config,
+                          uint8_t asso_size)
 {
-    // Save system channels and
-    channel_list = channels;
-    channel_list_size = chan_size;
-    asso_list = assos;
-    asso_conf_list = assos_config;
-    asso_list_size = asso_size;
+    if (ctx == NULL) return;
+
+    ctx->channels = channels;
+    ctx->channel_size = chan_size;
+    ctx->asso_states = assos;
+    ctx->asso_configs = assos_config;
+    ctx->asso_size = asso_size;
+    ctx->db_handler = NULL;
 
     for (uint32_t i = 0U; i < asso_size; i++)
     {
@@ -45,37 +43,44 @@ void csm_channel_init(csm_channel *channels, uint8_t chan_size, csm_asso_state *
     }
 }
 
-int csm_channel_execute(csm_db_context_t *ctx, uint8_t channel, csm_array *packet)
+void csm_channel_ctx_set_db(csm_channel_ctx *ctx, csm_db_access_handler handler)
+{
+    if (ctx != NULL)
+    {
+        ctx->db_handler = handler;
+    }
+}
+
+int csm_channel_execute_ctx(csm_channel_ctx *ctx, csm_db_context_t *db_ctx, uint8_t channel, csm_array *packet)
 {
     int ret = FALSE;
 
-    if ((channel_list == NULL) ||
-        (asso_list == NULL) ||
-        (asso_conf_list == NULL))
+    if ((ctx == NULL) ||
+        (ctx->channels == NULL) ||
+        (ctx->asso_states == NULL) ||
+        (ctx->asso_configs == NULL))
     {
-        CSM_ERR("[CHAN] Stack is not initialized. Call csm_channel_init() first.");
+        CSM_ERR("[CHAN] Stack is not initialized. Call csm_channel_ctx_init() first.");
         return ret;
     }
 
     uint32_t i = 0U;
 
-    // We have to find the association used by this request
-    // Find the valid association.
-    for (i = 0U; i < asso_list_size; i++)
+    /* Find the association used by this request */
+    for (i = 0U; i < ctx->asso_size; i++)
     {
-        if ((channel_list[channel].request.llc.ssap == asso_conf_list[i].llc.ssap) &&
-            (channel_list[channel].request.llc.dsap == asso_conf_list[i].llc.dsap))
+        if ((ctx->channels[channel].request.llc.ssap == ctx->asso_configs[i].llc.ssap) &&
+            (ctx->channels[channel].request.llc.dsap == ctx->asso_configs[i].llc.dsap))
         {
             break;
         }
     }
 
-    if (i < asso_list_size)
+    if (i < ctx->asso_size)
     {
-        // Association found, use this one
-        // Link the state with the configuration structure
-        asso_list[i].config = &asso_conf_list[i];
-        channel_list[channel].asso = &asso_list[i];
+        /* Association found, use this one */
+        ctx->asso_states[i].config = &ctx->asso_configs[i];
+        ctx->channels[channel].asso = &ctx->asso_states[i];
 
         uint8_t tag;
         if (csm_array_get(packet, 0U, &tag))
@@ -86,17 +91,17 @@ int csm_channel_execute(csm_db_context_t *ctx, uint8_t channel, csm_array *packe
             case CSM_ASSO_AARQ:
             case CSM_ASSO_RLRE:
             case CSM_ASSO_RLRQ:
-                ret = csm_asso_server_execute(&asso_list[i], packet);
+                ret = csm_asso_server_execute(&ctx->asso_states[i], packet);
                 break;
             default:
-                if (asso_list[i].state_cf == CF_ASSOCIATED)
+                if (ctx->asso_states[i].state_cf == CF_ASSOCIATED)
                 {
-                    ret = csm_server_services_execute(ctx, &asso_list[i], &channel_list[channel].request, packet);
+                    ret = csm_server_services_execute_handler(ctx->db_handler, db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
                 }
-                else if (asso_list[i].state_cf == CF_ASSOCIATION_PENDING)
+                else if (ctx->asso_states[i].state_cf == CF_ASSOCIATION_PENDING)
                 {
-                    // In case of HLS, we have to access to one attribute
-                    ret = csm_services_hls_execute(ctx, &asso_list[i], &channel_list[channel].request, packet);
+                    /* In case of HLS, we have to access to one attribute */
+                    ret = csm_services_hls_execute_handler(ctx->db_handler, db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
                 }
                 else
                 {
@@ -109,7 +114,7 @@ int csm_channel_execute(csm_db_context_t *ctx, uint8_t channel, csm_array *packe
     return ret;
 }
 
-int csm_channel_hls_pass3(csm_array *array, csm_request *request)
+int csm_channel_hls_pass3_ctx(csm_channel_ctx *ctx, csm_array *array, csm_request *request)
 {
     csm_sec_control_byte sc;
     uint32_t ic;
@@ -117,36 +122,35 @@ int csm_channel_hls_pass3(csm_array *array, csm_request *request)
 
     csm_array_dump(array);
 
-    // Save SC and IC
+    /* Save SC and IC */
     csm_array_read_u8(array, &sc.sh_byte);
     csm_array_read_u32(array, &ic);
 
-    // Remaining data should be the TAG
+    /* Remaining data should be the TAG */
     uint32_t unread = csm_array_unread(array);
 
     if (unread == 12U)
     {
-        uint32_t offset = array->offset; // Save the original offset
+        uint32_t offset = array->offset;
 
-        if (offset >= CSM_DEF_MAX_HLS_SIZE)
+        if ((ctx != NULL) && (offset >= CSM_DEF_MAX_HLS_SIZE))
         {
-            csm_asso_state *asso = channel_list[request->channel_id - 1U].asso;
+            csm_asso_state *asso = ctx->channels[request->channel_id - 1U].asso;
 
-            // Reserve memory & prepare packet
+            /* Reserve memory & prepare packet */
             array->offset = (offset + array->rd_index) - (CSM_DEF_SEC_HDR_SIZE + asso->handshake.stoc.size);
             array->rd_index = 0U;
             array->wr_index = 0U;
 
-            // Build a new fake packet with: SC || IC || Information || Tag
-            // Tag is left untouched, other data are appended just before
+            /* Build a new fake packet with: SC || IC || Information || Tag */
             csm_array_write_u8(array, sc.sh_byte);
             csm_array_write_u32(array, ic);
             csm_array_write_buff(array, &asso->handshake.stoc.value[0], asso->handshake.stoc.size);
-            csm_array_writer_jump(array, 12U); // Add the tag (already in the buffer)
+            csm_array_writer_jump(array, 12U);
 
             csm_sec_result res = csm_sec_auth_decrypt(array, request, &asso->client_app_title[0]);
 
-            array->offset = offset; // Restore original offset
+            array->offset = offset;
 
             if (res == CSM_SEC_OK)
             {
@@ -171,43 +175,28 @@ int csm_channel_hls_pass3(csm_array *array, csm_request *request)
     return ret;
 }
 
-int csm_channel_hls_pass4(csm_array *array, csm_request *request)
+int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_request *request)
 {
     int ret = FALSE;
-    // Output buffer state before function call
-    //    | offset |
-    // rd           ^
-    // wr           ^
-
-
-    // Buffer contents prepared for security processing
-    //    | reduced offset | Information (CtoS) | T
-    // rd                   ^
-    // wr                                        ^ (tag is appended)
-
-    // Output buffer state at the end of the function call
-    //    | offset |  OctetString | SC | IC | T |
-    // rd           ^
-    // wr                                        ^
 
     csm_sec_control_byte sc;
     sc.sh_byte = 0U;
-    sc.sh_bit_field.authentication = 1U; // Turn on only authentication
+    sc.sh_bit_field.authentication = 1U;
 
-    uint32_t ic = 0x01234567U; // FIXME: get the IC from the vital data manager
-    uint32_t offset = array->offset; // save offset
+    /* FIXME: get the IC from the vital data manager */
+    uint32_t ic = 0x01234567U;
+    uint32_t offset = array->offset;
 
-    if (offset >= CSM_DEF_MAX_HLS_SIZE)
+    if ((ctx != NULL) && (offset >= CSM_DEF_MAX_HLS_SIZE))
     {
-        csm_asso_state *asso = channel_list[request->channel_id - 1U].asso;       
+        csm_asso_state *asso = ctx->channels[request->channel_id - 1U].asso;
 
-        array->offset = offset - (asso->handshake.ctos.size - CSM_DEF_SEC_HDR_SIZE - 2U); // 2U is the OctetString encoding
-        // Write information data to authenticate
+        array->offset = offset - (asso->handshake.ctos.size - CSM_DEF_SEC_HDR_SIZE - 2U);
         csm_array_write_buff(array, &asso->handshake.ctos.value[0], asso->handshake.ctos.size);
 
         csm_sec_result res = csm_sec_auth_encrypt(array, request, csm_sys_get_system_title(), sc, ic);
 
-        array->offset = offset; // restore offset
+        array->offset = offset;
         array->wr_index = 0;
 
         int valid = csm_array_write_u8(array, AXDR_TAG_OCTETSTRING);
@@ -234,34 +223,93 @@ int csm_channel_hls_pass4(csm_array *array, csm_request *request)
     return ret;
 }
 
-
-void csm_channel_disconnect(uint8_t channel)
+void csm_channel_disconnect_ctx(csm_channel_ctx *ctx, uint8_t channel)
 {
-    if (channel < channel_list_size)
+    if ((ctx != NULL) && (channel < ctx->channel_size))
     {
-        channel_list[channel].request.channel_id = INVALID_CHANNEL_ID;
-        if (channel_list[channel].asso != NULL)
+        ctx->channels[channel].request.channel_id = INVALID_CHANNEL_ID;
+        if (ctx->channels[channel].asso != NULL)
         {
-            channel_list[channel].asso->state_cf = CF_IDLE;
+            ctx->channels[channel].asso->state_cf = CF_IDLE;
         }
     }
 }
 
-uint8_t csm_channel_new(void)
+uint8_t csm_channel_new_ctx(csm_channel_ctx *ctx)
 {
     uint8_t chan_id = INVALID_CHANNEL_ID;
-    // search for a valid free channel
-    // In case of CONN_NEW event, channel parameter is 0 (means invalid)
-    for (uint32_t i = 0U; i < channel_list_size; i++)
+
+    if (ctx != NULL)
     {
-        if (channel_list[i].request.channel_id == INVALID_CHANNEL_ID)
+        for (uint32_t i = 0U; i < ctx->channel_size; i++)
         {
-            chan_id = i + 1U; // generate a channel id
-            channel_list[i].request.channel_id = chan_id;
-            CSM_LOG("[CHAN] Grant connection to channel %d", chan_id);
-            break;
+            if (ctx->channels[i].request.channel_id == INVALID_CHANNEL_ID)
+            {
+                chan_id = i + 1U;
+                ctx->channels[i].request.channel_id = chan_id;
+                CSM_LOG("[CHAN] Grant connection to channel %d", chan_id);
+                break;
+            }
         }
     }
 
     return chan_id;
+}
+
+/* ── Legacy API (backward compatibility, single-instance only) ────────────── */
+
+static csm_channel_ctx *g_default_ctx = NULL;
+
+void csm_channel_init(csm_channel *channels, uint8_t chan_size,
+                      csm_asso_state *assos, const csm_asso_config *assos_config,
+                      uint8_t asso_size)
+{
+    /* Allocate context statically for legacy API */
+    static csm_channel_ctx legacy_ctx;
+    g_default_ctx = &legacy_ctx;
+    csm_channel_ctx_init(g_default_ctx, channels, chan_size, assos, assos_config, asso_size);
+}
+
+void csm_channel_disconnect(uint8_t channel)
+{
+    if (g_default_ctx != NULL)
+    {
+        csm_channel_disconnect_ctx(g_default_ctx, channel);
+    }
+}
+
+int csm_channel_hls_pass3(csm_array *array, csm_request *request)
+{
+    if (g_default_ctx != NULL)
+    {
+        return csm_channel_hls_pass3_ctx(g_default_ctx, array, request);
+    }
+    return FALSE;
+}
+
+int csm_channel_hls_pass4(csm_array *array, csm_request *request)
+{
+    if (g_default_ctx != NULL)
+    {
+        return csm_channel_hls_pass4_ctx(g_default_ctx, array, request);
+    }
+    return FALSE;
+}
+
+int csm_channel_execute(csm_db_context_t *ctx, uint8_t channel, csm_array *packet)
+{
+    if (g_default_ctx != NULL)
+    {
+        return csm_channel_execute_ctx(g_default_ctx, ctx, channel, packet);
+    }
+    return FALSE;
+}
+
+uint8_t csm_channel_new(void)
+{
+    if (g_default_ctx != NULL)
+    {
+        return csm_channel_new_ctx(g_default_ctx);
+    }
+    return INVALID_CHANNEL_ID;
 }

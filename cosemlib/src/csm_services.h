@@ -135,11 +135,17 @@ int csm_client_encode_selective_access_by_range(csm_array *array, csm_object_t *
 
 void csm_services_init(const csm_db_access_handler db_access);
 
-// Return he number of bytes to transfer back, 0 if no response
+// Return the number of bytes to transfer back, 0 if no response
 int csm_server_services_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array);
+
+// Execute with explicit handler (thread-safe, no global state)
+int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array);
 
 // Specific method in case of HLS authentication
 int csm_services_hls_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array);
+
+// HLS execute with explicit handler (thread-safe)
+int csm_services_hls_execute_handler(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array);
 
 #ifdef __cplusplus
 }

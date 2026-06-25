@@ -19,6 +19,7 @@ struct csm_server {
     csm_transport     *transport;
     csm_framing_type   framing;
     uint8_t            channel;
+    csm_channel_ctx    chan_ctx;
     csm_channel        channels[CSM_SERVER_MAX_CHANNELS];
     csm_asso_state     asso_states[CSM_SERVER_MAX_CHANNELS];
     csm_asso_config    asso_configs[CSM_SERVER_MAX_CHANNELS];
@@ -46,8 +47,8 @@ int csm_server_init(csm_server *server, csm_transport *transport,
         server->asso_configs[i].is_auto_connected = 0;
     }
 
-    csm_channel_init(server->channels, CSM_SERVER_MAX_CHANNELS,
-                     server->asso_states, server->asso_configs, CSM_SERVER_MAX_CHANNELS);
+    csm_channel_ctx_init(&server->chan_ctx, server->channels, CSM_SERVER_MAX_CHANNELS,
+                         server->asso_states, server->asso_configs, CSM_SERVER_MAX_CHANNELS);
 
     memset(&server->db_ctx, 0, sizeof(server->db_ctx));
 
@@ -58,7 +59,7 @@ void csm_server_register_db(csm_server *server, csm_db_access_handler handler)
 {
     if (server)
     {
-        csm_services_init(handler);
+        csm_channel_ctx_set_db(&server->chan_ctx, handler);
     }
 }
 
@@ -91,7 +92,7 @@ int csm_server_poll(csm_server *server, uint32_t timeout_ms)
     memcpy(server->tx_buf, apdu, apdu_len);
 
     /* Process through channel/association layer */
-    int resp_len = csm_channel_execute(&server->db_ctx, ch, &pkt);
+    int resp_len = csm_channel_execute_ctx(&server->chan_ctx, &server->db_ctx, ch, &pkt);
 
     if (resp_len > 0)
     {
@@ -137,6 +138,7 @@ struct csm_client {
     csm_transport     *transport;
     csm_framing_type   framing;
     uint8_t            channel;
+    csm_channel_ctx    chan_ctx;
     csm_channel        channels[CSM_SERVER_MAX_CHANNELS];
     csm_asso_state     asso_states[CSM_SERVER_MAX_CHANNELS];
     csm_asso_config    asso_configs[CSM_SERVER_MAX_CHANNELS];
@@ -163,8 +165,8 @@ int csm_dlms_client_init(csm_client *client, csm_transport *transport,
         client->asso_configs[i].is_auto_connected = 0;
     }
 
-    csm_channel_init(client->channels, CSM_SERVER_MAX_CHANNELS,
-                     client->asso_states, client->asso_configs, CSM_SERVER_MAX_CHANNELS);
+    csm_channel_ctx_init(&client->chan_ctx, client->channels, CSM_SERVER_MAX_CHANNELS,
+                         client->asso_states, client->asso_configs, CSM_SERVER_MAX_CHANNELS);
 
     memset(&client->db_ctx, 0, sizeof(client->db_ctx));
 
