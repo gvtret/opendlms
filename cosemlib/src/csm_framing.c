@@ -8,6 +8,7 @@
 
 #include "csm_framing.h"
 #include "csm_transport.h"
+#include "hdlc.h"
 #include <string.h>
 
 /* ── COSEM-TCP Wrapper (IEC 62056-5-3 §5.1.4) ──────────────────────────── */
@@ -145,11 +146,21 @@ int csm_framing_frame(csm_framing_type type, uint8_t direction,
         return (int)apdu_len;
 
     case CSM_FRAMING_HDLC:
-        /* HDLC framing TODO: integrate with hdlc module */
-        if (apdu_len > out_size)
-            return CSM_TRANSPORT_ERR_OVERFLOW;
-        memcpy(out, apdu, apdu_len);
-        return (int)apdu_len;
+    {
+        /* HDLC framing — use hdlc module */
+        hdlc_t hdlc;
+        hdlc_init(&hdlc);
+        hdlc.sender = HDLC_SERVER;
+        hdlc.cmd_resp = (direction == 0) ? 0 : 1;
+
+        int result = hdlc_encode(&hdlc, out, (uint16_t)out_size, HDLC_PACKET_TYPE_I,
+                                 apdu, (uint16_t)apdu_len);
+        if (result == HDLC_OK)
+        {
+            return (int)hdlc.data_size;
+        }
+        return CSM_TRANSPORT_ERR;
+    }
 
     default:
         return CSM_TRANSPORT_ERR;
@@ -171,10 +182,20 @@ int csm_framing_deframe(csm_framing_type type,
         return CSM_TRANSPORT_OK;
 
     case CSM_FRAMING_HDLC:
-        /* HDLC deframing TODO */
-        *apdu = data;
-        *apdu_len = data_len;
-        return CSM_TRANSPORT_OK;
+    {
+        /* HDLC deframing — use hdlc module */
+        hdlc_t hdlc;
+        hdlc_init(&hdlc);
+
+        int result = hdlc_decode(&hdlc, data, (uint16_t)data_len);
+        if (result == HDLC_OK)
+        {
+            *apdu = &data[hdlc.data_index];
+            *apdu_len = hdlc.data_size;
+            return CSM_TRANSPORT_OK;
+        }
+        return CSM_TRANSPORT_ERR;
+    }
 
     default:
         return CSM_TRANSPORT_ERR;
