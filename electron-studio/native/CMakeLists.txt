@@ -10,8 +10,8 @@ include_directories(${CMAKE_JS_INC})
 # Add cosemlib
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../cosemlib ${CMAKE_BINARY_DIR}/cosemlib)
 
-# Lua 5.3 (embedded from studio/lua/src)
-set(LUA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../studio/lua/src)
+# Lua 5.3 (embedded from lua/src)
+set(LUA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../lua/src)
 file(GLOB LUA_SOURCES ${LUA_DIR}/*.c)
 # Exclude standalone interpreters
 list(FILTER LUA_SOURCES EXCLUDE REGEX "lua\\.c$")
