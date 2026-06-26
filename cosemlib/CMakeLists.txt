@@ -17,6 +17,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/csm_block_transfer.c
     src/csm_channel.c
     src/csm_framing.c
+    src/csm_keyring.c
     src/csm_security.c
     src/csm_security_suite.c
     src/csm_server.c

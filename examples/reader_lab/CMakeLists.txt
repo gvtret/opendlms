@@ -1,5 +1,12 @@
 # reader_lab — TCP lab meter client using opendlms_reader API
+cmake_minimum_required(VERSION 3.10)
+project(reader_lab LANGUAGES C)
+
 option(OPEN_DLMS_BUILD_READER_LAB "Build reader_lab TCP client for lab meter profiles" ON)
+
+if(NOT TARGET cosemlib)
+    add_subdirectory(../../cosemlib ${CMAKE_BINARY_DIR}/cosemlib)
+endif()
 
 if(OPEN_DLMS_BUILD_READER_LAB)
     add_executable(reader_lab

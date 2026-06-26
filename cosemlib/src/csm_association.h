@@ -143,6 +143,8 @@ typedef struct
     csm_llc llc;
     uint32_t conformance;          ///< All services and functionalities authorized.
     uint8_t  is_auto_connected;    ///< Boolean to indicate if the association is auto connected or not;
+    uint8_t  application_context;  ///< LN_REF/SN_REF context, 0 keeps default LN_REF.
+    uint8_t  authentication;       ///< CSM_AUTH_* mechanism, 0 keeps lowest-level auth.
 } csm_asso_config;
 
 typedef struct

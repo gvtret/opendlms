@@ -11,8 +11,10 @@ The repository contains a compilable core library, a legacy meter simulator, a n
 high-level client/server API, Electron Studio bindings, and tests. These pieces do
 not currently form one consistently verified product:
 
-- `examples/reader_lab` references `client/lib/opendlms_reader.c` and
-  `client/include/opendlms_reader.h`, but those source files are not present.
+- `examples/reader_lab` previously referenced missing `client/lib/opendlms_reader.c`
+  and `client/include/opendlms_reader.h`. These files have been restored as a
+  buildable TCP-wrapper reader API, but runtime GET still depends on unresolved
+  service-layer issues below.
 - The CMake test target builds only part of the checked-in tests.
 - A clean MinGW test build compiles after C++ `nullptr` fixes, but the full
   `cosemtest` executable still has failing association/HLS/integration tests.
@@ -46,6 +48,8 @@ not currently form one consistently verified product:
   instead of repeating the Association object's OBIS.
 - Added GET error response encoding for database failures instead of silent
   no-response behavior.
+- Restored `opendlms_reader.h`, `opendlms_reader.c`, and `csm_keyring.c`, and
+  wired `reader_lab` into top-level CMake with `OPEN_DLMS_BUILD_READER_LAB`.
 
 ## Verified
 
@@ -55,6 +59,8 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Electron native addon rebuilds successfully.
 - LuaBridge can connect to the local meter simulator and decode AARE.
+- `reader_lab` builds from a clean CMake directory with
+  `OPEN_DLMS_BUILD_READER_LAB=ON`.
 
 ## Still failing
 
@@ -70,8 +76,8 @@ not currently form one consistently verified product:
 
 ## Required before calling this production-ready
 
-1. Restore or remove the missing `opendlms_reader` API and make `reader_lab`
-   build from a clean checkout.
+1. Complete the restored `opendlms_reader` runtime path by fixing the remaining
+   service-layer GET failures.
 2. Make CMake build every intended test file, or explicitly mark tests as
    experimental/disabled with a reason.
 3. Fix the remaining association/service integration failures, starting with

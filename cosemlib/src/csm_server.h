@@ -228,6 +228,13 @@ csm_client *csm_client_create(csm_transport *transport, uint8_t channel,
                                csm_framing_type framing);
 
 /**
+ * \brief Configure the client association used by csm_client_connect().
+ *
+ *  Copies the supplied configuration into association slot 0.
+ */
+int csm_client_set_association(csm_client *client, const csm_asso_config *config);
+
+/**
  * \brief Free a client allocated with csm_client_create
  */
 void csm_client_delete(csm_client *client);

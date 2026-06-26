@@ -187,6 +187,8 @@ int csm_dlms_client_init(csm_client *client, csm_transport *transport,
         client->asso_configs[i].llc.dsap = 0x00;
         client->asso_configs[i].conformance = 0xFFFFFFFFU;
         client->asso_configs[i].is_auto_connected = 0;
+        client->asso_configs[i].application_context = (uint8_t)LN_REF;
+        client->asso_configs[i].authentication = (uint8_t)CSM_AUTH_LOWEST_LEVEL;
     }
 
     csm_channel_ctx_init(&client->chan_ctx, client->channels, CSM_SERVER_MAX_CHANNELS,
@@ -205,13 +207,11 @@ int csm_client_connect(csm_client *client, uint32_t timeout_ms)
     if (rc != CSM_TRANSPORT_OK) return rc;
 
     csm_asso_state *asso = &client->asso_states[0];
-    client->asso_configs[0].llc.ssap = 1U;
-    client->asso_configs[0].llc.dsap = 1U;
-    client->asso_configs[0].conformance = 0xFFFFFFFFU;
-    client->asso_configs[0].is_auto_connected = 0U;
     asso->config = &client->asso_configs[0];
-    asso->ref = LN_REF;
-    asso->auth_level = CSM_AUTH_LOWEST_LEVEL;
+    asso->ref = (client->asso_configs[0].application_context != 0U)
+        ? (enum csm_referencing)client->asso_configs[0].application_context
+        : LN_REF;
+    asso->auth_level = (enum csm_auth_level)client->asso_configs[0].authentication;
 
     csm_array req;
     csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
@@ -373,6 +373,17 @@ csm_client *csm_client_create(csm_transport *transport, uint8_t channel,
         return NULL;
     }
     return client;
+}
+
+int csm_client_set_association(csm_client *client, const csm_asso_config *config)
+{
+    if (!client || !config) return -1;
+    client->asso_configs[0] = *config;
+    if (client->asso_configs[0].application_context == 0U)
+    {
+        client->asso_configs[0].application_context = (uint8_t)LN_REF;
+    }
+    return 0;
 }
 
 void csm_client_delete(csm_client *client)

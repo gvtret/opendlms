@@ -6,6 +6,7 @@ option(OPEN_DLMS_BUILD_TESTS      "Build unit tests"             ON)
 option(OPEN_DLMS_BUILD_SERVER     "Build server library"         ON)
 option(OPEN_DLMS_BUILD_METER_SIM  "Build meter simulator exe"   OFF)
 option(OPEN_DLMS_BUILD_CLIENT     "Build client tool (needs Gurux)" OFF)
+option(OPEN_DLMS_BUILD_READER_LAB "Build reader_lab TCP client" OFF)
 option(OPEN_DLMS_BUILD_STUDIO     "Build Shaddam Studio (needs Qt)" OFF)
 option(OPEN_DLMS_BUILD_DOCS       "Build WASM doc targets (needs Emscripten)" OFF)
 option(COSEMLIB_SHARED             "Build cosemlib as shared library" OFF)
@@ -32,6 +33,10 @@ endif()
 # ── Client tool (requires external JSON libs, currently opt-in) ──────────────
 if(OPEN_DLMS_BUILD_CLIENT)
     add_subdirectory(client)
+endif()
+
+if(OPEN_DLMS_BUILD_READER_LAB)
+    add_subdirectory(examples/reader_lab)
 endif()
 
 # ── Shaddam Studio (requires Qt) ─────────────────────────────────────────────

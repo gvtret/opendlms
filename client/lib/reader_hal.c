@@ -7,7 +7,6 @@
 #include "csm_config.h"
 #include "csm_association.h"
 #include "csm_definitions.h"
-#include "csm_sel_access.h"
 #include "csm_keyring.h"
 
 #include "gcm.h"
@@ -112,7 +111,7 @@ int reader_hal_keyring_set_hex(uint8_t sap,
         {
             return -1;
         }
-        if (csm_keyring_add(&reader_keyring, sap, CSM_KEY_GUEK, key) != 0)
+        if (csm_keyring_add(&reader_keyring, (uint8_t)CSM_SEC_GUEK, key, 16U) != 0)
         {
             return -1;
         }
@@ -124,7 +123,7 @@ int reader_hal_keyring_set_hex(uint8_t sap,
         {
             return -1;
         }
-        if (csm_keyring_add(&reader_keyring, sap, CSM_KEY_GAK, key) != 0)
+        if (csm_keyring_add(&reader_keyring, (uint8_t)CSM_SEC_GAK, key, 16U) != 0)
         {
             return -1;
         }
@@ -136,7 +135,7 @@ int reader_hal_keyring_set_hex(uint8_t sap,
         {
             return -1;
         }
-        if (csm_keyring_add(&reader_keyring, sap, CSM_KEY_KEK, key) != 0)
+        if (csm_keyring_add(&reader_keyring, (uint8_t)CSM_SEC_KEK, key, 16U) != 0)
         {
             return -1;
         }
@@ -198,7 +197,8 @@ uint8_t csm_sys_get_key_len(uint8_t sap, csm_sec_key key_id)
     {
         return len;
     }
-    if (csm_keyring_get_ex(&reader_keyring, sap, (csm_key_type)key_id, &len) == NULL)
+    (void)sap;
+    if (csm_keyring_find(&reader_keyring, (uint8_t)key_id) == NULL)
     {
         return 16U;
     }
@@ -215,7 +215,8 @@ void csm_sys_apply_security_suite(uint8_t sap, uint8_t sym_key_len, uint8_t kek_
 uint8_t *csm_sys_get_key(uint8_t sap, csm_sec_key key_id)
 {
     reader_hal_init();
-    return (uint8_t *)csm_keyring_get(&reader_keyring, sap, (csm_key_type)key_id);
+    (void)sap;
+    return (uint8_t *)csm_keyring_find(&reader_keyring, (uint8_t)key_id);
 }
 
 uint8_t csm_sys_get_mechanism_id(uint8_t sap)
@@ -353,5 +354,6 @@ int csm_hal_decode_selective_access(csm_request *request, csm_array *array)
     {
         return FALSE;
     }
-    return csm_sel_access_decode(&request->db_request.profile_sel, array);
+    request->db_request.sel_access.data = *array;
+    return TRUE;
 }
