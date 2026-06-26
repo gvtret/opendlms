@@ -8,6 +8,7 @@
 
 #include <napi.h>
 #include "csm_transport.h"
+#include "csm_transport_tcp.h"
 
 class TransportWrap : public Napi::ObjectWrap<TransportWrap>
 {
@@ -16,18 +17,19 @@ public:
     TransportWrap(const Napi::CallbackInfo &info);
     ~TransportWrap();
 
-    /* Methods exposed to JS */
+    Napi::Value ClientInit(const Napi::CallbackInfo &info);
+    Napi::Value ServerInit(const Napi::CallbackInfo &info);
     Napi::Value Connect(const Napi::CallbackInfo &info);
-    Napi::Value Send(const Napi::CallbackInfo &info);
-    Napi::Value Receive(const Napi::CallbackInfo &info);
-    Napi::Value Close(const Napi::CallbackInfo &info);
+    Napi::Value Accept(const Napi::CallbackInfo &info);
+    Napi::Value GetChannel(const Napi::CallbackInfo &info);
     Napi::Value IsConnected(const Napi::CallbackInfo &info);
+    Napi::Value Destroy(const Napi::CallbackInfo &info);
 
 private:
-    csm_transport *transport_;
-    bool connected_;
-    char host_[256];
-    uint16_t port_;
+    bool initialized_;
+
+public:
+    csm_transport transport_;
 };
 
 #endif /* TRANSPORT_WRAP_H */

@@ -8,6 +8,7 @@
 
 #include <napi.h>
 #include "csm_server.h"
+#include "transport_wrap.h"
 
 class ServerWrap : public Napi::ObjectWrap<ServerWrap>
 {
@@ -16,15 +17,14 @@ public:
     ServerWrap(const Napi::CallbackInfo &info);
     ~ServerWrap();
 
-    Napi::Value InitServer(const Napi::CallbackInfo &info);
-    Napi::Value RegisterDB(const Napi::CallbackInfo &info);
     Napi::Value Poll(const Napi::CallbackInfo &info);
-    Napi::Value SendUnsolicited(const Napi::CallbackInfo &info);
+    Napi::Value Send(const Napi::CallbackInfo &info);
     Napi::Value Destroy(const Napi::CallbackInfo &info);
 
 private:
     csm_server *server_;
-    Napi::FunctionReference db_callback_;
+    TransportWrap *transport_;
+    bool initialized_;
 };
 
 #endif /* SERVER_WRAP_H */

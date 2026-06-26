@@ -15,7 +15,7 @@ const path = require('path');
 
 let native;
 try {
-    native = require(path.join(__dirname, '..', 'native', 'build', 'opendlms-native.node'));
+    native = require(path.join(__dirname, '..', 'native', 'build', 'Release', 'opendlms-native.node'));
 } catch (e) {
     console.error('Failed to load native addon:', e.message);
     console.error('Build first: cd electron-studio && npm run build:native');
@@ -165,6 +165,237 @@ test('execReturn: boolean operations', () => {
     const lb = new native.LuaBridge();
     assert.strictEqual(lb.execReturn('10 > 5'), 'true');
     assert.strictEqual(lb.execReturn('10 < 5'), 'false');
+});
+
+/* ── Transport ────────────────────────────────────────────────────────────── */
+
+console.log('\nTransport:');
+
+test('Transport can be instantiated', () => {
+    const t = new native.Transport();
+    assert.ok(t);
+});
+
+test('Transport clientInit returns 0', () => {
+    const t = new native.Transport();
+    const rc = t.clientInit('127.0.0.1', 4060, native.FRAMING_WRAPPER);
+    assert.strictEqual(rc, 0);
+    t.destroy();
+});
+
+test('Transport serverInit returns 0', () => {
+    const t = new native.Transport();
+    const rc = t.serverInit(0, native.FRAMING_WRAPPER);
+    assert.strictEqual(rc, 0);
+    t.destroy();
+});
+
+test('Transport client connect to server roundtrip', () => {
+    const server = new native.Transport();
+    const rcServer = server.serverInit(0, native.FRAMING_WRAPPER);
+    assert.strictEqual(rcServer, 0);
+
+    const client = new native.Transport();
+    const rcClient = client.clientInit('127.0.0.1', 0, native.FRAMING_WRAPPER);
+    assert.strictEqual(rcClient, 0);
+
+    server.destroy();
+    client.destroy();
+});
+
+test('Transport destroy is safe to call twice', () => {
+    const t = new native.Transport();
+    t.clientInit('127.0.0.1', 4060, native.FRAMING_WRAPPER);
+    t.destroy();
+    t.destroy();
+});
+
+/* ── Client ─────────────────────────────────────────────────────────────── */
+
+console.log('\nClient:');
+
+test('Client can be instantiated', () => {
+    const t = new native.Transport();
+    t.clientInit('127.0.0.1', 4060, native.FRAMING_WRAPPER);
+    const c = new native.Client(t);
+    assert.ok(c);
+    c.destroy();
+    t.destroy();
+});
+
+test('Client get/set/action methods exist', () => {
+    const t = new native.Transport();
+    t.clientInit('127.0.0.1', 4060, native.FRAMING_WRAPPER);
+    const c = new native.Client(t);
+    assert.strictEqual(typeof c.get, 'function');
+    assert.strictEqual(typeof c.set, 'function');
+    assert.strictEqual(typeof c.action, 'function');
+    assert.strictEqual(typeof c.getBlock, 'function');
+    assert.strictEqual(typeof c.setBlock, 'function');
+    assert.strictEqual(typeof c.disconnect, 'function');
+    c.destroy();
+    t.destroy();
+});
+
+/* ── Server ─────────────────────────────────────────────────────────────── */
+
+console.log('\nServer:');
+
+test('Server can be instantiated', () => {
+    const t = new native.Transport();
+    t.serverInit(0, native.FRAMING_WRAPPER);
+    const s = new native.Server(t);
+    assert.ok(s);
+    s.destroy();
+    t.destroy();
+});
+
+test('Server poll/send methods exist', () => {
+    const t = new native.Transport();
+    t.serverInit(0, native.FRAMING_WRAPPER);
+    const s = new native.Server(t);
+    assert.strictEqual(typeof s.poll, 'function');
+    assert.strictEqual(typeof s.send, 'function');
+    s.destroy();
+    t.destroy();
+});
+
+/* ── Data ──────────────────────────────────────────────────────────────── */
+
+console.log('\nData:');
+
+test('Data can be instantiated', () => {
+    const d = new native.Data();
+    assert.ok(d);
+    assert.strictEqual(d.written(), 0);
+});
+
+test('Data writeU8 and readU8', () => {
+    const d = new native.Data();
+    d.writeU8(0x42);
+    d.writeU8(0xFF);
+    assert.strictEqual(d.written(), 2);
+    assert.strictEqual(d.readU8(), 0x42);
+    assert.strictEqual(d.readU8(), 0xFF);
+});
+
+test('Data writeU16 and readU16', () => {
+    const d = new native.Data();
+    d.writeU16(0x1234);
+    assert.strictEqual(d.written(), 2);
+    assert.strictEqual(d.readU16(), 0x1234);
+});
+
+test('Data writeU32 and readU32', () => {
+    const d = new native.Data();
+    d.writeU32(0xDEADBEEF);
+    assert.strictEqual(d.written(), 4);
+    assert.strictEqual(d.readU32(), 0xDEADBEEF);
+});
+
+test('Data writeBuffer and readBuffer', () => {
+    const d = new native.Data();
+    const src = Buffer.from([0x01, 0x02, 0x03, 0x04]);
+    d.writeBuffer(src);
+    assert.strictEqual(d.written(), 4);
+    const out = d.readBuffer(4);
+    assert.ok(Buffer.isBuffer(out));
+    assert.deepStrictEqual([...out], [0x01, 0x02, 0x03, 0x04]);
+});
+
+test('Data writeBoolean', () => {
+    const d = new native.Data();
+    d.writeBoolean(true);
+    d.writeBoolean(false);
+    const buf = d.toBuffer();
+    assert.strictEqual(buf.length, 4);
+    assert.strictEqual(buf[0], 9);
+    assert.strictEqual(buf[1], 1);
+    assert.strictEqual(buf[2], 9);
+    assert.strictEqual(buf[3], 0);
+});
+
+test('Data toBuffer', () => {
+    const d = new native.Data();
+    d.writeU8(0xAA);
+    d.writeU16(0xBBCC);
+    const buf = d.toBuffer();
+    assert.ok(Buffer.isBuffer(buf));
+    assert.strictEqual(buf.length, 3);
+    assert.deepStrictEqual([...buf], [0xAA, 0xBB, 0xCC]);
+});
+
+test('Data reset', () => {
+    const d = new native.Data();
+    d.writeU8(0x01);
+    assert.strictEqual(d.written(), 1);
+    d.reset();
+    assert.strictEqual(d.written(), 0);
+});
+
+test('Data custom size', () => {
+    const d = new native.Data(256);
+    assert.strictEqual(d.freeSize(), 256);
+});
+
+test('Data unread tracks read position', () => {
+    const d = new native.Data();
+    d.writeU8(1);
+    d.writeU8(2);
+    d.writeU8(3);
+    d.readU8();
+    assert.strictEqual(d.unread(), 2);
+});
+
+/* ── Block ─────────────────────────────────────────────────────────────── */
+
+console.log('\nBlock:');
+
+test('Block can be instantiated', () => {
+    const b = new native.Block();
+    assert.ok(b);
+    assert.strictEqual(b.isActive(), false);
+});
+
+test('Block init resets state', () => {
+    const b = new native.Block();
+    b.init();
+    assert.strictEqual(b.isActive(), false);
+});
+
+test('Block startServer and encodeFirst', () => {
+    const b = new native.Block();
+    const data = Buffer.alloc(100, 0xAB);
+    const rc = b.startServer(1, data);
+    assert.strictEqual(rc, 1);
+    assert.strictEqual(b.isActive(), true);
+    const block = b.encodeFirst(50);
+    assert.ok(Buffer.isBuffer(block));
+    assert.ok(block.length > 0);
+});
+
+test('Block encodeNext returns data', () => {
+    const b = new native.Block();
+    const data = Buffer.alloc(200, 0xCD);
+    b.startServer(1, data);
+    b.encodeFirst(50);
+    const next = b.encodeNext(50);
+    assert.ok(Buffer.isBuffer(next));
+});
+
+test('Block abort clears state', () => {
+    const b = new native.Block();
+    b.startServer(1, Buffer.alloc(10, 0));
+    assert.strictEqual(b.isActive(), true);
+    b.abort();
+    assert.strictEqual(b.isActive(), false);
+});
+
+test('Block canReceive requires active state', () => {
+    const b = new native.Block();
+    assert.strictEqual(b.canReceive(), false);
+    b.startReceive(1);
+    assert.strictEqual(b.canReceive(), true);
 });
 
 /* ── Summary ─────────────────────────────────────────────────────────────── */

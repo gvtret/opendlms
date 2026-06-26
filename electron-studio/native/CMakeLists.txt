@@ -4,9 +4,16 @@ project(opendlms-native LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Node.js headers (cmake-js downloads them)
-set(CMAKE_JS_INC ${CMAKE_JS_INC} "C:/Users/trete/.cmake-js/node-x64/v24.17.0/include/node")
+# Node.js/Electron headers and import library are provided by cmake-js.
 include_directories(${CMAKE_JS_INC})
+if(NOT EXISTS "${CMAKE_JS_INC}/node_api.h")
+    file(GLOB CMAKE_JS_NODE_API_HEADERS "$ENV{USERPROFILE}/.cmake-js/node-*/v*/include/node/node_api.h")
+    if(CMAKE_JS_NODE_API_HEADERS)
+        list(GET CMAKE_JS_NODE_API_HEADERS 0 NODE_API_HEADER)
+        get_filename_component(NODE_API_INCLUDE_DIR "${NODE_API_HEADER}" DIRECTORY)
+        include_directories("${NODE_API_INCLUDE_DIR}")
+    endif()
+endif()
 
 # node-addon-api
 find_path(NAPI_INCLUDE_DIR napi.h
@@ -33,11 +40,18 @@ else()
     target_compile_definitions(lua53 PRIVATE LUA_USE_POSIX)
 endif()
 
-# Native addon (LuaBridge only)
+# Native addon
 add_library(${PROJECT_NAME} SHARED
+    ${CMAKE_JS_SRC}
     src/binding.cpp
     src/lua_bridge.cpp
     src/lua_bridge_wrap.cpp
+    src/transport_wrap.cpp
+    src/client_wrap.cpp
+    src/server_wrap.cpp
+    src/data_wrap.cpp
+    src/block_wrap.cpp
+    src/hal_stubs.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -48,7 +62,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     cosemlib
     lua53
     ${CMAKE_JS_LIB}
-    "C:/Users/trete/.cmake-js/node-x64/v24.17.0/win-x64/node.lib"
 )
 
 if(WIN32)

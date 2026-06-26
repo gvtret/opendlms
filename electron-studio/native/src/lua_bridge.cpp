@@ -8,6 +8,7 @@
 #include "csm_framing.h"
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 

@@ -12,6 +12,7 @@
 #include "csm_definitions.h"
 #include "csm_association.h"
 #include <string.h>
+#include <stdlib.h>
 
 /* ── Server internals ───────────────────────────────────────────────────── */
 
@@ -130,6 +131,26 @@ void csm_server_destroy(csm_server *server)
 {
     if (!server) return;
     memset(server, 0, sizeof(*server));
+}
+
+csm_server *csm_server_create(csm_transport *transport, uint8_t channel,
+                               csm_framing_type framing)
+{
+    csm_server *server = (csm_server *)malloc(sizeof(csm_server));
+    if (!server) return NULL;
+    if (csm_server_init(server, transport, channel, framing) != 0)
+    {
+        free(server);
+        return NULL;
+    }
+    return server;
+}
+
+void csm_server_delete(csm_server *server)
+{
+    if (!server) return;
+    csm_server_destroy(server);
+    free(server);
 }
 
 /* ── Client internals ───────────────────────────────────────────────────── */
@@ -308,6 +329,26 @@ void csm_client_destroy(csm_client *client)
 {
     if (!client) return;
     memset(client, 0, sizeof(*client));
+}
+
+csm_client *csm_client_create(csm_transport *transport, uint8_t channel,
+                               csm_framing_type framing)
+{
+    csm_client *client = (csm_client *)malloc(sizeof(csm_client));
+    if (!client) return NULL;
+    if (csm_dlms_client_init(client, transport, channel, framing) != 0)
+    {
+        free(client);
+        return NULL;
+    }
+    return client;
+}
+
+void csm_client_delete(csm_client *client)
+{
+    if (!client) return;
+    csm_client_destroy(client);
+    free(client);
 }
 
 /* ── Block Transfer Client API ──────────────────────────────────────────── */

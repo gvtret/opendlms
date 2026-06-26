@@ -93,6 +93,25 @@ int csm_server_send(csm_server *server, uint8_t channel,
  */
 void csm_server_destroy(csm_server *server);
 
+/**
+ * \brief Allocate and initialize a server
+ *
+ *  Heap-allocated convenience wrapper around csm_server_init.
+ *  Free with csm_server_delete().
+ *
+ * \param transport  Transport instance
+ * \param channel    Primary channel index
+ * \param framing    Framing type
+ * \return Allocated server, or NULL on failure
+ */
+csm_server *csm_server_create(csm_transport *transport, uint8_t channel,
+                               csm_framing_type framing);
+
+/**
+ * \brief Free a server allocated with csm_server_create
+ */
+void csm_server_delete(csm_server *server);
+
 /* ── High-level client ──────────────────────────────────────────────────── */
 
 typedef struct csm_client csm_client;
@@ -193,6 +212,25 @@ int csm_client_disconnect(csm_client *client);
  * \brief Destroy client
  */
 void csm_client_destroy(csm_client *client);
+
+/**
+ * \brief Allocate and initialize a client
+ *
+ *  Heap-allocated convenience wrapper around csm_dlms_client_init.
+ *  Free with csm_client_delete().
+ *
+ * \param transport  Transport instance
+ * \param channel    Channel index
+ * \param framing    Framing type
+ * \return Allocated client, or NULL on failure
+ */
+csm_client *csm_client_create(csm_transport *transport, uint8_t channel,
+                               csm_framing_type framing);
+
+/**
+ * \brief Free a client allocated with csm_client_create
+ */
+void csm_client_delete(csm_client *client);
 
 #ifdef __cplusplus
 }

@@ -13,7 +13,8 @@ const fs = require('fs');
 /* Load native addon */
 let native;
 try {
-    native = require('../../native/build/Release/opendlms-native.node');
+    const addonPath = path.join(__dirname, '..', 'native', 'build', 'Release', 'opendlms-native.node');
+    native = require(addonPath);
 } catch (e) {
     console.error('Failed to load native addon:', e.message);
     console.error('Run: npm run build:native');

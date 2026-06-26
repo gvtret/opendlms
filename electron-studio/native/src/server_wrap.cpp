@@ -4,26 +4,14 @@
  */
 
 #include "server_wrap.h"
-#include "transport_wrap.h"
+#include "csm_transport_tcp.h"
 #include <cstring>
-
-static csm_db_code db_handler_wrapper(csm_db_context_t *ctx, csm_array *in, csm_array *out, csm_request *request)
-{
-    /* TODO: call JavaScript callback */
-    (void)ctx;
-    (void)in;
-    (void)out;
-    (void)request;
-    return CSM_OK;
-}
 
 Napi::Function ServerWrap::Init(Napi::Env env, Napi::Object exports)
 {
     Napi::Function func = DefineClass(env, "Server", {
-        InstanceMethod("init", &ServerWrap::InitServer),
-        InstanceMethod("registerDB", &ServerWrap::RegisterDB),
         InstanceMethod("poll", &ServerWrap::Poll),
-        InstanceMethod("send", &ServerWrap::SendUnsolicited),
+        InstanceMethod("send", &ServerWrap::Send),
         InstanceMethod("destroy", &ServerWrap::Destroy),
     });
 
@@ -32,80 +20,99 @@ Napi::Function ServerWrap::Init(Napi::Env env, Napi::Object exports)
 }
 
 ServerWrap::ServerWrap(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<ServerWrap>(info), server_(nullptr)
+    : Napi::ObjectWrap<ServerWrap>(info), server_(nullptr), transport_(nullptr), initialized_(false)
 {
-    server_ = new csm_server();
-    memset(server_, 0, sizeof(csm_server));
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsObject())
+    {
+        Napi::TypeError::New(env, "Argument: transport (TransportWrap)").ThrowAsJavaScriptException();
+        return;
+    }
+
+    transport_ = Napi::ObjectWrap<TransportWrap>::Unwrap(info[0].As<Napi::Object>());
+    if (!transport_)
+    {
+        Napi::Error::New(env, "Invalid transport").ThrowAsJavaScriptException();
+        return;
+    }
+
+    server_ = csm_server_create(&transport_->transport_, 0, CSM_FRAMING_WRAPPER);
+    if (!server_)
+    {
+        Napi::Error::New(env, "Failed to initialize server").ThrowAsJavaScriptException();
+    }
+    else
+    {
+        initialized_ = true;
+    }
 }
 
 ServerWrap::~ServerWrap()
 {
-    Destroy(info.Env());
-}
-
-Napi::Value ServerWrap::InitServer(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    if (info.Length() < 1)
+    if (server_)
     {
-        Napi::TypeError::New(env, "TransportWrap expected").ThrowAsJavaScriptException();
-        return Napi::Boolean::New(env, false);
+        csm_server_delete(server_);
+        server_ = nullptr;
     }
-
-    TransportWrap *transport = Napi::ObjectWrap<TransportWrap>::Unwrap(info[0].As<Napi::Object>());
-
-    int result = csm_server_init(server_, nullptr, 0, CSM_FRAMING_WRAPPER);
-
-    return Napi::Boolean::New(env, result == 0);
-}
-
-Napi::Value ServerWrap::RegisterDB(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    if (info.Length() >= 1 && info[0].IsFunction())
-    {
-        db_callback_ = Napi::Persistent(info[0].As<Napi::Function>());
-    }
-
-    csm_server_register_db(server_, db_handler_wrapper);
-
-    return env.Undefined();
 }
 
 Napi::Value ServerWrap::Poll(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    uint32_t timeout_ms = 100;
+    if (!server_)
+    {
+        Napi::Error::New(env, "Server not initialized").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    uint32_t timeout_ms = 1000;
     if (info.Length() >= 1 && info[0].IsNumber())
     {
         timeout_ms = info[0].As<Napi::Number>().Uint32Value();
     }
 
-    int result = csm_server_poll(server_, timeout_ms);
-
-    return Napi::Number::New(env, result);
+    int rc = csm_server_poll(server_, timeout_ms);
+    return Napi::Number::New(env, rc);
 }
 
-Napi::Value ServerWrap::SendUnsolicited(const Napi::CallbackInfo &info)
+Napi::Value ServerWrap::Send(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    /* TODO: implement */
-    return Napi::Number::New(env, -1);
+
+    if (!server_)
+    {
+        Napi::Error::New(env, "Server not initialized").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    if (info.Length() < 1 || !info[0].IsBuffer())
+    {
+        Napi::TypeError::New(env, "Argument: apdu (Buffer)").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    uint8_t channel = 0;
+    if (info.Length() >= 2 && info[1].IsNumber())
+    {
+        channel = info[1].As<Napi::Number>().Uint32Value();
+    }
+
+    Napi::Uint8Array data_arr = info[0].As<Napi::Uint8Array>();
+    int rc = csm_server_send(server_, channel, data_arr.Data(), data_arr.ByteLength());
+
+    return Napi::Number::New(env, rc);
 }
 
 Napi::Value ServerWrap::Destroy(const Napi::CallbackInfo &info)
 {
-    Napi::Env env = info.Env();
-
     if (server_)
     {
-        csm_server_destroy(server_);
-        delete server_;
+        csm_server_delete(server_);
         server_ = nullptr;
+        initialized_ = false;
     }
 
-    return env.Undefined();
+    return info.Env().Undefined();
 }

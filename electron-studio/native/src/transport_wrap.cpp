@@ -1,131 +1,162 @@
 /**
  * \file transport_wrap.cpp
- * \brief Node.js wrapper for csm_transport (TCP)
+ * \brief Node.js wrapper for csm_transport
  */
 
 #include "transport_wrap.h"
-#include "csm_transport_tcp.h"
 #include <cstring>
-
-Napi::FunctionReference TransportWrap::constructor;
 
 Napi::Function TransportWrap::Init(Napi::Env env, Napi::Object exports)
 {
     Napi::Function func = DefineClass(env, "Transport", {
+        InstanceMethod("clientInit", &TransportWrap::ClientInit),
+        InstanceMethod("serverInit", &TransportWrap::ServerInit),
         InstanceMethod("connect", &TransportWrap::Connect),
-        InstanceMethod("send", &TransportWrap::Send),
-        InstanceMethod("receive", &TransportWrap::Receive),
-        InstanceMethod("close", &TransportWrap::Close),
+        InstanceMethod("accept", &TransportWrap::Accept),
+        InstanceMethod("getChannel", &TransportWrap::GetChannel),
         InstanceMethod("isConnected", &TransportWrap::IsConnected),
+        InstanceMethod("destroy", &TransportWrap::Destroy),
     });
-
-    constructor = Napi::Persistent(func);
-    constructor.SuppressDestruct();
 
     exports.Set("Transport", func);
     return func;
 }
 
 TransportWrap::TransportWrap(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<TransportWrap>(info), transport_(nullptr), connected_(false)
+    : Napi::ObjectWrap<TransportWrap>(info), initialized_(false)
 {
-    Napi::Env env = info.Env();
-
-    if (info.Length() < 1 || !info[0].IsString())
-    {
-        Napi::TypeError::New(env, "String expected for host").ThrowAsJavaScriptException();
-        return;
-    }
-
-    std::string host = info[0].As<Napi::String>().Utf8Value();
-    strncpy(host_, host.c_str(), sizeof(host_) - 1);
-    host_[sizeof(host_) - 1] = '\0';
-
-    port_ = 4056;
-    if (info.Length() >= 2 && info[1].IsNumber())
-    {
-        port_ = (uint16_t)info[1].As<Napi::Number>().Uint32Value();
-    }
-
-    transport_ = csm_transport_tcp_create();
+    memset(&transport_, 0, sizeof(transport_));
 }
 
 TransportWrap::~TransportWrap()
 {
-    if (transport_)
+    if (initialized_)
     {
-        csm_transport_tcp_destroy(transport_);
-        transport_ = nullptr;
+        csm_transport_tcp_destroy(&transport_);
+        initialized_ = false;
     }
+}
+
+Napi::Value TransportWrap::ClientInit(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 3 || !info[0].IsString() || !info[1].IsNumber() || !info[2].IsNumber())
+    {
+        Napi::TypeError::New(env, "Arguments: host(String), port(Number), framing(Number)").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    std::string host = info[0].As<Napi::String>().Utf8Value();
+    uint16_t port = info[1].As<Napi::Number>().Uint32Value();
+    csm_framing_type framing = static_cast<csm_framing_type>(info[2].As<Napi::Number>().Uint32Value());
+
+    int rc = csm_transport_tcp_client_init(&transport_, host.c_str(), port, framing);
+    if (rc == CSM_TRANSPORT_OK)
+    {
+        initialized_ = true;
+    }
+
+    return Napi::Number::New(env, rc);
+}
+
+Napi::Value TransportWrap::ServerInit(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 2 || !info[0].IsNumber() || !info[1].IsNumber())
+    {
+        Napi::TypeError::New(env, "Arguments: port(Number), framing(Number)").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    uint16_t port = info[0].As<Napi::Number>().Uint32Value();
+    csm_framing_type framing = static_cast<csm_framing_type>(info[1].As<Napi::Number>().Uint32Value());
+
+    int rc = csm_transport_tcp_server_init(&transport_, port, framing);
+    if (rc == CSM_TRANSPORT_OK)
+    {
+        initialized_ = true;
+    }
+
+    return Napi::Number::New(env, rc);
 }
 
 Napi::Value TransportWrap::Connect(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    if (!transport_)
+    if (!initialized_)
     {
         Napi::Error::New(env, "Transport not initialized").ThrowAsJavaScriptException();
-        return Napi::Boolean::New(env, false);
+        return env.Null();
     }
 
-    int result = csm_transport_tcp_open(transport_, 0, host_, port_);
-    connected_ = (result == 0);
-
-    return Napi::Boolean::New(env, connected_);
-}
-
-Napi::Value TransportWrap::Send(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    if (info.Length() < 1 || !info[0].IsBuffer())
-    {
-        Napi::TypeError::New(env, "Buffer expected").ThrowAsJavaScriptException();
-        return Napi::Number::New(env, -1);
-    }
-
-    Napi::Buffer<uint8_t> buf = info[0].As<Napi::Buffer<uint8_t>>();
-    int sent = csm_transport_tcp_send(transport_, 0, buf.Data(), (uint32_t)buf.Length());
-
-    return Napi::Number::New(env, sent);
-}
-
-Napi::Value TransportWrap::Receive(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    uint32_t timeout_ms = 1000;
+    uint32_t timeout_ms = CSM_TRANSPORT_DEFAULT_TIMEOUT;
     if (info.Length() >= 1 && info[0].IsNumber())
     {
         timeout_ms = info[0].As<Napi::Number>().Uint32Value();
     }
 
-    uint8_t buf[2048];
-    int received = csm_transport_tcp_recv(transport_, 0, buf, sizeof(buf), timeout_ms);
-
-    if (received <= 0)
-    {
-        return env.Null();
-    }
-
-    return Napi::Buffer<uint8_t>::Copy(env, buf, (size_t)received);
+    int rc = csm_transport_tcp_connect(&transport_, timeout_ms);
+    return Napi::Number::New(env, rc);
 }
 
-Napi::Value TransportWrap::Close(const Napi::CallbackInfo &info)
+Napi::Value TransportWrap::Accept(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    if (transport_ && connected_)
+    if (!initialized_)
     {
-        csm_transport_tcp_close(transport_, 0);
-        connected_ = false;
+        Napi::Error::New(env, "Transport not initialized").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
-    return env.Undefined();
+    uint32_t timeout_ms = CSM_TRANSPORT_DEFAULT_TIMEOUT;
+    if (info.Length() >= 1 && info[0].IsNumber())
+    {
+        timeout_ms = info[0].As<Napi::Number>().Uint32Value();
+    }
+
+    int rc = csm_transport_tcp_accept(&transport_, timeout_ms);
+    return Napi::Number::New(env, rc);
+}
+
+Napi::Value TransportWrap::GetChannel(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    uint8_t channel = 0;
+    if (info.Length() >= 1 && info[0].IsNumber())
+    {
+        channel = info[0].As<Napi::Number>().Uint32Value();
+    }
+
+    bool connected = CSM_TRANSPORT_IS_CONNECTED(&transport_, channel) != 0;
+    return Napi::Boolean::New(env, connected);
 }
 
 Napi::Value TransportWrap::IsConnected(const Napi::CallbackInfo &info)
 {
-    return Napi::Boolean::New(info.Env(), connected_);
+    Napi::Env env = info.Env();
+
+    uint8_t channel = 0;
+    if (info.Length() >= 1 && info[0].IsNumber())
+    {
+        channel = info[0].As<Napi::Number>().Uint32Value();
+    }
+
+    bool connected = CSM_TRANSPORT_IS_CONNECTED(&transport_, channel) != 0;
+    return Napi::Boolean::New(env, connected);
+}
+
+Napi::Value TransportWrap::Destroy(const Napi::CallbackInfo &info)
+{
+    if (initialized_)
+    {
+        csm_transport_tcp_destroy(&transport_);
+        initialized_ = false;
+    }
+
+    return info.Env().Undefined();
 }

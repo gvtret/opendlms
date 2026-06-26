@@ -8,6 +8,7 @@
 
 #include <napi.h>
 #include "csm_server.h"
+#include "transport_wrap.h"
 
 class ClientWrap : public Napi::ObjectWrap<ClientWrap>
 {
@@ -17,15 +18,18 @@ public:
     ~ClientWrap();
 
     Napi::Value Connect(const Napi::CallbackInfo &info);
-    Napi::Value Disconnect(const Napi::CallbackInfo &info);
     Napi::Value Get(const Napi::CallbackInfo &info);
-    Napi::Value GetBlock(const Napi::CallbackInfo &info);
     Napi::Value Set(const Napi::CallbackInfo &info);
-    Napi::Value SetBlock(const Napi::CallbackInfo &info);
     Napi::Value Action(const Napi::CallbackInfo &info);
+    Napi::Value GetBlock(const Napi::CallbackInfo &info);
+    Napi::Value SetBlock(const Napi::CallbackInfo &info);
+    Napi::Value Disconnect(const Napi::CallbackInfo &info);
+    Napi::Value Destroy(const Napi::CallbackInfo &info);
 
 private:
     csm_client *client_;
+    TransportWrap *transport_;
+    bool initialized_;
 };
 
 #endif /* CLIENT_WRAP_H */
