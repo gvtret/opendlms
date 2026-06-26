@@ -29,4 +29,9 @@ contextBridge.exposeInMainWorld('openDLMS', {
     /* Dialogs */
     openFile: () => ipcRenderer.invoke('dialog:open'),
     saveFile: (opts) => ipcRenderer.invoke('dialog:save', opts),
+
+    /* History */
+    getHistory: () => ipcRenderer.invoke('history:get'),
+    addToHistory: (cmd) => ipcRenderer.invoke('history:add', cmd),
+    clearHistory: () => ipcRenderer.invoke('history:clear'),
 });

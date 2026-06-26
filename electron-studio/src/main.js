@@ -23,6 +23,39 @@ try {
 let mainWindow = null;
 let luaBridge = null;
 
+/* ── Command history persistence ─────────────────────────────────────────── */
+
+const HISTORY_FILE = path.join(app.getPath('userData'), 'console-history.json');
+const MAX_HISTORY = 1000;
+
+function loadHistory() {
+    try {
+        if (fs.existsSync(HISTORY_FILE)) {
+            const data = fs.readFileSync(HISTORY_FILE, 'utf-8');
+            return JSON.parse(data);
+        }
+    } catch (e) {
+        console.error('Failed to load history:', e.message);
+    }
+    return [];
+}
+
+function saveHistory(history) {
+    try {
+        const dir = path.dirname(HISTORY_FILE);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        /* Keep only last N entries */
+        const trimmed = history.slice(-MAX_HISTORY);
+        fs.writeFileSync(HISTORY_FILE, JSON.stringify(trimmed, null, 2), 'utf-8');
+    } catch (e) {
+        console.error('Failed to save history:', e.message);
+    }
+}
+
+let commandHistory = loadHistory();
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
@@ -92,6 +125,29 @@ ipcMain.handle('lua:getOutput', () => {
 
 ipcMain.handle('lua:clearOutput', () => {
     if (luaBridge) luaBridge.clearOutput();
+    return { success: true };
+});
+
+/* ── History IPC ─────────────────────────────────────────────────────────── */
+
+ipcMain.handle('history:get', () => {
+    return commandHistory;
+});
+
+ipcMain.handle('history:add', (event, command) => {
+    if (command && command.trim().length > 0) {
+        /* Avoid duplicates at the end */
+        if (commandHistory.length === 0 || commandHistory[commandHistory.length - 1] !== command) {
+            commandHistory.push(command);
+            saveHistory(commandHistory);
+        }
+    }
+    return { success: true };
+});
+
+ipcMain.handle('history:clear', () => {
+    commandHistory = [];
+    saveHistory(commandHistory);
     return { success: true };
 });
 

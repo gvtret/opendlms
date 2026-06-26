@@ -9,8 +9,6 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 let connected = false;
-let consoleHistory = [];
-let consoleHistoryIndex = -1;
 
 /* ── Init ────────────────────────────────────────────────────────────────── */
 
@@ -83,9 +81,20 @@ function setupKeyboard() {
 
 /* ── Console ─────────────────────────────────────────────────────────────── */
 
-function setupConsole() {
+let consoleHistory = [];
+let consoleHistoryIndex = -1;
+
+async function setupConsole() {
     const input = $('#console-input');
-    const output = $('#console-output');
+
+    /* Load persistent history */
+    try {
+        consoleHistory = await openDLMS.getHistory();
+        consoleHistoryIndex = consoleHistory.length;
+    } catch (e) {
+        consoleHistory = [];
+        consoleHistoryIndex = 0;
+    }
 
     /* Input handler */
     input.addEventListener('keydown', (e) => {
@@ -95,6 +104,7 @@ function setupConsole() {
             if (cmd) {
                 consoleHistory.push(cmd);
                 consoleHistoryIndex = consoleHistory.length;
+                openDLMS.addToHistory(cmd);
                 executeConsoleCommand(cmd);
                 input.value = '';
             }
@@ -121,13 +131,14 @@ function setupConsole() {
 
     /* Clear buttons */
     $('#btn-console-clear').addEventListener('click', clearConsole);
-    $('#btn-console-clear-history').addEventListener('click', () => {
+    $('#btn-console-clear-history').addEventListener('click', async () => {
         consoleHistory = [];
         consoleHistoryIndex = -1;
+        await openDLMS.clearHistory();
         consolePrint('History cleared', 'info');
     });
 
-    consolePrint('Lua Console ready. Type expressions and press Enter.', 'info');
+    consolePrint(`Lua Console ready. ${consoleHistory.length} commands in history.`, 'info');
 }
 
 async function executeConsoleCommand(cmd) {
