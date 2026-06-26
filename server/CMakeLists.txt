@@ -1,17 +1,14 @@
-# Version minimale de CMake
 cmake_minimum_required(VERSION 3.10)
 
-# Nom du projet
 project(cosemserver LANGUAGES C CXX)
 
 if(NOT TARGET cosemlib)
     add_subdirectory(../cosemlib ${CMAKE_BINARY_DIR}/cosemlib)
 endif()
 
-# Ajouter les fichiers sources
 add_library(${PROJECT_NAME}
 
-    # Application level of cosem
+    # Application level
     application/app_calendar.c
     application/app_database.c
 
@@ -22,13 +19,16 @@ add_library(${PROJECT_NAME}
     lib/db_cosem_event_notify.c
     lib/db_cosem_catalog_legacy.c
 
+    # Database objects
+    database/db_cosem_clock.c
+    database/db_cosem_associations.c
+    database/db_cosem_image_transfer.c
+
 )
 
-# Inclure des répertoires d'en-têtes si nécessaire
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/application
     ${CMAKE_CURRENT_LIST_DIR}/database
 )
 
-# External libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC cosemlib)

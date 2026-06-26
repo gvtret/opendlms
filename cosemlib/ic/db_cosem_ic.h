@@ -122,6 +122,24 @@ void db_ic_register_push_setup(void);
 void db_ic_register_security_setup(void);
 void db_ic_register_disconnect_control(void);
 void db_ic_register_limiter(void);
+void db_ic_register_schedule(void);
+void db_ic_register_special_days(void);
+void db_ic_register_script_table(void);
+void db_ic_register_activity_calendar(void);
+void db_ic_register_register_monitor(void);
+void db_ic_register_single_action_schedule(void);
+void db_ic_register_sap_assignment(void);
+void db_ic_register_comms(void);
+void db_ic_register_utility_tables(void);
+void db_ic_register_compact_data(void);
+void db_ic_register_register_table(void);
+void db_ic_register_status_mapping(void);
+void db_ic_register_parameter_monitor(void);
+void db_ic_register_arbitrator(void);
+void db_ic_register_sensor_manager(void);
+void db_ic_register_data_protection(void);
+void db_ic_register_profile_filter(void);
+void db_ic_register_table_manager(void);
 
 /* Helper: register all built-in classes */
 void db_ic_register_all_builtins(void);

@@ -439,3 +439,10 @@ static const db_ic_class ic_tcp_udp = {
 };
 
 void db_ic_register_tcp_udp_setup(void) { db_ic_register(&ic_tcp_udp); }
+
+void db_ic_register_comms(void)
+{
+    db_ic_register_iec_local_port_setup();
+    db_ic_register_iec_hdlc_setup();
+    db_ic_register_tcp_udp_setup();
+}

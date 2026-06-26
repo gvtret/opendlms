@@ -49,47 +49,36 @@ static csm_db_code ic_stub_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
  *   Class 3  Register          — db_cosem_register.c
  *   Class 4  Extended Register — db_cosem_ext_register.c
  *   Class 5  Demand Register   — db_cosem_demand_register.c
+ *   Class 6  Register Activation — db_cosem_ic_register_activation.c
  *   Class 7  Profile Generic   — db_cosem_ic_profile.c
+ *   Class 8  Clock             — (stub)
+ *   Class 9  Script Table      — db_cosem_ic_script_table.c
+ *   Class 10 Schedule          — db_cosem_ic_schedule.c
+ *   Class 11 Special Days      — db_cosem_ic_special_days.c
  *   Class 15 Association LN    — db_cosem_ic_association.c
+ *   Class 17 SAP Assignment    — db_cosem_ic_sap_assignment.c
+ *   Class 18 Image Transfer    — db_cosem_ic_image_transfer.c
+ *   Class 19 IEC Local Port    — db_cosem_ic_comms.c
+ *   Class 20 Activity Calendar — db_cosem_ic_activity_calendar.c
+ *   Class 21 Register Monitor  — db_cosem_ic_register_monitor.c
+ *   Class 22 Single Action Sched — db_cosem_ic_single_action_schedule.c
+ *   Class 23 IEC HDLC Setup    — db_cosem_ic_comms.c
+ *   Class 26 Utility Tables    — db_cosem_ic_utility_tables.c
+ *   Class 30 Data Protection   — db_cosem_ic_data_protection.c
+ *   Class 31 Profile Filter    — db_cosem_ic_profile_filter.c
  *   Class 40 Push Setup        — db_cosem_ic_push.c
+ *   Class 41 TCP-UDP Setup     — db_cosem_ic_comms.c
+ *   Class 61 Register Table    — db_cosem_ic_register_table.c
+ *   Class 62 Compact Data      — db_cosem_ic_compact_data.c
+ *   Class 63 Status Mapping    — db_cosem_ic_status_mapping.c
  *   Class 64 Security Setup    — db_cosem_ic_security_setup.c
+ *   Class 65 Parameter Monitor — db_cosem_ic_parameter_monitor.c
+ *   Class 67 Sensor Manager    — db_cosem_ic_sensor_manager.c
+ *   Class 68 Arbitrator        — db_cosem_ic_arbitrator.c
+ *   Class 70 Disconnect Control — db_cosem_ic_disconnect.c
  *   Class 71 Limiter           — db_cosem_ic_limiter.c
- *
- * Remaining stub-only classes:
- *   Class 6  Register Activation
- *   Class 8  Clock
- *   Class 18 Image Transfer
- *   Class 70 Disconnect Control
+ *   Class 8200 Table Manager   — db_cosem_ic_table_manager.c
  */
-
-/* ========================= Register Activation (Class ID 6) ========================= */
-
-static const db_ic_attr_descr reg_act_attrs[] = {
-    { DB_ACCESS_GET,                  1, 0x09 }, /* logical_name */
-    { DB_ACCESS_GET,                  2, 0x01 }, /* register_activation_object_list */
-    { DB_ACCESS_GET | DB_ACCESS_SET,  3, 0x01 }, /* register_activation_object_list_index */
-};
-
-static const db_ic_object_descr reg_act_descr = {
-    .attributes   = reg_act_attrs,
-    .methods      = NULL,
-    .class_id     = 6,
-    .obis         = { 0, 0, 0, 0, 0, 0 },
-    .attr_count   = 3,
-    .method_count = 0,
-    .version      = 0
-};
-
-static const db_ic_class ic_reg_act = {
-    .class_id  = 6,
-    .name      = "Register Activation",
-    .version   = 0,
-    .descr     = &reg_act_descr,
-    .create    = ic_stub_create,
-    .dispatch  = ic_stub_dispatch
-};
-
-void db_ic_register_register_activation(void) { db_ic_register(&ic_reg_act); }
 
 /* Profile Generic (Class ID 7) — implemented in db_cosem_ic_profile.c */
 
@@ -133,91 +122,9 @@ static const db_ic_class ic_clock = {
 
 void db_ic_register_clock(void) { db_ic_register(&ic_clock); }
 
-/* Association LN (Class ID 15) — implemented in db_cosem_ic_association.c */
-
-/* ========================= Image Transfer (Class ID 18) ========================= */
-
-static const db_ic_attr_descr img_xfer_attrs[] = {
-    { DB_ACCESS_GET,                  1, 0x09 }, /* logical_name */
-    { DB_ACCESS_GET,                  2, 0x09 }, /* image_transfer_status */
-    { DB_ACCESS_GET,                  3, 0x09 }, /* image_blocks_transferred */
-    { DB_ACCESS_GET,                  4, 0x09 }, /* image_block_size */
-    { DB_ACCESS_GET,                  5, 0x09 }, /* image_transferred_blocks_status */
-    { DB_ACCESS_GET,                  6, 0x09 }, /* image_first_not_transferred_block_number */
-    { DB_ACCESS_GET,                  7, 0x09 }, /* image_transfer_enabled */
-};
-
-static const db_ic_method_descr img_xfer_methods[] = {
-    { DB_ACCESS_ACTION, 1, 0x00 }, /* image_block_transfer */
-    { DB_ACCESS_ACTION, 2, 0x00 }, /* image_transfer_init */
-    { DB_ACCESS_ACTION, 3, 0x00 }, /* image_transfer_start */
-    { DB_ACCESS_ACTION, 4, 0x00 }, /* image_transfer_stop */
-    { DB_ACCESS_ACTION, 5, 0x00 }, /* image_verify */
-    { DB_ACCESS_ACTION, 6, 0x00 }, /* image_activate */
-};
-
-static const db_ic_object_descr img_xfer_descr = {
-    .attributes   = img_xfer_attrs,
-    .methods      = img_xfer_methods,
-    .class_id     = 18,
-    .obis         = { 0, 0, 44, 0, 0, 255 },
-    .attr_count   = 7,
-    .method_count = 6,
-    .version      = 0
-};
-
-static const db_ic_class ic_img_xfer = {
-    .class_id  = 18,
-    .name      = "Image Transfer",
-    .version   = 0,
-    .descr     = &img_xfer_descr,
-    .create    = ic_stub_create,
-    .dispatch  = ic_stub_dispatch
-};
-
-void db_ic_register_image_transfer(void) { db_ic_register(&ic_img_xfer); }
-
 /* Push Setup (Class ID 40) — implemented in db_cosem_ic_push.c */
 
 /* Security Setup (Class ID 64) — implemented in db_cosem_ic_security_setup.c */
-
-/* ========================= Disconnect Control (Class ID 70) ========================= */
-
-static const db_ic_attr_descr disc_attrs[] = {
-    { DB_ACCESS_GET,                  1, 0x09 }, /* logical_name */
-    { DB_ACCESS_GET,                  2, 0x03 }, /* output_state */
-    { DB_ACCESS_GET,                  3, 0x03 }, /* control_mode */
-    { DB_ACCESS_GET,                  4, 0x09 }, /* control_configuration */
-    { DB_ACCESS_GET,                  5, 0x09 }, /* control_event */
-};
-
-static const db_ic_method_descr disc_methods[] = {
-    { DB_ACCESS_ACTION, 1, 0x00 }, /* disconnect */
-    { DB_ACCESS_ACTION, 2, 0x00 }, /* reconnect */
-    { DB_ACCESS_ACTION, 3, 0x00 }, /* output_pulse_on */
-    { DB_ACCESS_ACTION, 4, 0x00 }, /* output_pulse_off */
-};
-
-static const db_ic_object_descr disc_descr = {
-    .attributes   = disc_attrs,
-    .methods      = disc_methods,
-    .class_id     = 70,
-    .obis         = { 0, 0, 96, 3, 10, 255 },
-    .attr_count   = 5,
-    .method_count = 4,
-    .version      = 0
-};
-
-static const db_ic_class ic_disc = {
-    .class_id  = 70,
-    .name      = "Disconnect Control",
-    .version   = 0,
-    .descr     = &disc_descr,
-    .create    = ic_stub_create,
-    .dispatch  = ic_stub_dispatch
-};
-
-void db_ic_register_disconnect_control(void) { db_ic_register(&ic_disc); }
 
 /* Limiter (Class ID 71) — implemented in db_cosem_ic_limiter.c */
 
@@ -271,10 +178,28 @@ void db_ic_register_all_builtins(void)
     db_ic_register_register_activation();
     db_ic_register_profile_generic();
     db_ic_register_clock();
+    db_ic_register_script_table();
+    db_ic_register_schedule();
+    db_ic_register_special_days();
     db_ic_register_association_ln();
+    db_ic_register_sap_assignment();
     db_ic_register_image_transfer();
+    db_ic_register_comms();
+    db_ic_register_activity_calendar();
+    db_ic_register_register_monitor();
+    db_ic_register_single_action_schedule();
+    db_ic_register_utility_tables();
+    db_ic_register_data_protection();
+    db_ic_register_profile_filter();
     db_ic_register_push_setup();
+    db_ic_register_compact_data();
+    db_ic_register_register_table();
+    db_ic_register_status_mapping();
     db_ic_register_security_setup();
+    db_ic_register_parameter_monitor();
+    db_ic_register_sensor_manager();
+    db_ic_register_arbitrator();
     db_ic_register_disconnect_control();
     db_ic_register_limiter();
+    db_ic_register_table_manager();
 }
