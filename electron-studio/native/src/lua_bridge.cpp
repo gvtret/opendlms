@@ -576,25 +576,36 @@ int lua_bridge_exec_return(lua_bridge_t *bridge, const char *script,
 
     bridge->last_error[0] = '\0';
 
-    /* Wrap script in a function that returns the value */
+    /* Try to execute as expression first (returns value) */
     char wrapped[8192];
-    snprintf(wrapped, sizeof(wrapped), "return (function() %s end)()", script);
+    snprintf(wrapped, sizeof(wrapped), "return %s", script);
 
     int status = luaL_dostring(bridge->L, wrapped);
 
     if (status != LUA_OK)
     {
-        const char *err = lua_tostring(bridge->L, -1);
-        if (err)
-        {
-            strncpy(bridge->last_error, err, sizeof(bridge->last_error) - 1);
-            if (result) strncpy(result, err, result_size - 1);
-        }
+        /* If that failed, try as statement (no return value) */
         lua_pop(bridge->L, 1);
-        return -1;
+        status = luaL_dostring(bridge->L, script);
+
+        if (status != LUA_OK)
+        {
+            const char *err = lua_tostring(bridge->L, -1);
+            if (err)
+            {
+                strncpy(bridge->last_error, err, sizeof(bridge->last_error) - 1);
+                if (result) strncpy(result, err, result_size - 1);
+            }
+            lua_pop(bridge->L, 1);
+            return -1;
+        }
+
+        /* Statement executed successfully, no return value */
+        if (result) result[0] = '\0';
+        return 0;
     }
 
-    /* Read the return value from the stack */
+    /* Expression returned a value — read it from the stack */
     if (result && result_size > 0)
     {
         int t = lua_type(bridge->L, -1);

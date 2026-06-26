@@ -135,7 +135,7 @@ async function executeConsoleCommand(cmd) {
     consolePrint(`>>> ${cmd}`, 'input');
 
     try {
-        /* Try execReturn first for expressions */
+        /* Execute command */
         const result = await openDLMS.execReturn(cmd);
 
         /* Capture print output */
@@ -150,6 +150,9 @@ async function executeConsoleCommand(cmd) {
         /* Show result if not empty */
         if (result.data && result.data.length > 0) {
             consolePrint(result.data, 'output');
+        } else if (result.success) {
+            /* Statement executed successfully, no return value */
+            /* Don't show anything for silent success */
         }
 
         /* Show error if any */

@@ -70,10 +70,14 @@ ipcMain.handle('lua:execReturn', (event, script) => {
         return { success: false, error: 'Lua bridge not initialized', data: '' };
     }
 
+    /* Clear previous error */
+    luaBridge.clearOutput();
+
     const result = luaBridge.execReturn(script);
     const error = luaBridge.getError();
     const output = luaBridge.getOutput();
 
+    /* If there's an error, result contains the error message */
     if (error && error.length > 0) {
         return { success: false, error, data: '', output };
     }
