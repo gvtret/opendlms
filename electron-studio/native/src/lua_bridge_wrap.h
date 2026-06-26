@@ -18,6 +18,7 @@ public:
 
     Napi::Value Exec(const Napi::CallbackInfo &info);
     Napi::Value ExecFile(const Napi::CallbackInfo &info);
+    Napi::Value ExecReturn(const Napi::CallbackInfo &info);
     Napi::Value GetError(const Napi::CallbackInfo &info);
     Napi::Value IsConnected(const Napi::CallbackInfo &info);
 

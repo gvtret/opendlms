@@ -73,6 +73,21 @@ int lua_bridge_exec_file(lua_bridge_t *bridge, const char *filename,
                          char *result, uint32_t result_size);
 
 /**
+ * \brief Execute a Lua expression and return its result as a string
+ *
+ *  The script should evaluate to a single value (string, number, boolean, nil).
+ *  For table results, use hex() or serialize manually in the script.
+ *
+ * \param bridge    Bridge context
+ * \param script    Lua expression to evaluate
+ * \param result    Buffer for the returned value as string
+ * \param result_size  Size of result buffer
+ * \return 0 on success, -1 on error
+ */
+int lua_bridge_exec_return(lua_bridge_t *bridge, const char *script,
+                           char *result, uint32_t result_size);
+
+/**
  * \brief Get the last error message
  */
 const char *lua_bridge_get_error(lua_bridge_t *bridge);

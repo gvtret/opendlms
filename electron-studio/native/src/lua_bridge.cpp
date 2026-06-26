@@ -462,6 +462,69 @@ int lua_bridge_exec_file(lua_bridge_t *bridge, const char *filename,
     return 0;
 }
 
+int lua_bridge_exec_return(lua_bridge_t *bridge, const char *script,
+                           char *result, uint32_t result_size)
+{
+    if (!bridge || !bridge->L || !script)
+    {
+        if (result) snprintf(result, result_size, "invalid bridge or script");
+        return -1;
+    }
+
+    bridge->last_error[0] = '\0';
+
+    /* Wrap script in a function that returns the value */
+    char wrapped[8192];
+    snprintf(wrapped, sizeof(wrapped), "return (function() %s end)()", script);
+
+    int status = luaL_dostring(bridge->L, wrapped);
+
+    if (status != LUA_OK)
+    {
+        const char *err = lua_tostring(bridge->L, -1);
+        if (err)
+        {
+            strncpy(bridge->last_error, err, sizeof(bridge->last_error) - 1);
+            if (result) strncpy(result, err, result_size - 1);
+        }
+        lua_pop(bridge->L, 1);
+        return -1;
+    }
+
+    /* Read the return value from the stack */
+    if (result && result_size > 0)
+    {
+        int t = lua_type(bridge->L, -1);
+        switch (t)
+        {
+        case LUA_TSTRING:
+        {
+            size_t len = 0;
+            const char *s = lua_tolstring(bridge->L, -1, &len);
+            if (len >= result_size) len = result_size - 1;
+            memcpy(result, s, len);
+            result[len] = '\0';
+            break;
+        }
+        case LUA_TNUMBER:
+            snprintf(result, result_size, "%g", lua_tonumber(bridge->L, -1));
+            break;
+        case LUA_TBOOLEAN:
+            snprintf(result, result_size, "%s", lua_toboolean(bridge->L, -1) ? "true" : "false");
+            break;
+        case LUA_TNIL:
+            result[0] = '\0';
+            break;
+        default:
+            snprintf(result, result_size, "[%s]", lua_typename(bridge->L, t));
+            break;
+        }
+    }
+
+    lua_pop(bridge->L, 1);
+    return 0;
+}
+
 const char *lua_bridge_get_error(lua_bridge_t *bridge)
 {
     if (!bridge) return "null bridge";

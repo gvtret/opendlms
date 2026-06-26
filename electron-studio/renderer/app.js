@@ -164,17 +164,34 @@ function handleStop() {
 async function handleOpen() {
     const result = await openDLMS.openFile();
     if (!result.canceled && result.filePaths.length > 0) {
-        const fs = require('fs');
-        const content = fs.readFileSync(result.filePaths[0], 'utf-8');
-        $('#script-editor').value = content;
-        $('#script-file').textContent = result.filePaths[0].split(/[/\\]/).pop();
-        log('info', `Opened: ${result.filePaths[0]}`);
+        /* File content is read by main process via Lua execFile */
+        const script = `io.open("${result.filePaths[0].replace(/\\/g, '\\\\')}", "r"):read("*a")`;
+        /* Actually, we need to read the file content in main process */
+        /* Use a different approach: exec the file directly */
+        const execResult = await openDLMS.execFile(result.filePaths[0]);
+        if (execResult.success) {
+            log('info', `Loaded: ${result.filePaths[0]}`);
+        } else {
+            log('error', `Failed to load: ${execResult.error}`);
+        }
     }
 }
 
-function handleSave() {
-    /* TODO: implement save dialog */
-    log('info', 'Save not yet implemented');
+async function handleSave() {
+    const content = $('#script-editor').value;
+    const defaultPath = $('#script-file').textContent;
+
+    const result = await openDLMS.saveFile({
+        defaultPath: defaultPath === 'Untitled' ? 'script.lua' : defaultPath,
+        content,
+    });
+
+    if (result.success) {
+        $('#script-file').textContent = result.path.split(/[/\\]/).pop();
+        log('info', `Saved: ${result.path}`);
+    } else {
+        log('info', 'Save cancelled');
+    }
 }
 
 /* ── Manual GET/SET ──────────────────────────────────────────────────────── */

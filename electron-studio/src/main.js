@@ -70,7 +70,6 @@ ipcMain.handle('lua:execFile', (event, filename) => {
         return { success: false, error: 'Lua bridge not initialized' };
     }
 
-    /* Read file and execute */
     try {
         const content = fs.readFileSync(filename, 'utf-8');
         const error = luaBridge.exec(content);
@@ -103,28 +102,52 @@ ipcMain.handle('lua:disconnect', () => {
 
 ipcMain.handle('client:get', (event, { invokeId, classId, obis, attrId }) => {
     if (!luaBridge) {
-        return { success: false, error: 'Not connected' };
+        return { success: false, error: 'Bridge not initialized' };
     }
 
-    /* Execute via Lua bridge */
-    const script = `
-        local data, err = getCosem(${classId}, obis(${JSON.stringify(obis.join('.'))}), ${attrId})
-        if data then
-            return hex(data)
-        else
-            error(err or "GET failed")
-        end
-    `;
-    /* TODO: implement direct API without Lua */
-    return { success: false, error: 'Use Lua script for now' });
+    const obisStr = obis.join('.');
+    const script = `hex(getCosem(${classId}, obis("${obisStr}"), ${attrId}))`;
+
+    const result = luaBridge.execReturn(script);
+
+    /* Check if result is an error (starts with "bad" or contains "fail") */
+    if (result && !result.startsWith('[') && !result.startsWith('nil')) {
+        return { success: true, data: result };
+    }
+
+    /* Check for nil result */
+    if (result === '' || result === 'nil' || result === 'false') {
+        const err = luaBridge.getError();
+        return { success: false, error: err || 'GET failed' };
+    }
+
+    return { success: true, data: result };
 });
 
 ipcMain.handle('client:set', (event, { invokeId, classId, obis, attrId, data }) => {
     if (!luaBridge) {
-        return { success: false, error: 'Not connected' };
+        return { success: false, error: 'Bridge not initialized' };
     }
 
-    return { success: false, error: 'Use Lua script for now' });
+    const obisStr = obis.join('.');
+    const dataHex = Array.from(data).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    /* Convert hex string to binary in Lua */
+    const script = `
+        local hex = "${dataHex}"
+        local bin = ""
+        for i = 1, #hex, 2 do
+            bin = bin .. string.char(tonumber(hex:sub(i, i+1), 16))
+        end
+        setCosem(${classId}, obis("${obisStr}"), ${attrId}, bin)
+    `;
+
+    const error = luaBridge.exec(script);
+    if (error) {
+        return { success: false, error };
+    }
+
+    return { success: true };
 });
 
 /* ── Dialog ──────────────────────────────────────────────────────────────── */
@@ -139,6 +162,23 @@ ipcMain.handle('dialog:open', async () => {
         ],
     });
     return result;
+});
+
+ipcMain.handle('dialog:save', async (event, { defaultPath, content }) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+        defaultPath: defaultPath || 'script.lua',
+        filters: [
+            { name: 'Lua Scripts', extensions: ['lua'] },
+            { name: 'All Files', extensions: ['*'] },
+        ],
+    });
+
+    if (!result.canceled && result.filePath) {
+        fs.writeFileSync(result.filePath, content, 'utf-8');
+        return { success: true, path: result.filePath };
+    }
+
+    return { success: false };
 });
 
 /* ── App lifecycle ───────────────────────────────────────────────────────── */

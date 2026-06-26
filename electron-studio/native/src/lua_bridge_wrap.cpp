@@ -11,6 +11,7 @@ Napi::Function LuaBridgeWrap::Init(Napi::Env env, Napi::Object exports)
     Napi::Function func = DefineClass(env, "LuaBridge", {
         InstanceMethod("exec", &LuaBridgeWrap::Exec),
         InstanceMethod("execFile", &LuaBridgeWrap::ExecFile),
+        InstanceMethod("execReturn", &LuaBridgeWrap::ExecReturn),
         InstanceMethod("getError", &LuaBridgeWrap::GetError),
         InstanceMethod("isConnected", &LuaBridgeWrap::IsConnected),
     });
@@ -86,4 +87,29 @@ Napi::Value LuaBridgeWrap::GetError(const Napi::CallbackInfo &info)
 Napi::Value LuaBridgeWrap::IsConnected(const Napi::CallbackInfo &info)
 {
     return Napi::Boolean::New(info.Env(), bridge_.connected != 0);
+}
+
+Napi::Value LuaBridgeWrap::ExecReturn(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsString())
+    {
+        Napi::TypeError::New(env, "String expected").ThrowAsJavaScriptException();
+        return env.Null();
+    }
+
+    std::string script = info[0].As<Napi::String>().Utf8Value();
+
+    char result[4096];
+    int rc = lua_bridge_exec_return(&bridge_, script.c_str(), result, sizeof(result));
+
+    if (rc != 0)
+    {
+        /* Return error as string */
+        return Napi::String::New(env, result);
+    }
+
+    /* Return result — may be empty string for nil */
+    return Napi::String::New(env, result);
 }

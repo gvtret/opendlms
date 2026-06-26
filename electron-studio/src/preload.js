@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('openDLMS', {
 
     /* Lua bridge */
     execScript: (script) => ipcRenderer.invoke('lua:exec', script),
+    execReturn: (script) => ipcRenderer.invoke('lua:execReturn', script),
     execFile: (filename) => ipcRenderer.invoke('lua:execFile', filename),
     isConnected: () => ipcRenderer.invoke('lua:isConnected'),
     getError: () => ipcRenderer.invoke('lua:getError'),
@@ -21,4 +22,5 @@ contextBridge.exposeInMainWorld('openDLMS', {
 
     /* Dialogs */
     openFile: () => ipcRenderer.invoke('dialog:open'),
+    saveFile: (opts) => ipcRenderer.invoke('dialog:save', opts),
 });
