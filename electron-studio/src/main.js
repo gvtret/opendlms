@@ -65,6 +65,32 @@ ipcMain.handle('lua:exec', (event, script) => {
     return { success: true };
 });
 
+ipcMain.handle('lua:execReturn', (event, script) => {
+    if (!luaBridge) {
+        return { success: false, error: 'Lua bridge not initialized', data: '' };
+    }
+
+    const result = luaBridge.execReturn(script);
+    const error = luaBridge.getError();
+    const output = luaBridge.getOutput();
+
+    if (error && error.length > 0) {
+        return { success: false, error, data: '', output };
+    }
+
+    return { success: true, data: result || '', output };
+});
+
+ipcMain.handle('lua:getOutput', () => {
+    if (!luaBridge) return '';
+    return luaBridge.getOutput();
+});
+
+ipcMain.handle('lua:clearOutput', () => {
+    if (luaBridge) luaBridge.clearOutput();
+    return { success: true };
+});
+
 ipcMain.handle('lua:execFile', (event, filename) => {
     if (!luaBridge) {
         return { success: false, error: 'Lua bridge not initialized' };

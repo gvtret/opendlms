@@ -42,6 +42,8 @@ typedef struct
     uint16_t port;
     int connected;
     char last_error[512];
+    char print_buf[16384];   ///< Accumulated print output
+    uint32_t print_len;      ///< Current length of print output
 } lua_bridge_t;
 
 /**
@@ -91,6 +93,21 @@ int lua_bridge_exec_return(lua_bridge_t *bridge, const char *script,
  * \brief Get the last error message
  */
 const char *lua_bridge_get_error(lua_bridge_t *bridge);
+
+/**
+ * \brief Get accumulated print output and clear buffer
+ *
+ * \param bridge    Bridge context
+ * \param output    Buffer for output
+ * \param output_size  Size of output buffer
+ * \return Number of bytes copied
+ */
+uint32_t lua_bridge_get_output(lua_bridge_t *bridge, char *output, uint32_t output_size);
+
+/**
+ * \brief Clear the print output buffer
+ */
+void lua_bridge_clear_output(lua_bridge_t *bridge);
 
 #ifdef __cplusplus
 }

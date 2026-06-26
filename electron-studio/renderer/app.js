@@ -210,6 +210,16 @@ async function handleRun() {
 
     try {
         const result = await openDLMS.execScript(script);
+
+        /* Capture any Lua print output */
+        const output = await openDLMS.getOutput();
+        if (output && output.length > 0) {
+            output.split('\n').forEach((line) => {
+                if (line.trim()) log('lua', line);
+            });
+        }
+        await openDLMS.clearOutput();
+
         if (result.success) {
             log('info', 'Script completed');
             setStatus('Ready');

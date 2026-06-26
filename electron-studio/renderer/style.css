@@ -301,6 +301,10 @@ input:focus, select:focus, textarea:focus {
     color: var(--danger);
 }
 
+.log-lua {
+    color: var(--warning);
+}
+
 /* Tree */
 .tree {
     font-size: 12px;

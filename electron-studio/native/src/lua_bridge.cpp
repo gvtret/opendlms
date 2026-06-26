@@ -29,7 +29,44 @@ static lua_bridge_t *get_bridge(lua_State *L)
 
 static int lua_print(lua_State *L)
 {
+    lua_bridge_t *bridge = get_bridge(L);
     int n = lua_gettop(L);
+
+    for (int i = 1; i <= n; i++)
+    {
+        const char *s = lua_tostring(L, i);
+        if (s)
+        {
+            if (bridge && bridge->print_len < sizeof(bridge->print_buf) - 1)
+            {
+                if (i > 1 && bridge->print_len < sizeof(bridge->print_buf) - 1)
+                {
+                    bridge->print_buf[bridge->print_len++] = '\t';
+                }
+                uint32_t slen = (uint32_t)strlen(s);
+                uint32_t space = sizeof(bridge->print_buf) - 1 - bridge->print_len;
+                if (slen > space) slen = space;
+                memcpy(bridge->print_buf + bridge->print_len, s, slen);
+                bridge->print_len += slen;
+            }
+        }
+        else
+        {
+            if (bridge && bridge->print_len < sizeof(bridge->print_buf) - 4)
+            {
+                memcpy(bridge->print_buf + bridge->print_len, "[?]", 3);
+                bridge->print_len += 3;
+            }
+        }
+    }
+
+    /* Add newline */
+    if (bridge && bridge->print_len < sizeof(bridge->print_buf) - 1)
+    {
+        bridge->print_buf[bridge->print_len++] = '\n';
+    }
+
+    /* Also print to stdout for debug */
     for (int i = 1; i <= n; i++)
     {
         const char *s = lua_tostring(L, i);
@@ -45,6 +82,7 @@ static int lua_print(lua_State *L)
     }
     printf("\n");
     fflush(stdout);
+
     return 0;
 }
 
@@ -594,4 +632,33 @@ const char *lua_bridge_get_error(lua_bridge_t *bridge)
 {
     if (!bridge) return "null bridge";
     return bridge->last_error;
+}
+
+uint32_t lua_bridge_get_output(lua_bridge_t *bridge, char *output, uint32_t output_size)
+{
+    if (!bridge || !output || output_size == 0) return 0;
+
+    uint32_t len = bridge->print_len;
+    if (len >= output_size) len = output_size - 1;
+
+    if (len > 0)
+    {
+        memcpy(output, bridge->print_buf, len);
+    }
+    output[len] = '\0';
+
+    /* Clear buffer */
+    bridge->print_len = 0;
+    bridge->print_buf[0] = '\0';
+
+    return len;
+}
+
+void lua_bridge_clear_output(lua_bridge_t *bridge)
+{
+    if (bridge)
+    {
+        bridge->print_len = 0;
+        bridge->print_buf[0] = '\0';
+    }
 }

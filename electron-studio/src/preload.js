@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('openDLMS', {
     execScript: (script) => ipcRenderer.invoke('lua:exec', script),
     execReturn: (script) => ipcRenderer.invoke('lua:execReturn', script),
     execFile: (filename) => ipcRenderer.invoke('lua:execFile', filename),
+    getOutput: () => ipcRenderer.invoke('lua:getOutput'),
+    clearOutput: () => ipcRenderer.invoke('lua:clearOutput'),
     isConnected: () => ipcRenderer.invoke('lua:isConnected'),
     getError: () => ipcRenderer.invoke('lua:getError'),
     disconnect: () => ipcRenderer.invoke('lua:disconnect'),

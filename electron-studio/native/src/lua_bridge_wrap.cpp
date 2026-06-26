@@ -12,6 +12,8 @@ Napi::Function LuaBridgeWrap::Init(Napi::Env env, Napi::Object exports)
         InstanceMethod("exec", &LuaBridgeWrap::Exec),
         InstanceMethod("execFile", &LuaBridgeWrap::ExecFile),
         InstanceMethod("execReturn", &LuaBridgeWrap::ExecReturn),
+        InstanceMethod("getOutput", &LuaBridgeWrap::GetOutput),
+        InstanceMethod("clearOutput", &LuaBridgeWrap::ClearOutput),
         InstanceMethod("getError", &LuaBridgeWrap::GetError),
         InstanceMethod("isConnected", &LuaBridgeWrap::IsConnected),
     });
@@ -112,4 +114,20 @@ Napi::Value LuaBridgeWrap::ExecReturn(const Napi::CallbackInfo &info)
 
     /* Return result — may be empty string for nil */
     return Napi::String::New(env, result);
+}
+
+Napi::Value LuaBridgeWrap::GetOutput(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    char output[16384];
+    uint32_t len = lua_bridge_get_output(&bridge_, output, sizeof(output));
+
+    return Napi::String::New(env, output, len);
+}
+
+Napi::Value LuaBridgeWrap::ClearOutput(const Napi::CallbackInfo &info)
+{
+    lua_bridge_clear_output(&bridge_);
+    return info.Env().Undefined();
 }
