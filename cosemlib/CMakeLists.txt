@@ -18,6 +18,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     src/csm_channel.c
     src/csm_framing.c
     src/csm_security.c
+    src/csm_security_suite.c
     src/csm_server.c
     src/csm_services.c
     src/csm_transport_tcp.c
