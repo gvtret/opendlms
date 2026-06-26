@@ -1,9 +1,0 @@
-{
-	"version": "1.0.0",
-	"device": "none",
-
-	"serial": {
-   	  "baudrate": 9600,
-	  "port": "COM1"
-	}
-}

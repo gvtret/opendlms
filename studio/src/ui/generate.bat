@@ -1,1 +1,0 @@
-..\..\tools\ledc -o upgrade_ui.c upgrade.led
