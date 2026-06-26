@@ -1,0 +1,49 @@
+# Doxyfile for OpenDLMS
+
+PROJECT_NAME           = "OpenDLMS"
+PROJECT_NUMBER         = "1.1.0"
+PROJECT_BRIEF          = "DLMS/COSEM protocol stack (IEC 62056)"
+
+OUTPUT_DIRECTORY       = docs/doxygen
+CREATE_SUBDIRS         = NO
+
+# Input
+INPUT                  = cosemlib/src \
+                         cosemlib/crypto \
+                         cosemlib/hdlc \
+                         cosemlib/ic \
+                         server \
+                         client
+FILE_PATTERNS          = *.h *.c
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */tests/* */build-* */.git/*
+
+# Extraction
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+
+# Output
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HTML_OUTPUT            = html
+HTML_COLORSTYLE        = AUTO_LIGHT
+
+# Warnings
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+
+# Diagrams
+HAVE_DOT               = NO
+CLASS_DIAGRAMS         = NO
+
+# Preprocessing
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+
+# Misc
+SORT_MEMBER_DOCS       = YES
+SORT_BRIEF_DOCS        = YES
+JAVADOC_AUTOBRIEF      = YES
