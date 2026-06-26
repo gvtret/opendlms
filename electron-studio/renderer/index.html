@@ -57,6 +57,7 @@
                 <!-- Tabs -->
                 <div id="tabs">
                     <button class="tab active" data-tab="script">Script</button>
+                    <button class="tab" data-tab="console">Console</button>
                     <button class="tab" data-tab="requests">Requests</button>
                     <button class="tab" data-tab="log">Packet Log</button>
                 </div>
@@ -80,6 +81,20 @@
 --   setCosem(classId, obis, attrId, data)
 --   print(...)
 " spellcheck="false"></textarea>
+                    </div>
+
+                    <!-- Lua Console -->
+                    <div id="tab-console" class="tab-panel">
+                        <div class="console-toolbar">
+                            <button id="btn-console-clear" class="btn">Clear</button>
+                            <button id="btn-console-clear-history" class="btn">Clear History</button>
+                            <label><input type="checkbox" id="console-auto-scroll" checked> Auto-scroll</label>
+                        </div>
+                        <div id="console-output" class="console-output"></div>
+                        <div class="console-input-row">
+                            <span class="console-prompt">&gt;&gt;&gt;</span>
+                            <input type="text" id="console-input" class="console-input" placeholder="Enter Lua expression..." spellcheck="false" autocomplete="off">
+                        </div>
                     </div>
 
                     <!-- Manual requests -->

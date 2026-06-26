@@ -9,6 +9,8 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 let connected = false;
+let consoleHistory = [];
+let consoleHistoryIndex = -1;
 
 /* ── Init ────────────────────────────────────────────────────────────────── */
 
@@ -20,6 +22,7 @@ async function init() {
     setupTabs();
     setupButtons();
     setupKeyboard();
+    setupConsole();
 }
 
 /* ── Tabs ────────────────────────────────────────────────────────────────── */
@@ -76,6 +79,102 @@ function setupKeyboard() {
             handleSave();
         }
     });
+}
+
+/* ── Console ─────────────────────────────────────────────────────────────── */
+
+function setupConsole() {
+    const input = $('#console-input');
+    const output = $('#console-output');
+
+    /* Input handler */
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const cmd = input.value.trim();
+            if (cmd) {
+                consoleHistory.push(cmd);
+                consoleHistoryIndex = consoleHistory.length;
+                executeConsoleCommand(cmd);
+                input.value = '';
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (consoleHistoryIndex > 0) {
+                consoleHistoryIndex--;
+                input.value = consoleHistory[consoleHistoryIndex] || '';
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (consoleHistoryIndex < consoleHistory.length - 1) {
+                consoleHistoryIndex++;
+                input.value = consoleHistory[consoleHistoryIndex] || '';
+            } else {
+                consoleHistoryIndex = consoleHistory.length;
+                input.value = '';
+            }
+        } else if (e.key === 'l' && e.ctrlKey) {
+            e.preventDefault();
+            clearConsole();
+        }
+    });
+
+    /* Clear buttons */
+    $('#btn-console-clear').addEventListener('click', clearConsole);
+    $('#btn-console-clear-history').addEventListener('click', () => {
+        consoleHistory = [];
+        consoleHistoryIndex = -1;
+        consolePrint('History cleared', 'info');
+    });
+
+    consolePrint('Lua Console ready. Type expressions and press Enter.', 'info');
+}
+
+async function executeConsoleCommand(cmd) {
+    /* Echo input */
+    consolePrint(`>>> ${cmd}`, 'input');
+
+    try {
+        /* Try execReturn first for expressions */
+        const result = await openDLMS.execReturn(cmd);
+
+        /* Capture print output */
+        const output = await openDLMS.getOutput();
+        if (output && output.length > 0) {
+            output.split('\n').forEach((line) => {
+                if (line.trim()) consolePrint(line, 'output');
+            });
+        }
+        await openDLMS.clearOutput();
+
+        /* Show result if not empty */
+        if (result.data && result.data.length > 0) {
+            consolePrint(result.data, 'output');
+        }
+
+        /* Show error if any */
+        if (result.error && result.error.length > 0) {
+            consolePrint(`Error: ${result.error}`, 'error');
+        }
+    } catch (e) {
+        consolePrint(`Error: ${e.message}`, 'error');
+    }
+}
+
+function consolePrint(text, type = 'output') {
+    const output = $('#console-output');
+    const line = document.createElement('div');
+    line.className = `console-line console-line-${type}`;
+    line.textContent = text;
+    output.appendChild(line);
+
+    if ($('#console-auto-scroll').checked) {
+        output.scrollTop = output.scrollHeight;
+    }
+}
+
+function clearConsole() {
+    $('#console-output').innerHTML = '';
 }
 
 /* ── Connection ──────────────────────────────────────────────────────────── */
