@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('openDLMS', {
     clientGet: (opts) => ipcRenderer.invoke('client:get', opts),
     clientSet: (opts) => ipcRenderer.invoke('client:set', opts),
 
+    /* Object browser */
+    getObjectList: () => ipcRenderer.invoke('cosem:getObjectList'),
+    getClock: () => ipcRenderer.invoke('cosem:getClock'),
+
     /* Dialogs */
     openFile: () => ipcRenderer.invoke('dialog:open'),
     saveFile: (opts) => ipcRenderer.invoke('dialog:save', opts),

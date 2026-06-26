@@ -150,6 +150,40 @@ ipcMain.handle('client:set', (event, { invokeId, classId, obis, attrId, data }) 
     return { success: true };
 });
 
+/* ── Object browser IPC ──────────────────────────────────────────────────── */
+
+ipcMain.handle('cosem:getObjectList', () => {
+    if (!luaBridge) {
+        return { success: false, error: 'Bridge not initialized' };
+    }
+
+    const script = `hex(getObjectList())`;
+    const result = luaBridge.execReturn(script);
+
+    if (result && result.length > 0 && !result.startsWith('[')) {
+        return { success: true, data: result };
+    }
+
+    const err = luaBridge.getError();
+    return { success: false, error: err || 'Failed to get object list' };
+});
+
+ipcMain.handle('cosem:getClock', () => {
+    if (!luaBridge) {
+        return { success: false, error: 'Bridge not initialized' };
+    }
+
+    const script = `hex(getClock())`;
+    const result = luaBridge.execReturn(script);
+
+    if (result && result.length > 0 && !result.startsWith('[')) {
+        return { success: true, data: result };
+    }
+
+    const err = luaBridge.getError();
+    return { success: false, error: err || 'Failed to get clock' };
+});
+
 /* ── Dialog ──────────────────────────────────────────────────────────────── */
 
 ipcMain.handle('dialog:open', async () => {

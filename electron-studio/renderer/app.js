@@ -96,6 +96,9 @@ async function handleConnect() {
             $('#status-connection').textContent = `Connected to ${host}:${port}`;
             setStatus('Connected');
             log('info', `Connected to ${host}:${port}`);
+
+            /* Populate object tree */
+            await refreshObjectTree();
         } else {
             setStatus('Connection failed');
             log('error', `Connection failed: ${result.error}`);
@@ -104,6 +107,77 @@ async function handleConnect() {
         setStatus('Connection error');
         log('error', `Connection error: ${e.message}`);
     }
+}
+
+async function refreshObjectTree() {
+    const tree = $('#object-tree');
+    tree.innerHTML = '<div class="tree-empty">Loading objects...</div>';
+
+    try {
+        const result = await openDLMS.getObjectList();
+        if (result.success && result.data) {
+            /* Parse AXDR-encoded object list */
+            const objects = parseObjectList(result.data);
+            if (objects.length > 0) {
+                tree.innerHTML = '';
+                objects.forEach((obj) => {
+                    const item = document.createElement('div');
+                    item.className = 'tree-item';
+                    item.textContent = `${obj.classId} ${obj.obis} (${obj.version})`;
+                    item.title = `Class ID: ${obj.classId}, OBIS: ${obj.obis}`;
+                    item.addEventListener('click', () => {
+                        /* Select object for GET/SET */
+                        log('info', `Selected: ${obj.classId} ${obj.obis}`);
+                    });
+                    tree.appendChild(item);
+                });
+                log('info', `Found ${objects.length} objects`);
+            } else {
+                tree.innerHTML = '<div class="tree-empty">No objects found</div>';
+            }
+        } else {
+            tree.innerHTML = `<div class="tree-empty">${result.error || 'Failed to load'}</div>`;
+        }
+    } catch (e) {
+        tree.innerHTML = `<div class="tree-empty">Error: ${e.message}</div>`;
+    }
+}
+
+function parseObjectList(hexStr) {
+    /* Simple AXDR object list parser */
+    const objects = [];
+    const bytes = [];
+    for (let i = 0; i < hexStr.length; i += 2) {
+        bytes.push(parseInt(hexStr.substring(i, i + 2), 16));
+    }
+
+    let pos = 0;
+
+    /* Skip tag (0x01 = array) and length */
+    if (bytes[pos] === 0x01) pos++;
+    const count = bytes[pos++];
+
+    for (let i = 0; i < count && pos < bytes.length; i++) {
+        /* Skip structure tag (0x02) and count (0x04) */
+        if (bytes[pos] === 0x02) pos++;
+        if (bytes[pos] === 0x04) pos++;
+
+        /* Class ID (2 bytes) */
+        const classId = (bytes[pos] << 8) | bytes[pos + 1];
+        pos += 2;
+
+        /* OBIS (6 bytes) */
+        const obis = `${bytes[pos]}.${bytes[pos+1]}.${bytes[pos+2]}.${bytes[pos+3]}.${bytes[pos+4]}.${bytes[pos+5]}`;
+        pos += 6;
+
+        /* Version (2 bytes) */
+        const version = (bytes[pos] << 8) | bytes[pos + 1];
+        pos += 2;
+
+        objects.push({ classId, obis, version });
+    }
+
+    return objects;
 }
 
 async function handleDisconnect() {

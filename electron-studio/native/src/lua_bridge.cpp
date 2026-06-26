@@ -333,6 +333,69 @@ static int lua_action(lua_State *L)
     return 1;
 }
 
+/* ── Lua function: getObjectList() ──────────────────────────────────────── */
+
+static int lua_get_object_list(lua_State *L)
+{
+    lua_bridge_t *bridge = get_bridge(L);
+    if (!bridge || !bridge->connected)
+    {
+        lua_pushnil(L);
+        lua_pushstring(L, "not connected");
+        return 2;
+    }
+
+    /* GET Attribute 2 (object list) from Association object 0.0.40.0.0.255 */
+    csm_obis_code obis;
+    memset(&obis, 0, sizeof(obis));
+    obis.A = 0; obis.B = 0; obis.C = 40; obis.D = 0; obis.E = 0; obis.F = 255;
+
+    uint8_t resp[4096];
+    int len = csm_client_get_block(bridge->client, 1, 1, &obis, 2, resp, sizeof(resp));
+
+    if (len <= 0)
+    {
+        lua_pushnil(L);
+        lua_pushstring(L, "failed to get object list");
+        return 2;
+    }
+
+    /* Return as binary string — caller should parse AXDR */
+    lua_pushlstring(L, (const char *)resp, (size_t)len);
+    return 1;
+}
+
+/* ── Lua function: getClockOBIS() ───────────────────────────────────────── */
+
+static int lua_get_clock(lua_State *L)
+{
+    lua_bridge_t *bridge = get_bridge(L);
+    if (!bridge || !bridge->connected)
+    {
+        lua_pushnil(L);
+        lua_pushstring(L, "not connected");
+        return 2;
+    }
+
+    /* GET Attribute 2 (time) from Clock object 0.0.1.0.0.255 */
+    csm_obis_code obis;
+    memset(&obis, 0, sizeof(obis));
+    obis.A = 0; obis.B = 0; obis.C = 1; obis.D = 0; obis.E = 0; obis.F = 255;
+
+    uint8_t resp[512];
+    int len = csm_client_get_block(bridge->client, 1, 8, &obis, 2, resp, sizeof(resp));
+
+    if (len <= 0)
+    {
+        lua_pushnil(L);
+        lua_pushstring(L, "failed to get clock");
+        return 2;
+    }
+
+    lua_pushlstring(L, (const char *)resp, (size_t)len);
+    return 1;
+}
+
 /* ── Bridge init/destroy ─────────────────────────────────────────────────── */
 
 int lua_bridge_init(lua_bridge_t *bridge)
@@ -363,6 +426,8 @@ int lua_bridge_init(lua_bridge_t *bridge)
     lua_register(bridge->L, "getCosem", lua_get_cosem);
     lua_register(bridge->L, "setCosem", lua_set_cosem);
     lua_register(bridge->L, "action", lua_action);
+    lua_register(bridge->L, "getObjectList", lua_get_object_list);
+    lua_register(bridge->L, "getClock", lua_get_clock);
     lua_register(bridge->L, "delay", lua_delay);
     lua_register(bridge->L, "hex", lua_hex);
     lua_register(bridge->L, "obis", lua_obis);
