@@ -64,7 +64,7 @@ uint8_t *HexToBin(const char *input, uint32_t size)
     size_t packet_size = size/2U;
     uint8_t *packet = (uint8_t *) malloc(packet_size);
 
-    if (packet != NULL)
+    if (packet != nullptr)
     {
         int ret;
         uint8_t *packet_ptr = packet;
@@ -193,7 +193,7 @@ void ACSEDecoder(const char *frame, int sz, csm_asso_tag tag)
     size_t packet_size = sz/2U;
     uint8_t *packet = (uint8_t *) malloc(packet_size);
 
-    if (packet != NULL)
+    if (packet != nullptr)
     {
         uint8_t *packet_ptr = packet;
 
@@ -380,6 +380,5 @@ TEST_CASE("AARQ-ICube-EZReader", "[AARQ-Decoder]" )
     puts("\r\n--------------------------  COSEM AARQ ICube EZReader  --------------------------\r\n");
     AARQDecoder(aarq_icube_ezreader, sizeof(aarq_icube_ezreader));
 }
-
 
 

@@ -169,8 +169,8 @@ TEST_CASE("Transport: destroy clears state", "[transport]")
     t.ctx = (void *)0x1234;
 
     CSM_TRANSPORT_DESTROY(&t);
-    REQUIRE(t.ops == NULL);
-    REQUIRE(t.ctx == NULL);
+    REQUIRE(t.ops == nullptr);
+    REQUIRE(t.ctx == nullptr);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════ */

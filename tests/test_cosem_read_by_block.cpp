@@ -40,7 +40,7 @@ void TestBigBlockProfile()
     size_t packet_size = profile_size/2U;
     uint8_t *packet = (uint8_t *) malloc(packet_size);
 
-    if (packet != NULL)
+    if (packet != nullptr)
     {
         int ret;
         uint8_t *packet_ptr = packet;
@@ -77,5 +77,4 @@ TEST_CASE( "COSEM_READ", "[Read by block]" )
     puts("\r\n--------------------------  COSEM TEST READ 1  --------------------------\r\n");
     TestBigBlockProfile();
 }
-
 

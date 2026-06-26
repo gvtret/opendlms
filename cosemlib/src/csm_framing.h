@@ -3,7 +3,8 @@
  * \brief APDU framing for DLMS/COSEM transports
  *
  *  Provides framing/unframing for:
- *    - COSEM-TCP wrapper (IEC 62056-5-3 §5.1.4): LLC prefix E6 E6 00/E6 E7 00
+ *    - COSEM LLC wrapper: LLC prefix E6 E6 00/E6 E7 00
+ *    - COSEM-TCP WPDU (IEC 62056-5-3): version/source/destination/length
  *    - HDLC (IEC 62056-46): flag, address, control, info, FCS
  *    - Raw (no framing, for testing)
  *
@@ -28,7 +29,8 @@ extern "C" {
 
 #define CSM_WRAPPER_CMD_PREFIX_LEN  3   /* E6 E6 00 */
 #define CSM_WRAPPER_RSP_PREFIX_LEN  3   /* E6 E7 00 */
-#define CSM_WRAPPER_MAX_LEN         (3 + CSM_FRAMING_MAX_PDU)
+#define CSM_TCP_WRAPPER_LEN         8
+#define CSM_WRAPPER_MAX_LEN         (CSM_TCP_WRAPPER_LEN + CSM_FRAMING_MAX_PDU)
 
 /**
  * \brief Frame an APDU with COSEM-TCP wrapper (command)
@@ -66,6 +68,13 @@ int csm_wrapper_frame_response(const uint8_t *apdu, uint32_t apdu_len,
 int csm_wrapper_deframe(const uint8_t *data, uint32_t data_len,
                         const uint8_t **apdu, uint32_t *apdu_len);
 
+int csm_tcp_wrapper_frame(uint16_t source_wport, uint16_t dest_wport,
+                          const uint8_t *apdu, uint32_t apdu_len,
+                          uint8_t *out, uint32_t out_size);
+int csm_tcp_wrapper_deframe(const uint8_t *data, uint32_t data_len,
+                            const uint8_t **apdu, uint32_t *apdu_len,
+                            uint16_t *source_wport, uint16_t *dest_wport);
+
 /* ── LLC SAP constants ──────────────────────────────────────────────────── */
 
 #define CSM_LLC_SAP_CMD   0xE6  /* Server SAP for commands */
@@ -98,7 +107,8 @@ int csm_hdlc_find_frame(const uint8_t *stream, uint32_t stream_len,
 
 typedef enum {
     CSM_FRAMING_NONE = 0,   /*!< No framing (raw) */
-    CSM_FRAMING_WRAPPER,    /*!< COSEM-TCP wrapper (E6 E6/E7 00) */
+    CSM_FRAMING_WRAPPER,    /*!< COSEM LLC wrapper (E6 E6/E7 00) */
+    CSM_FRAMING_TCP_WRAPPER,/*!< COSEM-TCP WPDU wrapper */
     CSM_FRAMING_HDLC        /*!< HDLC framing */
 } csm_framing_type;
 

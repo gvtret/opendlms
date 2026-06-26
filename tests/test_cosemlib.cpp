@@ -84,7 +84,7 @@ TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")
 
     REQUIRE(state.direction == CSM_BLOCK_DIR_NONE);
     REQUIRE(state.active == 0U);
-    REQUIRE(state.data == NULL);
+    REQUIRE(state.data == nullptr);
 
     /* Start a server→client transfer */
     static const uint8_t data[] = {1, 2, 3, 4, 5};
@@ -120,7 +120,7 @@ TEST_CASE("csm_channel_ctx API", "[cosemlib][channel]")
     REQUIRE(ctx.asso_states == assos);
     REQUIRE(ctx.asso_configs == configs);
     REQUIRE(ctx.asso_size == 2);
-    REQUIRE(ctx.db_handler == NULL);
+    REQUIRE(ctx.db_handler == nullptr);
 
     /* New channel */
     uint8_t ch = csm_channel_new_ctx(&ctx);

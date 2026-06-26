@@ -168,6 +168,9 @@ struct csm_client {
     uint8_t            tx_buf[CSM_SERVER_MAX_PDU];
 };
 
+static int client_send_recv(csm_client *client, uint8_t *apdu, uint32_t apdu_len,
+                            uint8_t *resp_buf, uint32_t resp_size);
+
 int csm_dlms_client_init(csm_client *client, csm_transport *transport,
                     uint8_t channel, csm_framing_type framing)
 {
@@ -197,7 +200,35 @@ int csm_dlms_client_init(csm_client *client, csm_transport *transport,
 int csm_client_connect(csm_client *client, uint32_t timeout_ms)
 {
     if (!client || !client->transport) return -1;
-    return CSM_TRANSPORT_OPEN(client->transport, client->channel);
+
+    int rc = CSM_TRANSPORT_OPEN(client->transport, client->channel);
+    if (rc != CSM_TRANSPORT_OK) return rc;
+
+    csm_asso_state *asso = &client->asso_states[0];
+    client->asso_configs[0].llc.ssap = 1U;
+    client->asso_configs[0].llc.dsap = 1U;
+    client->asso_configs[0].conformance = 0xFFFFFFFFU;
+    client->asso_configs[0].is_auto_connected = 0U;
+    asso->config = &client->asso_configs[0];
+    asso->ref = LN_REF;
+    asso->auth_level = CSM_AUTH_LOWEST_LEVEL;
+
+    csm_array req;
+    csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
+    if (!csm_asso_encoder(asso, &req, CSM_ASSO_AARQ)) return -1;
+
+    int resp_len = client_send_recv(client, client->tx_buf, req.wr_index,
+                                    client->rx_buf, sizeof(client->rx_buf));
+    if (resp_len <= 0) return resp_len;
+
+    csm_array resp;
+    csm_array_init(&resp, client->rx_buf, sizeof(client->rx_buf), (uint32_t)resp_len, 0);
+    if (!csm_asso_decoder(asso, &resp, CSM_ASSO_AARE)) return -1;
+    if (!asso->handshake.accepted) return -1;
+
+    asso->state_cf = CF_ASSOCIATED;
+    (void)timeout_ms;
+    return CSM_TRANSPORT_OK;
 }
 
 static int client_send_recv(csm_client *client, uint8_t *apdu, uint32_t apdu_len,

@@ -142,6 +142,27 @@ static int tcp_fill_recv_buf(csm_tcp_context *ctx, uint8_t channel)
     return CSM_TRANSPORT_OK;
 }
 
+static int tcp_wait_readable(socket_t fd, uint32_t timeout_ms)
+{
+    fd_set read_set;
+    FD_ZERO(&read_set);
+    FD_SET(fd, &read_set);
+
+    struct timeval tv;
+    struct timeval *tv_ptr = NULL;
+    if (timeout_ms != UINT32_MAX)
+    {
+        tv.tv_sec = (long)(timeout_ms / 1000U);
+        tv.tv_usec = (long)((timeout_ms % 1000U) * 1000U);
+        tv_ptr = &tv;
+    }
+
+    int rc = select((int)fd + 1, &read_set, NULL, NULL, tv_ptr);
+    if (rc == 0) return CSM_TRANSPORT_ERR_TIMEOUT;
+    if (rc < 0) return CSM_TRANSPORT_ERR_IO;
+    return CSM_TRANSPORT_OK;
+}
+
 /* ── Internal: extract one framed PDU from recv buffer ──────────────────── */
 
 static int tcp_extract_pdu(csm_tcp_context *ctx, uint8_t channel,
@@ -174,6 +195,31 @@ static int tcp_extract_pdu(csm_tcp_context *ctx, uint8_t channel,
         memcpy(out, apdu, apdu_len);
         *consumed = (uint32_t)(apdu + apdu_len - ch->recv_buf);
         return (int)apdu_len;
+    }
+    else if (ctx->framing == CSM_FRAMING_TCP_WRAPPER)
+    {
+        if (ch->recv_len < CSM_TCP_WRAPPER_LEN) return 0;
+
+        uint16_t apdu_len = (uint16_t)((ch->recv_buf[6] << 8U) | ch->recv_buf[7]);
+        uint32_t total_len = CSM_TCP_WRAPPER_LEN + (uint32_t)apdu_len;
+        if (total_len > sizeof(ch->recv_buf)) return CSM_TRANSPORT_ERR_OVERFLOW;
+        if (ch->recv_len < total_len) return 0;
+
+        const uint8_t *apdu;
+        uint32_t decoded_len;
+        int rc = csm_tcp_wrapper_deframe(ch->recv_buf, total_len, &apdu, &decoded_len, NULL, NULL);
+        if (rc == CSM_TRANSPORT_ERR_FRAMING)
+        {
+            memmove(ch->recv_buf, ch->recv_buf + 1, ch->recv_len - 1);
+            ch->recv_len--;
+            return 0;
+        }
+        if (rc != CSM_TRANSPORT_OK) return rc;
+        if (decoded_len > out_size) return CSM_TRANSPORT_ERR_OVERFLOW;
+
+        memcpy(out, apdu, decoded_len);
+        *consumed = total_len;
+        return (int)decoded_len;
     }
     else if (ctx->framing == CSM_FRAMING_HDLC)
     {
@@ -237,11 +283,8 @@ static int tcp_open(void *ctx, uint8_t channel)
     }
     else
     {
-        /* Client: connect later via csm_transport_tcp_connect() */
-        c->channels[channel].fd = SOCK_INVALID;
-        c->channels[channel].connected = 0;
-        c->channels[channel].recv_len = 0;
-        return CSM_TRANSPORT_OK;
+        csm_transport transport = { NULL, c };
+        return csm_transport_tcp_connect(&transport, 0U);
     }
 }
 
@@ -314,6 +357,9 @@ static int tcp_recv(void *ctx, uint8_t channel, uint8_t *buf, uint32_t buf_size,
         c->channels[channel].recv_len -= consumed;
         return pdu_len;
     }
+
+    int wait_rc = tcp_wait_readable(c->channels[channel].fd, timeout_ms);
+    if (wait_rc != CSM_TRANSPORT_OK) return wait_rc;
 
     /* No complete PDU yet — try to receive more data */
     int rc = tcp_fill_recv_buf(c, channel);
@@ -480,6 +526,7 @@ int csm_transport_tcp_connect(csm_transport *transport, uint32_t timeout_ms)
     (void)timeout_ms;
     if (!transport) return CSM_TRANSPORT_ERR;
     csm_tcp_context *c = (csm_tcp_context *)transport->ctx;
+    if (c->channels[0].connected) return CSM_TRANSPORT_OK;
 
     socket_t fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == SOCK_INVALID) return CSM_TRANSPORT_ERR_IO;

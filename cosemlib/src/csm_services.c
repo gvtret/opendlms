@@ -190,6 +190,20 @@ static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state
                 code = database(ctx, array, array, request);
             }
 
+            if (code != CSM_OK && code != CSM_OK_BLOCK)
+            {
+                array->wr_index = 0U;
+                valid = csm_array_write_u8(array, AXDR_GET_RESPONSE);
+                valid = valid && csm_array_write_u8(array, 1U);
+                valid = valid && csm_array_write_u8(array, request->sender_invoke_id);
+                valid = valid && csm_array_write_u8(array, 1U);
+                valid = valid && csm_array_write_u8(array, CSM_ACCESS_RESULT_OBJECT_UNDEFINED);
+                if (valid)
+                {
+                    code = CSM_OK;
+                }
+            }
+
             /* If data too large, start block transfer */
             if (code == CSM_OK_BLOCK)
             {
@@ -1142,5 +1156,4 @@ int csm_client_get_block_data(csm_response *response, const uint8_t **data,
 
     return csm_block_get_received_data(&response->block_state, data, data_size);
 }
-
 

@@ -360,17 +360,10 @@ function handleStop() {
 
 async function handleOpen() {
     const result = await openDLMS.openFile();
-    if (!result.canceled && result.filePaths.length > 0) {
-        /* File content is read by main process via Lua execFile */
-        const script = `io.open("${result.filePaths[0].replace(/\\/g, '\\\\')}", "r"):read("*a")`;
-        /* Actually, we need to read the file content in main process */
-        /* Use a different approach: exec the file directly */
-        const execResult = await openDLMS.execFile(result.filePaths[0]);
-        if (execResult.success) {
-            log('info', `Loaded: ${result.filePaths[0]}`);
-        } else {
-            log('error', `Failed to load: ${execResult.error}`);
-        }
+    if (!result.canceled) {
+        $('#script-editor').value = result.content || '';
+        $('#script-file').textContent = result.filePath.split(/[/\\]/).pop();
+        log('info', `Loaded: ${result.filePath}`);
     }
 }
 

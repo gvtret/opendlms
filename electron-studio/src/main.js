@@ -282,7 +282,14 @@ ipcMain.handle('dialog:open', async () => {
             { name: 'All Files', extensions: ['*'] },
         ],
     });
-    return result;
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return { canceled: true };
+    }
+
+    const filePath = result.filePaths[0];
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return { canceled: false, filePath, content };
 });
 
 ipcMain.handle('dialog:save', async (event, { defaultPath, content }) => {

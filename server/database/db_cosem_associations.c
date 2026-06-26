@@ -28,7 +28,7 @@ csm_db_code db_cosem_associations_func(csm_db_context_t *ctx, csm_array *in, csm
                     const db_object_descr *obj = &e->objects[j];
                     valid = valid && csm_array_write_u16(out, obj->class_id);
                     valid = valid && csm_array_write_u8(out, obj->version);
-                    valid = valid && csm_array_write_buff(out, &request->db_request.logical_name.obis.A, 6U);
+                    valid = valid && csm_array_write_buff(out, &obj->obis_code.A, 6U);
                     
                     valid = valid && csm_array_write_u8(out, AXDR_TAG_STRUCTURE);
                     valid = valid && csm_ber_write_len(out, 2);
@@ -83,4 +83,3 @@ csm_db_code db_cosem_associations_func(csm_db_context_t *ctx, csm_array *in, csm
 
     return code;
 }
-

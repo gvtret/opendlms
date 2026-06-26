@@ -22,7 +22,7 @@ void StreamingDecoder()
     size_t packet_size = sz/2U;
     uint8_t *packet = (uint8_t *) malloc(packet_size);
 
-    if (packet != NULL)
+    if (packet != nullptr)
     {
         int ret;
         uint8_t *packet_ptr = packet;
@@ -71,7 +71,7 @@ void SnrmEncoder()
     size_t snrm_size = sz/2U;
     uint8_t *snrm = (uint8_t *) malloc(snrm_size);
 
-    if (snrm != NULL)
+    if (snrm != nullptr)
     {
         int ret;
 
@@ -125,8 +125,8 @@ void SnrmDecoder()
     uint8_t *snrm1 = (uint8_t *) malloc(snrm1_size);
     uint8_t *snrm2 = (uint8_t *) malloc(snrm2_size);
 
-    if ((snrm1 != NULL) &&
-        (snrm2 != NULL))
+    if ((snrm1 != nullptr) &&
+        (snrm2 != nullptr))
     {
         int ret;
 
@@ -169,7 +169,7 @@ void AckEncoder()
     size_t rr_size = sz/2U;
     uint8_t *rr = (uint8_t *) malloc(rr_size);
 
-    if (rr != NULL)
+    if (rr != nullptr)
     {
         int ret;
 
@@ -220,7 +220,7 @@ void InformationDecoder()
 
     uint8_t *info_frame = (uint8_t *) malloc(info_size);
 
-    if (info_frame != NULL)
+    if (info_frame != nullptr)
     {
         int ret;
 
@@ -274,6 +274,5 @@ TEST_CASE( "HDLC5", "[INFO]" )
     puts("\r\n--------------------------  HDLC TEST 5  --------------------------\r\n");
     InformationDecoder();
 }
-
 
 

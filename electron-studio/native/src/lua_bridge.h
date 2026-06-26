@@ -22,6 +22,10 @@ typedef struct
     char host[256];
     uint16_t port;
     int connected;
+    int transport_initialized;
+    csm_transport transport;
+    csm_client *client;
+    uint8_t invoke_id;
     char last_error[512];
     char print_buf[16384];
     uint32_t print_len;

@@ -8,6 +8,7 @@
 
 #include "csm_framing.h"
 #include "csm_transport.h"
+#include "os_util.h"
 #include "hdlc.h"
 #include <string.h>
 
@@ -76,6 +77,53 @@ int csm_wrapper_deframe(const uint8_t *data, uint32_t data_len,
     return CSM_TRANSPORT_OK;
 }
 
+int csm_tcp_wrapper_frame(uint16_t source_wport, uint16_t dest_wport,
+                          const uint8_t *apdu, uint32_t apdu_len,
+                          uint8_t *out, uint32_t out_size)
+{
+    if (!apdu || !out || apdu_len > CSM_FRAMING_MAX_PDU ||
+        apdu_len > 0xFFFFU || out_size < (CSM_TCP_WRAPPER_LEN + apdu_len))
+    {
+        return CSM_TRANSPORT_ERR_OVERFLOW;
+    }
+
+    PUT_BE16(&out[0], 0x0001U);
+    PUT_BE16(&out[2], source_wport);
+    PUT_BE16(&out[4], dest_wport);
+    PUT_BE16(&out[6], (uint16_t)apdu_len);
+    memcpy(out + CSM_TCP_WRAPPER_LEN, apdu, apdu_len);
+
+    return (int)(CSM_TCP_WRAPPER_LEN + apdu_len);
+}
+
+int csm_tcp_wrapper_deframe(const uint8_t *data, uint32_t data_len,
+                            const uint8_t **apdu, uint32_t *apdu_len,
+                            uint16_t *source_wport, uint16_t *dest_wport)
+{
+    if (!data || !apdu || !apdu_len || data_len < CSM_TCP_WRAPPER_LEN)
+    {
+        return CSM_TRANSPORT_ERR;
+    }
+
+    uint16_t version = GET_BE16(&data[0]);
+    uint16_t len = GET_BE16(&data[6]);
+    if (version != 0x0001U)
+    {
+        return CSM_TRANSPORT_ERR_FRAMING;
+    }
+    if ((uint32_t)len + CSM_TCP_WRAPPER_LEN > data_len)
+    {
+        return CSM_TRANSPORT_ERR_TIMEOUT;
+    }
+
+    if (source_wport) *source_wport = GET_BE16(&data[2]);
+    if (dest_wport) *dest_wport = GET_BE16(&data[4]);
+    *apdu = data + CSM_TCP_WRAPPER_LEN;
+    *apdu_len = len;
+
+    return CSM_TRANSPORT_OK;
+}
+
 /* ── HDLC framing ───────────────────────────────────────────────────────── */
 
 int csm_hdlc_find_frame(const uint8_t *stream, uint32_t stream_len,
@@ -139,6 +187,9 @@ int csm_framing_frame(csm_framing_type type, uint8_t direction,
         else
             return csm_wrapper_frame_response(apdu, apdu_len, out, out_size);
 
+    case CSM_FRAMING_TCP_WRAPPER:
+        return csm_tcp_wrapper_frame(1U, 1U, apdu, apdu_len, out, out_size);
+
     case CSM_FRAMING_NONE:
         if (apdu_len > out_size)
             return CSM_TRANSPORT_ERR_OVERFLOW;
@@ -175,6 +226,9 @@ int csm_framing_deframe(csm_framing_type type,
     {
     case CSM_FRAMING_WRAPPER:
         return csm_wrapper_deframe(data, data_len, apdu, apdu_len);
+
+    case CSM_FRAMING_TCP_WRAPPER:
+        return csm_tcp_wrapper_deframe(data, data_len, apdu, apdu_len, NULL, NULL);
 
     case CSM_FRAMING_NONE:
         *apdu = data;

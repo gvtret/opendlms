@@ -227,12 +227,22 @@ int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
 
 void csm_channel_disconnect_ctx(csm_channel_ctx *ctx, uint8_t channel)
 {
-    if ((ctx != NULL) && (channel < ctx->channel_size))
+    if (ctx == NULL) return;
+
+    uint8_t index = channel;
+    if ((channel > 0U) &&
+        (channel <= ctx->channel_size) &&
+        (ctx->channels[channel - 1U].request.channel_id == channel))
     {
-        ctx->channels[channel].request.channel_id = INVALID_CHANNEL_ID;
-        if (ctx->channels[channel].asso != NULL)
+        index = (uint8_t)(channel - 1U);
+    }
+
+    if (index < ctx->channel_size)
+    {
+        ctx->channels[index].request.channel_id = INVALID_CHANNEL_ID;
+        if (ctx->channels[index].asso != NULL)
         {
-            ctx->channels[channel].asso->state_cf = CF_IDLE;
+            ctx->channels[index].asso->state_cf = CF_IDLE;
         }
     }
 }

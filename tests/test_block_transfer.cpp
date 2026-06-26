@@ -28,7 +28,7 @@ TEST_CASE("Block transfer init", "[block_transfer]")
     REQUIRE(state.invoke_id == 0U);
     REQUIRE(state.last_block == 0U);
     REQUIRE(state.active == 0U);
-    REQUIRE(state.data == NULL);
+    REQUIRE(state.data == nullptr);
 }
 
 TEST_CASE("Block transfer is_active", "[block_transfer]")
@@ -58,7 +58,7 @@ TEST_CASE("Block transfer abort", "[block_transfer]")
 
     REQUIRE(state.active == 0U);
     REQUIRE(state.direction == CSM_BLOCK_DIR_NONE);
-    REQUIRE(state.data == NULL);
+    REQUIRE(state.data == nullptr);
 }
 
 /* ── Block Transfer Start Tests ─────────────────────────────────────────── */
