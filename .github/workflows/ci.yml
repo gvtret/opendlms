@@ -2,28 +2,126 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, develop]
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    runs-on: ${{ matrix.os }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc g++
 
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DOPEN_DLMS_BUILD_TESTS=ON \
+            -DOPEN_DLMS_BUILD_SERVER=ON \
+            -DCOSEMLIB_SHARED=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        run: cd build && ctest --output-on-failure
+
+      - name: Install
+        run: cmake --install build --prefix ${{ github.workspace }}/install
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: |
+            build/cosemlib/libcosemlib.a
+            ${{ github.workspace }}/install/
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        uses: lukka/get-cmake@latest
+
+      - name: Configure (MSVC)
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A x64 `
+            -DOPEN_DLMS_BUILD_TESTS=ON `
+            -DOPEN_DLMS_BUILD_SERVER=ON `
+            -DCOSEMLIB_SHARED=OFF
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run tests
+        run: |
+          cd build
+          ctest -C Release --output-on-failure
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: build/*/Release/cosemlib.lib
+
+  build-macos:
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DOPEN_DLMS_BUILD_TESTS=ON \
+            -DOPEN_DLMS_BUILD_SERVER=ON \
+            -DCOSEMLIB_SHARED=OFF
 
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake --build build
 
-      - name: Test
-        working-directory: build
-        run: ctest --output-on-failure -C Debug
+      - name: Run tests
+        run: cd build && ctest --output-on-failure
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: build/cosemlib/libcosemlib.a
+
+  # Electron studio build (Linux only for now)
+  build-studio:
+    runs-on: ubuntu-latest
+    needs: build-linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install native deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc g++
+
+      - name: Install npm dependencies
+        working-directory: electron-studio
+        run: npm install
+
+      - name: Build native addon
+        working-directory: electron-studio
+        run: npm run build:native
+
+      - name: Package
+        working-directory: electron-studio
+        run: npx electron-builder --linux --dir
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
