@@ -666,6 +666,77 @@ TEST_CASE("Integration_ImageTransferInitParsesStructure", "[integration][basic]"
     REQUIRE(blocks_buf[6] == 0x00);
 }
 
+TEST_CASE("Integration_ImageTransferBlockTransferUpdatesProgress", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(18, &obis_image, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t block_size[] = {
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x32
+    };
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 18, &obis_image, 4,
+                          block_size, sizeof(block_size), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t init_data[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_OCTETSTRING, 0x02, 'f', 'w',
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x64
+    };
+    ret = test_do_action(0x02, 18, &obis_image, 2,
+                         init_data, sizeof(init_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t block_data[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x00,
+        AXDR_TAG_OCTETSTRING, 0x04, 0xDE, 0xAD, 0xBE, 0xEF
+    };
+    ret = test_do_action(0x03, 18, &obis_image, 1,
+                         block_data, sizeof(block_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t progress_buf[1024];
+    ret = test_do_get(0x04, 18, &obis_image, 3, progress_buf, sizeof(progress_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(progress_buf[0] == 0xC4);
+    REQUIRE(progress_buf[3] == 0x00);
+    REQUIRE(progress_buf[4] == AXDR_TAG_UNSIGNED32);
+    REQUIRE(progress_buf[8] == 0x01);
+
+    uint8_t blocks_buf[1024];
+    ret = test_do_get(0x05, 18, &obis_image, 5, blocks_buf, sizeof(blocks_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(blocks_buf[0] == 0xC4);
+    REQUIRE(blocks_buf[3] == 0x00);
+    REQUIRE(blocks_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(blocks_buf[5] == 0x01);
+    REQUIRE(blocks_buf[6] == 0x80);
+
+    uint8_t first_buf[1024];
+    ret = test_do_get(0x06, 18, &obis_image, 6, first_buf, sizeof(first_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(first_buf[0] == 0xC4);
+    REQUIRE(first_buf[3] == 0x00);
+    REQUIRE(first_buf[4] == AXDR_TAG_UNSIGNED32);
+    REQUIRE(first_buf[8] == 0x01);
+
+    const uint8_t bad_block[] = { AXDR_TAG_STRUCTURE, 0x01, AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x00 };
+    ret = test_do_action(0x07, 18, &obis_image, 1,
+                         bad_block, sizeof(bad_block), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 250);
+}
+
 TEST_CASE("Integration_SetDataValue", "[integration][basic]")
 {
     test_stack_setup();

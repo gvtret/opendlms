@@ -71,7 +71,7 @@ static const db_ic_attr_descr image_attrs[] = {
 };
 
 static const db_ic_method_descr image_methods[] = {
-    { DB_ACCESS_ACTION, 1, AXDR_TAG_NULL },
+    { DB_ACCESS_ACTION, 1, AXDR_TAG_STRUCTURE },
     { DB_ACCESS_ACTION, 2, AXDR_TAG_STRUCTURE },
     { DB_ACCESS_ACTION, 3, AXDR_TAG_UNSIGNED32 },
     { DB_ACCESS_ACTION, 4, AXDR_TAG_NULL },
@@ -137,6 +137,67 @@ static int image_read_init(csm_array *in, db_ic_image_data *d)
     memset(d->transferred_blocks_status, 0, sizeof(d->transferred_blocks_status));
     d->transferred_blocks_len = (uint8_t)status_len;
     return TRUE;
+}
+
+static uint32_t image_block_count(const db_ic_image_data *d)
+{
+    if (d->block_size == 0U) { return 0U; }
+    return (d->image_size + d->block_size - 1U) / d->block_size;
+}
+
+static int image_block_is_transferred(const db_ic_image_data *d, uint32_t block_number)
+{
+    uint32_t byte_index = block_number / 8U;
+    uint8_t bit_mask = (uint8_t)(0x80U >> (block_number % 8U));
+    if (byte_index >= d->transferred_blocks_len) { return FALSE; }
+    return ((d->transferred_blocks_status[byte_index] & bit_mask) != 0U);
+}
+
+static void image_mark_block_transferred(db_ic_image_data *d, uint32_t block_number)
+{
+    uint32_t byte_index = block_number / 8U;
+    uint8_t bit_mask = (uint8_t)(0x80U >> (block_number % 8U));
+    if (byte_index < d->transferred_blocks_len)
+    {
+        d->transferred_blocks_status[byte_index] |= bit_mask;
+    }
+}
+
+static void image_update_first_not_transferred(db_ic_image_data *d)
+{
+    uint32_t block_count = image_block_count(d);
+    uint32_t block = 0U;
+    while ((block < block_count) && image_block_is_transferred(d, block))
+    {
+        block++;
+    }
+    d->first_not_transferred = block;
+}
+
+static int image_read_block_transfer(csm_array *in, db_ic_image_data *d, uint32_t *block_number)
+{
+    uint8_t tag = 0xFFU;
+    uint8_t fields = 0U;
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_STRUCTURE) { return FALSE; }
+    if (!csm_array_read_u8(in, &fields) || fields != 2U) { return FALSE; }
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED32) { return FALSE; }
+    if (!csm_array_read_u32(in, block_number)) { return FALSE; }
+
+    uint32_t data_len = 0U;
+    if (!csm_axdr_rd_octetstring(in, &data_len)) { return FALSE; }
+
+    uint32_t block_count = image_block_count(d);
+    if ((*block_number >= block_count) || (block_count == 0U)) { return FALSE; }
+
+    uint32_t expected_max = d->block_size;
+    if (*block_number == (block_count - 1U))
+    {
+        uint32_t remainder = d->image_size % d->block_size;
+        if (remainder != 0U) { expected_max = remainder; }
+    }
+
+    if ((data_len == 0U) || (data_len > expected_max)) { return FALSE; }
+    return csm_array_reader_jump(in, data_len);
 }
 
 static csm_db_code image_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
@@ -225,8 +286,23 @@ static csm_db_code image_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         switch (method_id)
         {
-        case 1U: /* image_block_transfer: skip input data, acknowledge */
+        case 1U:
+        {
+            if ((d->transfer_status != IMG_STATUS_INITIALIZATION_OK) &&
+                (d->transfer_status != IMG_STATUS_INITIATED))
+            {
+                return CSM_ERR_TEMPORARY_FAILURE;
+            }
+            uint32_t block_number = 0U;
+            if (!image_read_block_transfer(in, d, &block_number)) { return CSM_ERR_BAD_ENCODING; }
+            if (!image_block_is_transferred(d, block_number))
+            {
+                image_mark_block_transferred(d, block_number);
+                d->blocks_transferred++;
+            }
+            image_update_first_not_transferred(d);
             return CSM_OK;
+        }
         case 2U:
             if (d->transfer_enabled == 0U) { return CSM_ERR_UNAUTHORIZED_ACCESS; }
             if (!image_read_init(in, d))
