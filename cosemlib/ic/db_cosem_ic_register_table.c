@@ -202,8 +202,25 @@ static csm_db_code reg_table_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         }
         else if (method_id == 2U)
         {
-            /* capture */
-            return CSM_OK;
+            if ((d->class_id == 0U) || (d->entry_count == 0U) ||
+                (d->active_index >= d->entry_count))
+            {
+                return CSM_ERR_DATA_CONTENT_NOT_OK;
+            }
+
+            db_ic_inst_t *target = NULL;
+            db_ic_reg_table_entry *entry = &d->entries[d->active_index];
+            if (!db_ic_find(d->class_id, &entry->obis, &target) || target == NULL)
+            {
+                return CSM_ERR_OBJECT_NOT_FOUND;
+            }
+
+            uint8_t capture_buf[128];
+            csm_array capture_out;
+            csm_array_init(&capture_out, capture_buf, sizeof(capture_buf), 0U, 0U);
+            return (csm_db_code) db_ic_dispatch(target, IC_OP_GET,
+                                                entry->attribute_id, 0U,
+                                                NULL, &capture_out);
         }
     }
     return CSM_ERR_OBJECT_NOT_FOUND;

@@ -126,6 +126,8 @@ not currently form one consistently verified product:
   successful no-op.
 - Implemented Sensor Manager `reset` as a real state reset instead of reporting
   a successful no-op.
+- Made Register Table `capture` validate its configured active target and read
+  it through the IC registry instead of returning unconditional success.
 
 ## Verified
 
@@ -135,10 +137,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 144 test cases with 1128 assertions`.
+  reports `Passed all 145 test cases with 1148 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 72 test cases with 582 assertions`.
+  reports `Passed all 73 test cases with 602 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
@@ -178,6 +180,9 @@ not currently form one consistently verified product:
   the requested script id is not present.
 - Integration tests now verify Sensor Manager `reset` clears previously SET
   active-variant, retry-count, and data-protection state.
+- Integration tests now verify Register Table `capture` fails without a
+  configured readable target, succeeds for a real Register object attribute, and
+  rejects an out-of-range active index.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

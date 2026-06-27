@@ -53,6 +53,7 @@ static const csm_obis_code obis_push        = { 0, 0, 25, 1, 0, 255 };
 static const csm_obis_code obis_disconnect  = { 0, 0, 96, 3, 10, 255 };
 static const csm_obis_code obis_utility     = { 0, 0, 10, 3, 0, 255 };
 static const csm_obis_code obis_compact     = { 0, 0, 60, 3, 0, 255 };
+static const csm_obis_code obis_reg_table   = { 0, 0, 60, 2, 0, 255 };
 static const csm_obis_code obis_reg_act     = { 0, 0, 60, 5, 0, 255 };
 static const csm_obis_code obis_param_mon   = { 0, 0, 60, 6, 0, 255 };
 static const csm_obis_code obis_arbitrator  = { 0, 0, 60, 7, 0, 255 };
@@ -937,6 +938,62 @@ TEST_CASE("Integration_SensorManagerResetClearsState", "[integration][basic]")
     REQUIRE(get_buf[3] == 0x00);
     REQUIRE(get_buf[4] == AXDR_TAG_BOOLEAN);
     REQUIRE(get_buf[5] == 0x00);
+}
+
+TEST_CASE("Integration_RegisterTableCaptureRequiresReadableTarget", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(61, &obis_reg_table, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 61, &obis_reg_table, 2,
+                             NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
+
+    const uint8_t class_id[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x03
+    };
+    ret = test_do_set(0x02, 61, &obis_reg_table, 3,
+                      class_id, sizeof(class_id), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t entries[] = {
+        AXDR_TAG_ARRAY, 0x01,
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_OCTETSTRING, 0x06, 0x00, 0x00, 0x0A, 0x00, 0x00, 0xFF,
+        AXDR_TAG_UNSIGNED8, 0x02
+    };
+    ret = test_do_set(0x03, 61, &obis_reg_table, 2,
+                      entries, sizeof(entries), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_action(0x04, 61, &obis_reg_table, 2,
+                         NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t bad_active_index[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x01
+    };
+    ret = test_do_set(0x05, 61, &obis_reg_table, 4,
+                      bad_active_index, sizeof(bad_active_index), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_action(0x06, 61, &obis_reg_table, 2,
+                         NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
 }
 
 TEST_CASE("Integration_ArbitratorUnsupportedRequestActionFails", "[integration][basic]")
