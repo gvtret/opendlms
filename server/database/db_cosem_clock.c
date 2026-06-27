@@ -1,7 +1,7 @@
 #include "db_cosem_clock.h"
 #include "csm_axdr_codec.h"
 
-static const uint8_t date_time[12] = {
+static uint8_t date_time[12] = {
     0x07, 0xD2,// year 2002
     0x0C,// month December
     0x04,// day 4th
@@ -28,7 +28,24 @@ csm_db_code db_cosem_clock_func(csm_db_context_t *ctx, csm_array *in, csm_array 
     }
     else if (request->db_request.service == SVC_SET)
     {
-        // Not implemented
+        uint32_t size = 0U;
+        if (csm_axdr_rd_octetstring(in, &size) && size == sizeof(date_time))
+        {
+            if (csm_array_read_buff(in, date_time, sizeof(date_time)))
+            {
+                code = CSM_OK;
+            }
+        }
+    }
+    else if (request->db_request.service == SVC_ACTION)
+    {
+        if (request->db_request.logical_name.id == 2U)
+        {
+            date_time[6] = 30U;
+            date_time[7] = 0U;
+            date_time[8] = 0U;
+            code = CSM_OK;
+        }
     }
 
     return code;

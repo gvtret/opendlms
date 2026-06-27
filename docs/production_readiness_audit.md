@@ -142,6 +142,21 @@ not currently form one consistently verified product:
   actions so its reset/action behavior operates on configured state.
 - Implemented Single Action Schedule SET support for executed script, schedule
   type, and execution time.
+- Fixed high-level client SET/ACTION request encoding so normal requests include
+  the required presence flags before payload data.
+- Extended `reader_lab` with raw attribute, SAP, destination, and AXDR
+  `set-hex` flags so live examples can exercise non-default attributes and
+  raw COSEM payloads.
+- Made legacy `common/ip/tcp_server` accumulate TCP wrapper frames instead of
+  assuming each `recv()` returns exactly one complete WPDU, and made socket
+  writes drain the full response buffer.
+- Fixed client response initialization and GET/ACTION response decoding for
+  data-access-result and action return-parameter discriminators.
+- Implemented mutable simulator Clock SET and an ACTION method path for live
+  TCP smoke coverage.
+- Added optional CTest `reader_lab_live_smoke` covering TCP-wrapper AARQ/AARE,
+  GET, SET, ACTION, and GET error response against a real `metersimulator`
+  process.
 
 ## Verified
 
@@ -157,7 +172,7 @@ not currently form one consistently verified product:
   reports `Passed all 77 test cases with 720 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
-  reports `100% tests passed, 0 tests failed out of 1`.
+  reports `100% tests passed, 0 tests failed out of 2`.
 - Integration tests now verify Clock time AXDR payload and SET/GET round-trip.
 - Integration tests now verify Clock action handling for quarter-hour adjustment
   and preset-time failure behavior.
@@ -209,6 +224,9 @@ not currently form one consistently verified product:
   and reset clearing monitored value.
 - Integration tests now verify Single Action Schedule SET/GET for executed
   script, schedule type, and execution time.
+- Live `reader_lab`/`metersimulator` smoke passes through CTest:
+  `ctest --test-dir build-audit-client -R reader_lab_live_smoke --output-on-failure`
+  reports `100% tests passed, 0 tests failed out of 1`.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
@@ -237,9 +255,9 @@ not currently form one consistently verified product:
   `examples/metersimulator/tests/test_fs.cpp` uses embUnit, and
   `test_clock.cpp`/`test_cosem_read_by_block.cpp` reference missing external
   headers (`date.h`, Gurux JSON/Common helpers).
-- TCP-wrapper live coverage currently proves AARQ/AARE, GET clock, and
-  LuaBridge `getObjectList()`. It still needs automated live SET, ACTION, error
-  response, and disconnect assertions.
+- TCP-wrapper live coverage currently proves AARQ/AARE, GET clock, SET clock,
+  ACTION clock, GET error response, and LuaBridge `getObjectList()`. It still
+  needs automated disconnect assertions and security-profile live coverage.
 - Configurator invocation-counter discovery/synchronization is deliberately
   gated off in the restored C reader API until the full security-client
   handshake path is implemented; callers must seed the counter explicitly.
@@ -250,8 +268,8 @@ not currently form one consistently verified product:
 
 1. Make CMake build every intended test file, or explicitly mark tests as
    experimental/disabled with a reason.
-2. Add end-to-end TCP WPDU tests covering AARQ/AARE, GET object list, GET error
-   response, SET, ACTION, and disconnect.
+2. Extend end-to-end TCP WPDU tests with disconnect assertions, security-profile
+   live coverage, and gateway/proxy scenarios.
 3. Complete remaining partial IC handlers or document unsupported operations
    with standard COSEM errors.
 4. Add CI gates for clean MinGW, live simulator smoke, and native addon builds.

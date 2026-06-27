@@ -16,6 +16,10 @@ const db_attr_descr clock_attributes[] = {
 { DB_ACCESS_GETSET, 9, DB_TYPE_ENUM },
 };
 
+const db_attr_descr clock_methods[] = {
+{ DB_ACCESS_GETSET, 2, DB_TYPE_NOT_USED },
+};
+
 const db_attr_descr current_association_attributes[] = {
 { DB_ACCESS_GET, 2, DB_TYPE_ARRAY },
 { DB_ACCESS_GET, 3, DB_TYPE_STRUCTURE },
@@ -32,7 +36,7 @@ const db_attr_descr current_association_methods[] = {
 };
 
 const db_object_descr clock_objects[] = {
-    {&clock_attributes[0], NULL, 8U , { 0U, 0U, 1U, 0U, 0U, 255U } , 0U , 8U, 0U },
+    {&clock_attributes[0], &clock_methods[0], 8U , { 0U, 0U, 1U, 0U, 0U, 255U } , 0U , 8U, 1U },
 };
 
 const db_object_descr associations_objects[] = {
@@ -47,4 +51,3 @@ const struct db_element gDataBaseList[] = {
 
 
 #define COSEM_DATABASE_SIZE (sizeof(gDataBaseList)/sizeof(gDataBaseList[0]))
-

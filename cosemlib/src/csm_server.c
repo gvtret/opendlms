@@ -316,6 +316,7 @@ int csm_client_set(csm_client *client, uint8_t invoke_id,
     csm_array_write_u8(&req, obis->F);
     csm_array_write_u8(&req, attr_id);
     csm_array_write_u8(&req, 0x00);  /* No selective access */
+    csm_array_write_u8(&req, 0x01);  /* Data present */
     csm_array_write_buff(&req, data, data_len);
 
     return client_send_recv(client, client->tx_buf, req.wr_index,
@@ -345,7 +346,12 @@ int csm_client_action(csm_client *client, uint8_t invoke_id,
     csm_array_write_u8(&req, method_id);
     if (data && data_len > 0)
     {
+        csm_array_write_u8(&req, 0x01);  /* Action parameters present */
         csm_array_write_buff(&req, data, data_len);
+    }
+    else
+    {
+        csm_array_write_u8(&req, 0x00);  /* No action parameters */
     }
 
     return client_send_recv(client, client->tx_buf, req.wr_index,

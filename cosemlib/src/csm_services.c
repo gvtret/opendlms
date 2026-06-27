@@ -883,30 +883,28 @@ int svc_result_decoder(csm_response *response, csm_array *array)
             {
                 if (result == 1U)
                 {
-                    // Yes, there is a data result
-                    valid = valid && svc_is_valid_data_access_result(result);
-
-                    if (valid)
+                    // Data or Data-Access-Result?
+                    valid = valid && csm_array_read_u8(array, &result);
+                    if (valid && result == 1U)
                     {
-                        // Data or Data-Access-Result?
                         valid = valid && csm_array_read_u8(array, &result);
-
-                        if (result == 1U)
+                        valid = valid && svc_is_valid_data_access_result(result);
+                        if (valid)
                         {
                             response->access_result = (csm_data_access_result)result;
                             CSM_LOG("[SVC] Decoded access result");
                         }
-                        else if (result == 0U)
-                        {
-                            // Next bytes are the data
-                            response->has_data = TRUE;
-                            response->access_result = CSM_ACCESS_RESULT_SUCCESS;
-                            CSM_LOG("[SVC] Found data");
-                        }
-                        else
-                        {
-                            valid = FALSE;
-                        }
+                    }
+                    else if (valid && result == 0U)
+                    {
+                        // Next bytes are the data
+                        response->has_data = TRUE;
+                        response->access_result = CSM_ACCESS_RESULT_SUCCESS;
+                        CSM_LOG("[SVC] Found data");
+                    }
+                    else
+                    {
+                        valid = FALSE;
                     }
                 }
                 else if (result != 0U)
@@ -917,6 +915,33 @@ int svc_result_decoder(csm_response *response, csm_array *array)
             }
         }
 
+    }
+    else if (response->service == SVC_GET)
+    {
+        response->result = result;
+        if (result == 0U)
+        {
+            response->has_data = TRUE;
+            response->access_result = CSM_ACCESS_RESULT_SUCCESS;
+        }
+        else if (result == 1U)
+        {
+            valid = valid && csm_array_read_u8(array, &result);
+            valid = valid && svc_is_valid_data_access_result(result);
+            if (valid)
+            {
+                response->access_result = (csm_data_access_result)result;
+            }
+            else
+            {
+                response->access_result = CSM_ACCESS_RESULT_NOT_SET;
+            }
+        }
+        else
+        {
+            valid = FALSE;
+            response->access_result = CSM_ACCESS_RESULT_NOT_SET;
+        }
     }
     else
     {
@@ -1156,10 +1181,14 @@ void csm_client_init(csm_request *request, csm_response *response)
 {
     (void) request;
 
+    memset(response, 0, sizeof(*response));
+    response->service = SVC_UNKOWN;
     response->type = 0U;
     response->block_number = 0U;
     response->invoke_id = 0U;
     response->last_block = 0U;
+    response->access_result = CSM_ACCESS_RESULT_NOT_SET;
+    response->action_result = CSM_ACTION_RESULT_NOT_SET;
     csm_block_init(&response->block_state);
 }
 

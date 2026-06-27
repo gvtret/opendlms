@@ -35,12 +35,16 @@ typedef struct in_addr IN_ADDR;
 
 #define CRLF		"\r\n"
 #define MAX_CLIENTS 10
+#define TCP_SERVER_WRAPPER_HEADER_SIZE 8U
+#define TCP_SERVER_RECV_BUFFER_SIZE 8192U
 
 
 typedef struct
 {
    SOCKET sock;
    uint8_t connected; // 0 = not connected, otherwise identifier
+   uint8_t recv_buf[TCP_SERVER_RECV_BUFFER_SIZE];
+   uint32_t recv_len;
 } peer;
 
 static void init(void)
@@ -138,11 +142,22 @@ static int read_peer(SOCKET sock, char *buffer, int max_size)
 
 static void write_peer(SOCKET sock, const char *buffer, size_t size)
 {
-   if(send(sock, buffer, size, 0) < 0)
+   size_t sent = 0U;
+   while(sent < size)
    {
-      perror("send()");
-    //  exit(errno);
+      int n = send(sock, buffer + sent, (int)(size - sent), 0);
+      if(n <= 0)
+      {
+         perror("send()");
+         break;
+      }
+      sent += (size_t)n;
    }
+}
+
+static uint16_t read_be16(const uint8_t *data)
+{
+   return (uint16_t)(((uint16_t)data[0] << 8U) | data[1]);
 }
 
 static void app(data_handler data_func, conn_handler conn_func, memory_t *b, int tcp_port)
@@ -160,6 +175,7 @@ static void app(data_handler data_func, conn_handler conn_func, memory_t *b, int
    for (int i = 0; i < MAX_CLIENTS; i++)
    {
        peers[i].connected = 0U;
+       peers[i].recv_len = 0U;
    }
 
    fd_set working_set;
@@ -212,7 +228,10 @@ static void app(data_handler data_func, conn_handler conn_func, memory_t *b, int
             if (channel > 0)
             {
                 FD_SET(csock, &master_set);
-                peer c = { csock, (uint8_t)channel };
+                peer c;
+                memset(&c, 0, sizeof(c));
+                c.sock = csock;
+                c.connected = (uint8_t)channel;
                 for (int i = 0; i < MAX_CLIENTS; i++)
                 {
                     if (!peers[i].connected)
@@ -251,18 +270,63 @@ static void app(data_handler data_func, conn_handler conn_func, memory_t *b, int
                       // Make sure structure elements are cleared
                       peers[i].sock = INVALID_SOCKET;
                       peers[i].connected = 0U;
+                      peers[i].recv_len = 0U;
                    }
                    else
                    {
-                       puts("[TCP server] New data received!");
-                       if (data_func != NULL)
+                       if ((peers[i].recv_len + (uint32_t)size) > sizeof(peers[i].recv_buf))
                        {
-                           // FIXME: change channel number with instance number when multi threaded server is available
-                           int ret = data_func(0U, b, size);
-                           if (ret > 0)
-                           {
-                                write_peer(peers[i].sock, buff, ret);
-                           }
+                           puts("[TCP server] Receive buffer overflow; disconnecting client");
+                           FD_CLR(peers[i].sock, &master_set);
+                           end_connection(peers[i].sock);
+                           conn_func(peers[i].connected, CONN_DISCONNECTED);
+                           peers[i].sock = INVALID_SOCKET;
+                           peers[i].connected = 0U;
+                           peers[i].recv_len = 0U;
+                       }
+                       else
+                       {
+                          memcpy(peers[i].recv_buf + peers[i].recv_len, buff, (uint32_t)size);
+                          peers[i].recv_len += (uint32_t)size;
+
+                          while (peers[i].recv_len >= TCP_SERVER_WRAPPER_HEADER_SIZE)
+                          {
+                              uint16_t apdu_size = read_be16(peers[i].recv_buf + 6U);
+                              uint32_t frame_size = TCP_SERVER_WRAPPER_HEADER_SIZE + (uint32_t)apdu_size;
+
+                              if (frame_size > (uint32_t)max_size)
+                              {
+                                  puts("[TCP server] Frame too large; disconnecting client");
+                                  FD_CLR(peers[i].sock, &master_set);
+                                  end_connection(peers[i].sock);
+                                  conn_func(peers[i].connected, CONN_DISCONNECTED);
+                                  peers[i].sock = INVALID_SOCKET;
+                                  peers[i].connected = 0U;
+                                  peers[i].recv_len = 0U;
+                                  break;
+                              }
+                              if (peers[i].recv_len < frame_size)
+                              {
+                                  break;
+                              }
+
+                              puts("[TCP server] New data received!");
+                              memcpy(buff, peers[i].recv_buf, frame_size);
+                              if (data_func != NULL)
+                              {
+                                  // FIXME: change channel number with instance number when multi threaded server is available
+                                  int ret = data_func(0U, b, frame_size);
+                                  if (ret > 0)
+                                  {
+                                       write_peer(peers[i].sock, buff, (size_t)ret);
+                                  }
+                              }
+
+                              peers[i].recv_len -= frame_size;
+                              memmove(peers[i].recv_buf,
+                                      peers[i].recv_buf + frame_size,
+                                      peers[i].recv_len);
+                          }
                        }
 
                        //broadcast(peers, client, actual, buffer, 0);

@@ -40,6 +40,19 @@ if(OPEN_DLMS_BUILD_READER_LAB)
     add_subdirectory(examples/reader_lab)
 endif()
 
+if(OPEN_DLMS_BUILD_TESTS AND OPEN_DLMS_BUILD_METER_SIM AND OPEN_DLMS_BUILD_READER_LAB)
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(
+            NAME reader_lab_live_smoke
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/tests/live_reader_lab_smoke.py
+                    $<TARGET_FILE:metersimulator>
+                    $<TARGET_FILE:reader_lab>
+        )
+    endif()
+endif()
+
 # ── Shaddam Studio (requires Qt) ─────────────────────────────────────────────
 if(OPEN_DLMS_BUILD_STUDIO)
     add_subdirectory(studio)

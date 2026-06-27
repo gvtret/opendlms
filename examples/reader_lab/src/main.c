@@ -8,6 +8,7 @@
  *   reader_lab config   192.168.1.116 4059 0.0.1.0.0.255
  *   reader_lab public   127.0.0.1 4059 0.0.10.0.0.255 class=3 set-u32=42
  *   reader_lab public   127.0.0.1 4059 0.0.10.0.0.255 class=3 action=1
+ *   reader_lab public   127.0.0.1 4059 0.0.1.0.0.255 sap=1 attr=2 set-hex=090c...
  *
  * Defaults: host=192.168.1.116 port=4059
  */
@@ -135,15 +136,29 @@ static int tcp_io_read(void *ctx, uint8_t *buf, uint32_t len, uint32_t timeout_m
 #if defined(_WIN32) || defined(WIN32)
     DWORD tv_ms = timeout_ms;
     setsockopt(g_sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv_ms, sizeof(tv_ms));
-    int n = recv(g_sock, (char *)buf, (int)len, 0);
 #else
     struct timeval tv;
     tv.tv_sec  = (time_t)(timeout_ms / 1000U);
     tv.tv_usec = (suseconds_t)((timeout_ms % 1000U) * 1000U);
     setsockopt(g_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    ssize_t n = recv(g_sock, buf, len, MSG_WAITALL);
 #endif
-    return (int)n;
+
+    uint32_t total = 0U;
+    while (total < len)
+    {
+#if defined(_WIN32) || defined(WIN32)
+        int n = recv(g_sock, (char *)buf + total, (int)(len - total), 0);
+#else
+        ssize_t n = recv(g_sock, buf + total, len - total, 0);
+#endif
+        if (n <= 0)
+        {
+            return (total > 0U) ? (int)total : (int)n;
+        }
+        total += (uint32_t)n;
+    }
+
+    return (int)total;
 }
 
 static int parse_obis(const char *str, csm_obis_code *obis, uint16_t *class_id)
@@ -180,6 +195,56 @@ static int parse_obis(const char *str, csm_obis_code *obis, uint16_t *class_id)
         *class_id = (uint16_t)vals[2];
     }
 
+    return 0;
+}
+
+static int hex_nibble(char c)
+{
+    if (c >= '0' && c <= '9')
+    {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f')
+    {
+        return 10 + (c - 'a');
+    }
+    if (c >= 'A' && c <= 'F')
+    {
+        return 10 + (c - 'A');
+    }
+    return -1;
+}
+
+static int parse_hex(const char *hex, uint8_t *out, uint32_t out_size, uint32_t *out_len)
+{
+    uint32_t len = 0U;
+
+    if (!hex || !out || !out_len)
+    {
+        return -1;
+    }
+
+    while (*hex != '\0')
+    {
+        while (*hex == ':' || *hex == '-' || *hex == ' ')
+        {
+            hex++;
+        }
+        if (*hex == '\0')
+        {
+            break;
+        }
+
+        int hi = hex_nibble(*hex++);
+        int lo = (*hex != '\0') ? hex_nibble(*hex++) : -1;
+        if (hi < 0 || lo < 0 || len >= out_size)
+        {
+            return -1;
+        }
+        out[len++] = (uint8_t)((hi << 4) | lo);
+    }
+
+    *out_len = len;
     return 0;
 }
 
@@ -239,8 +304,15 @@ int main(int argc, char **argv)
     int           port  = 4059;
     int           obis_arg = -1;
     int           class_override = -1;
+    int           attr_override = 2;
     int           set_u32 = -1;
     int           action_method = -1;
+    int           source_wport_override = -1;
+    int           dest_wport_override = -1;
+    uint16_t      dest_wport = OPENDLMS_READER_TCP_LOGICAL_DEVICE;
+    const char   *set_hex = NULL;
+    uint8_t       set_hex_buf[256];
+    uint32_t      set_hex_len = 0U;
     uint8_t       sync_ic = 0U;
     uint8_t       plain_hls = 0U;
 
@@ -255,7 +327,7 @@ int main(int argc, char **argv)
 
     if (argc < 2)
     {
-        printf("Usage: %s <public|reader|config> [host] [port] [obis] [plain] [class=N] [set-u32=N|action=N]\n", argv[0]);
+        printf("Usage: %s <public|reader|config> [host] [port] [obis] [plain] [class=N] [attr=N] [sap=N] [dest=N] [set-u32=N|set-hex=HEX|action=N]\n", argv[0]);
         return 1;
     }
 
@@ -284,9 +356,25 @@ int main(int argc, char **argv)
         {
             class_override = atoi(argv[i] + 6);
         }
+        else if (strncmp(argv[i], "attr=", 5) == 0)
+        {
+            attr_override = atoi(argv[i] + 5);
+        }
+        else if (strncmp(argv[i], "sap=", 4) == 0)
+        {
+            source_wport_override = atoi(argv[i] + 4);
+        }
+        else if (strncmp(argv[i], "dest=", 5) == 0)
+        {
+            dest_wport_override = atoi(argv[i] + 5);
+        }
         else if (strncmp(argv[i], "set-u32=", 8) == 0)
         {
             set_u32 = atoi(argv[i] + 8);
+        }
+        else if (strncmp(argv[i], "set-hex=", 8) == 0)
+        {
+            set_hex = argv[i] + 8;
         }
         else if (strncmp(argv[i], "action=", 7) == 0)
         {
@@ -306,6 +394,14 @@ int main(int argc, char **argv)
     reader_hal_init();
     reader_hal_sys_init();
     setup_profile(profile, &auth, &asso_cfg, plain_hls);
+    if (source_wport_override > 0)
+    {
+        asso_cfg.llc.ssap = (uint16_t)source_wport_override;
+    }
+    if (dest_wport_override > 0)
+    {
+        dest_wport = (uint16_t)dest_wport_override;
+    }
 
     if (sync_ic != 0U)
     {
@@ -337,7 +433,7 @@ int main(int argc, char **argv)
     opendlms_reader_session_init(&session, &reader, io, &asso_cfg);
     opendlms_reader_session_set_transport(&session, OPENDLMS_READER_TRANSPORT_TCP_WRAPPER,
                                           asso_cfg.llc.ssap,
-                                          OPENDLMS_READER_TCP_LOGICAL_DEVICE);
+                                          dest_wport);
     opendlms_reader_session_set_auth(&session, &auth);
     if (plain_hls != 0U)
     {
@@ -383,8 +479,43 @@ int main(int argc, char **argv)
     {
         class_id = (uint16_t)class_override;
     }
+    if (attr_override <= 0 || attr_override > 255)
+    {
+        fprintf(stderr, "Bad attr id: %d\n", attr_override);
+        opendlms_reader_disconnect(&session);
+        tcp_close();
+        platform_cleanup();
+        return 1;
+    }
 
-    if (set_u32 >= 0)
+    if (set_hex != NULL)
+    {
+        if (parse_hex(set_hex, set_hex_buf, sizeof(set_hex_buf), &set_hex_len) < 0 ||
+            set_hex_len == 0U)
+        {
+            fprintf(stderr, "Bad set-hex payload\n");
+            opendlms_reader_disconnect(&session);
+            tcp_close();
+            platform_cleanup();
+            return 1;
+        }
+
+        printf("SET %u.%u.%u.%u.%u.%u class=%u attr=%d hex_len=%lu\n",
+               obis.A, obis.B, obis.C, obis.D, obis.E, obis.F,
+               (unsigned)class_id, attr_override, (unsigned long)set_hex_len);
+
+        if (opendlms_reader_set(&session, class_id, &obis, (uint8_t)attr_override,
+                                set_hex_buf, set_hex_len, &response) < 0)
+        {
+            fprintf(stderr, "SET failed\n");
+        }
+        else
+        {
+            printf("SET OK: service=%d result=%u access=%u\n", (int)response.service,
+                   (unsigned)response.result, (unsigned)response.access_result);
+        }
+    }
+    else if (set_u32 >= 0)
     {
         uint8_t set_data[] = {
             AXDR_TAG_UNSIGNED32,
@@ -394,12 +525,12 @@ int main(int argc, char **argv)
             (uint8_t)((uint32_t)set_u32 & 0xFFU)
         };
 
-        printf("SET %u.%u.%u.%u.%u.%u class=%u attr=2 value=%d\n",
+        printf("SET %u.%u.%u.%u.%u.%u class=%u attr=%d value=%d\n",
                obis.A, obis.B, obis.C, obis.D, obis.E, obis.F,
-               (unsigned)class_id, set_u32);
+               (unsigned)class_id, attr_override, set_u32);
 
-        if (opendlms_reader_set(&session, class_id, &obis, 2U, set_data, sizeof(set_data),
-                                &response) < 0)
+        if (opendlms_reader_set(&session, class_id, &obis, (uint8_t)attr_override,
+                                set_data, sizeof(set_data), &response) < 0)
         {
             fprintf(stderr, "SET failed\n");
         }
@@ -428,10 +559,12 @@ int main(int argc, char **argv)
     }
     else
     {
-        printf("GET %u.%u.%u.%u.%u.%u class=%u attr=2\n",
-               obis.A, obis.B, obis.C, obis.D, obis.E, obis.F, (unsigned)class_id);
+        printf("GET %u.%u.%u.%u.%u.%u class=%u attr=%d\n",
+               obis.A, obis.B, obis.C, obis.D, obis.E, obis.F,
+               (unsigned)class_id, attr_override);
 
-        if (opendlms_reader_get(&session, class_id, &obis, 2U, &response) < 0)
+        if (opendlms_reader_get(&session, class_id, &obis, (uint8_t)attr_override,
+                                &response) < 0)
         {
             fprintf(stderr, "GET failed\n");
         }
