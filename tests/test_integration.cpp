@@ -840,23 +840,14 @@ TEST_CASE("Integration_ImageTransferRejectsOutOfSequenceActions", "[integration]
     const uint8_t verify_data[] = {
         AXDR_TAG_STRUCTURE, 0x00
     };
-    uint8_t verify_payload[sizeof(verify_data)];
-    uint8_t verify_out_buf[16];
-    csm_array verify_in;
-    csm_array verify_out;
-    db_ic_inst_t *image_inst = nullptr;
-    REQUIRE(db_ic_find(18, &obis_image, &image_inst) == TRUE);
-    REQUIRE(image_inst != nullptr);
-
-    std::memcpy(verify_payload, verify_data, sizeof(verify_data));
-    csm_array_init(&verify_in, verify_payload, sizeof(verify_payload),
-                   sizeof(verify_payload), 0U);
-    csm_array_init(&verify_out, verify_out_buf, sizeof(verify_out_buf), 0U, 0U);
-    REQUIRE(db_ic_dispatch(image_inst, IC_OP_ACTION, 0U, 5U,
-                           &verify_in, &verify_out) == CSM_ERR_TEMPORARY_FAILURE);
-
     uint8_t buf[1024];
-    int ret = test_do_action(0x02, 18, &obis_image, 6, NULL, 0, buf, sizeof(buf));
+    int ret = test_do_action(0x01, 18, &obis_image, 5,
+                             verify_data, sizeof(verify_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_TEMPORARY_FAILURE);
+
+    ret = test_do_action(0x02, 18, &obis_image, 6, NULL, 0, buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == CSM_ACTION_RESULT_TEMPORARY_FAILURE);
@@ -872,12 +863,11 @@ TEST_CASE("Integration_ImageTransferRejectsOutOfSequenceActions", "[integration]
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x00);
 
-    std::memcpy(verify_payload, verify_data, sizeof(verify_data));
-    csm_array_init(&verify_in, verify_payload, sizeof(verify_payload),
-                   sizeof(verify_payload), 0U);
-    csm_array_init(&verify_out, verify_out_buf, sizeof(verify_out_buf), 0U, 0U);
-    REQUIRE(db_ic_dispatch(image_inst, IC_OP_ACTION, 0U, 5U,
-                           &verify_in, &verify_out) == CSM_ERR_TEMPORARY_FAILURE);
+    ret = test_do_action(0x04, 18, &obis_image, 5,
+                         verify_data, sizeof(verify_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_TEMPORARY_FAILURE);
 
     ret = test_do_action(0x05, 18, &obis_image, 2,
                          init_data, sizeof(init_data), buf, sizeof(buf));
@@ -901,12 +891,11 @@ TEST_CASE("Integration_ImageTransferRejectsOutOfSequenceActions", "[integration]
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x00);
 
-    std::memcpy(verify_payload, verify_data, sizeof(verify_data));
-    csm_array_init(&verify_in, verify_payload, sizeof(verify_payload),
-                   sizeof(verify_payload), 0U);
-    csm_array_init(&verify_out, verify_out_buf, sizeof(verify_out_buf), 0U, 0U);
-    REQUIRE(db_ic_dispatch(image_inst, IC_OP_ACTION, 0U, 5U,
-                           &verify_in, &verify_out) == CSM_OK);
+    ret = test_do_action(0x08, 18, &obis_image, 5,
+                         verify_data, sizeof(verify_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
 
     ret = test_do_action(0x09, 18, &obis_image, 6, NULL, 0, buf, sizeof(buf));
     REQUIRE(ret > 0);
