@@ -65,6 +65,7 @@ static const csm_obis_code obis_sap         = { 0, 0, 41, 0, 0, 255 };
 static const csm_obis_code obis_script      = { 0, 0, 9, 0, 0, 255 };
 static const csm_obis_code obis_schedule    = { 0, 0, 10, 4, 0, 255 };
 static const csm_obis_code obis_special_day = { 0, 0, 11, 0, 0, 255 };
+static const csm_obis_code obis_activity    = { 0, 0, 20, 0, 0, 255 };
 static const csm_obis_code obis_nonexist    = { 0, 0, 99, 9, 9, 255 };
 
 static csm_db_code test_db_access(csm_db_context_t *ctx, csm_array *in,
@@ -1031,6 +1032,39 @@ TEST_CASE("Integration_SapAssignmentConnectRequiresAssignedSap", "[integration][
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x00);
+}
+
+TEST_CASE("Integration_ActivityCalendarActivatesPassiveCalendar", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(20, &obis_activity, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t passive_calendar[] = {
+        AXDR_TAG_OCTETSTRING, 0x06, 's', 'u', 'm', 'm', 'e', 'r'
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 20, &obis_activity, 2,
+                          passive_calendar, sizeof(passive_calendar), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_action(0x02, 20, &obis_activity, 1,
+                         NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x03, 20, &obis_activity, 3, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[5] == 0x06);
+    REQUIRE(std::memcmp(&get_buf[6], "summer", 6) == 0);
 }
 
 TEST_CASE("Integration_ArbitratorUnsupportedRequestActionFails", "[integration][basic]")

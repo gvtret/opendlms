@@ -40,7 +40,7 @@ void db_ic_activity_cal_reset_count(void) { activity_cal_data_count = 0U; activi
 
 static const db_ic_attr_descr activity_cal_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
-    { DB_ACCESS_GET,                  2, AXDR_TAG_OCTETSTRING },
+    { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  3, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  4, AXDR_TAG_STRUCTURE },
     { DB_ACCESS_GET,                  5, AXDR_TAG_STRUCTURE },
@@ -128,6 +128,34 @@ static csm_db_code activity_cal_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
             db_ic_activity_cal_data_t *data = (db_ic_activity_cal_data_t *)inst->data;
             int valid = csm_array_write_buff(out, data->active_calendar, data->active_len);
             return valid ? CSM_OK : CSM_ERR_BAD_ENCODING;
+        }
+    }
+    else if (op == IC_OP_SET)
+    {
+        if (attr_id == 2U)
+        {
+            db_ic_activity_cal_data_t *data = (db_ic_activity_cal_data_t *)inst->data;
+            uint8_t tag = 0xFFU;
+            uint8_t len = 0U;
+
+            if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_OCTETSTRING)
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+            if (!csm_array_read_u8(in, &len) || len > (ACTIVITY_CAL_NAME_LEN - 2U))
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+
+            data->passive_calendar[0] = AXDR_TAG_OCTETSTRING;
+            data->passive_calendar[1] = len;
+            data->passive_len = (uint8_t)(2U + len);
+            if (len > 0U &&
+                !csm_array_read_buff(in, &data->passive_calendar[2], len))
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+            return CSM_OK;
         }
     }
     else if (op == IC_OP_ACTION)
