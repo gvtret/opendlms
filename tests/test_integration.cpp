@@ -276,7 +276,11 @@ TEST_CASE("Integration_GetObjectNotFound", "[integration][basic]")
     uint8_t buf[1024];
     int ret = test_do_get(0x01, 1, &obis_nonexist, 2, buf, sizeof(buf));
     REQUIRE(ret > 0);
-    REQUIRE(buf[0] == 0xD8);
+    REQUIRE(buf[0] == 0xC4);
+    REQUIRE(buf[1] == 0x01);
+    REQUIRE(buf[2] == 0x01);
+    REQUIRE(buf[3] == 0x01);
+    REQUIRE(buf[4] == 0x04);
 }
 
 TEST_CASE("Integration_ReadAssociationObject", "[integration][basic]")
@@ -376,7 +380,11 @@ TEST_CASE("Integration_ExceptionResponse", "[integration][basic]")
 
     int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
     REQUIRE(ret > 0);
-    REQUIRE(buf[0] == 0xD8);
+    REQUIRE(buf[0] == 0xC4);
+    REQUIRE(buf[1] == 0x01);
+    REQUIRE(buf[2] == 0x01);
+    REQUIRE(buf[3] == 0x01);
+    REQUIRE(buf[4] == 0x04);
 }
 
 TEST_CASE("Integration_BlockTransfer", "[integration][basic]")

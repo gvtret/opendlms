@@ -92,6 +92,10 @@ int svc_is_next_request(uint8_t type, enum csm_service service)
 int svc_decode_request(csm_request *request, csm_array *array)
 {
     uint8_t type = 0U;
+    enum csm_service service = request->db_request.service;
+    memset(&request->db_request, 0, sizeof(request->db_request));
+    request->db_request.service = service;
+
     int valid = csm_array_read_u8(array, &type);
     valid = valid && csm_array_read_u8(array, &request->sender_invoke_id); // save the invoke ID to reuse the same
 
@@ -99,6 +103,7 @@ int svc_decode_request(csm_request *request, csm_array *array)
     {
         if (svc_is_normal_request(type))
         {
+            request->type = SVC_REQUEST_NORMAL;
             valid = valid && csm_array_read_u16(array, &request->db_request.logical_name.class_id);
             valid = valid && csm_array_read_buff(array, &request->db_request.logical_name.obis.A, 6U);
             valid = valid && csm_array_read_u8(array, (uint8_t*)&request->db_request.logical_name.id);
@@ -119,11 +124,15 @@ int svc_decode_request(csm_request *request, csm_array *array)
             {
                 // SET and ACTION services can have data in the request
                 valid = valid && csm_array_read_u8(array, &request->db_request.additional_data.enable);
-                // Data is following in the array
+                request->db_request.additional_data.data = *array;
+                request->db_request.additional_data.data.offset += array->rd_index;
+                request->db_request.additional_data.data.wr_index = array->wr_index - array->rd_index;
+                request->db_request.additional_data.data.rd_index = 0U;
             }
         }
         else if (svc_is_next_request(type, request->db_request.service))
         {
+            request->type = SVC_REQUEST_NEXT;
             valid = valid && csm_array_read_u32(array, &request->db_request.block_number); // save the invoke ID to reuse the same
         }
     }
@@ -275,12 +284,12 @@ static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state
 
 static const uint32_t gResponseNormalHeaderSize = 6U; // Offset where data can be returned for an Action
 
-static csm_db_code svc_set_or_action_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+static csm_db_code svc_set_or_action_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
     csm_db_code code = CSM_ERR_BAD_ENCODING;
     (void) state;
 
-    if (svc_decode_request(request, array))
+    if (request->type == SVC_REQUEST_NORMAL)
     {
         if (database != NULL)
         {
@@ -294,7 +303,10 @@ static csm_db_code svc_set_or_action_decoder(csm_db_context_t *ctx, csm_asso_sta
             output.rd_index = 0U;
             output.wr_index = 0U;
 
-            code = database(ctx, array, &output, request);
+            csm_array *input = (request->db_request.additional_data.enable != 0U)
+                ? &request->db_request.additional_data.data
+                : array;
+            code = database(ctx, input, &output, request);
 
             reply_size = output.wr_index;
 
@@ -354,12 +366,18 @@ static csm_db_code svc_set_or_action_decoder(csm_db_context_t *ctx, csm_asso_sta
             CSM_ERR("[SVC][SET] Internal problem, cannot encore exception response");
         }
     }
-    else
-    {
-        CSM_ERR("[SVC][SET] Encoding error");
-    }
 
     return code;
+}
+
+static csm_db_code svc_set_or_action_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+{
+    if (!svc_decode_request(request, array))
+    {
+        return CSM_ERR_BAD_ENCODING;
+    }
+
+    return svc_set_or_action_execute(ctx, state, request, array);
 }
 
 static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
@@ -517,7 +535,7 @@ static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state
             else
             {
                 /* Data fits in single block, use normal SET */
-                return svc_set_or_action_decoder(ctx, state, request, array);
+                return svc_set_or_action_execute(ctx, state, request, array);
             }
         }
         else
@@ -1156,4 +1174,3 @@ int csm_client_get_block_data(csm_response *response, const uint8_t **data,
 
     return csm_block_get_received_data(&response->block_state, data, data_size);
 }
-

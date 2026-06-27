@@ -1023,6 +1023,7 @@ static const csm_asso_enc aarq_encoder_chain[] =
 
 void csm_asso_init(csm_asso_state *state)
 {
+    memset(state, 0, sizeof(*state));
     state->state_cf = CF_IDLE;
     state->auth_level = CSM_AUTH_LOWEST_LEVEL;
     state->ref = NO_REF;

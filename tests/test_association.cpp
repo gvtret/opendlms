@@ -36,6 +36,7 @@ void AARQEncoder()
 
     csm_sys_init();
 
+    csm_asso_init(&state);
     state.auth_level = CSM_AUTH_LOW_LEVEL;
     state.ref = LN_REF;
 
@@ -233,14 +234,14 @@ void TestVectorHLS3()
 {
 
     // TEST Vector Cyx
-    static const char HLSSecret[] = "PLACEHOLDER_HLS";
+    static const char HLSSecret[] = "F50AB847E31D96C2A5F6B3E901E24A18";
 
     static const char md5CtoS[] = "0C0F910048247310C0F2B79770BADA38F6CAA6B27D2654CF8BD2B43888B0AFCF";
     static const char md5StoC[] = "B1582C160B8542A1D068349A4DA65329944A25120984C261B0D86CB6DBED763B";
 
     static const uint32_t SizeOfChallenge = strlen(md5StoC);
 
-    static const char md5ExpectedPass3Hash[] = "41C845AEEA55D9C9CDE708AF0BA5B4BD";
+    static const char md5ExpectedPass3Hash[] = "6931E44407F71B32C0AFCA72AC715B93";
     static const char md5ExpectedPass4Hash[] = "3B5BCE648F4AFAE9F5EEF44E9BEE9CCD";
 
     uint8_t *secret = HexToBin(HLSSecret, 32U);
@@ -380,5 +381,4 @@ TEST_CASE("AARQ-ICube-EZReader", "[AARQ-Decoder]" )
     puts("\r\n--------------------------  COSEM AARQ ICube EZReader  --------------------------\r\n");
     AARQDecoder(aarq_icube_ezreader, sizeof(aarq_icube_ezreader));
 }
-
 

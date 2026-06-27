@@ -96,12 +96,26 @@ int csm_channel_execute_ctx(csm_channel_ctx *ctx, csm_db_context_t *db_ctx, uint
             default:
                 if (ctx->asso_states[i].state_cf == CF_ASSOCIATED)
                 {
-                    ret = csm_server_services_execute_handler(ctx->db_handler, db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                    if (ctx->db_handler != NULL)
+                    {
+                        ret = csm_server_services_execute_handler(ctx->db_handler, db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                    }
+                    else
+                    {
+                        ret = csm_server_services_execute(db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                    }
                 }
                 else if (ctx->asso_states[i].state_cf == CF_ASSOCIATION_PENDING)
                 {
                     /* In case of HLS, we have to access to one attribute */
-                    ret = csm_services_hls_execute_handler(ctx->db_handler, db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                    if (ctx->db_handler != NULL)
+                    {
+                        ret = csm_services_hls_execute_handler(ctx->db_handler, db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                    }
+                    else
+                    {
+                        ret = csm_services_hls_execute(db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                    }
                 }
                 else
                 {
