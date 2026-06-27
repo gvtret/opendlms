@@ -113,6 +113,8 @@ not currently form one consistently verified product:
   sessions/tests in one process do not exhaust static instance pools.
 - Added Image Transfer state guards for start, verify, and activate so
   out-of-sequence ACTION calls return DLMS errors instead of false success.
+- Added generic validation for ACTION methods declared as `AXDR_TAG_NULL` so
+  unexpected payloads return a DLMS error instead of being ignored.
 
 ## Verified
 
@@ -122,7 +124,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 139 test cases with 999 assertions`.
+  reports `Passed all 140 test cases with 1017 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 66 test cases with 411 assertions`.
@@ -154,6 +156,8 @@ not currently form one consistently verified product:
 - Integration tests now verify repeated Image Transfer setup across test cases
   after IC pool reset and end-to-end Image Transfer start/verify/activate state
   guards.
+- Integration tests now verify `AXDR_TAG_NULL` ACTION methods reject unexpected
+  payloads and still accept an explicit AXDR NULL parameter.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

@@ -11,6 +11,7 @@
 
 #include "db_cosem_ic.h"
 #include "csm_config.h"
+#include "csm_axdr_codec.h"
 #include <string.h>
 
 static const db_ic_class *class_registry[DB_IC_MAX_CLASSES];
@@ -219,6 +220,15 @@ int db_ic_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         if ((meth == NULL) || ((meth->access & DB_ACCESS_ACTION) == 0U))
         {
             return (int) CSM_ERR_UNAUTHORIZED_ACCESS;
+        }
+        if ((meth->type == AXDR_TAG_NULL) && (in != NULL) && (csm_array_unread(in) > 0U))
+        {
+            uint8_t tag = 0xFFU;
+            if (!csm_array_read_u8(in, &tag) || (tag != AXDR_TAG_NULL) ||
+                (csm_array_unread(in) != 0U))
+            {
+                return (int) CSM_ERR_BAD_ENCODING;
+            }
         }
     }
 

@@ -1479,6 +1479,47 @@ TEST_CASE("Integration_DataDeviceId", "[integration][service]")
     REQUIRE(get_buf[4] == 0x09);
 }
 
+TEST_CASE("Integration_ActionNullMethodRejectsUnexpectedPayload", "[integration][service]")
+{
+    test_stack_setup();
+    test_establish_association();
+
+    const uint8_t data_value[] = {
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x2A
+    };
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 1, &obis_data, 2,
+                          data_value, sizeof(data_value), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_action(0x02, 1, &obis_data, 1,
+                         data_value, sizeof(data_value), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
+
+    ret = test_do_get(0x03, 1, &obis_data, 2, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC4);
+    REQUIRE(buf[3] == 0x00);
+    REQUIRE(std::memcmp(&buf[4], data_value, sizeof(data_value)) == 0);
+
+    const uint8_t null_param[] = { AXDR_TAG_NULL };
+    ret = test_do_action(0x04, 1, &obis_data, 1,
+                         null_param, sizeof(null_param), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_get(0x05, 1, &obis_data, 2, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC4);
+    REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == AXDR_TAG_NULL);
+}
+
 TEST_CASE("Integration_ProfilePowerCapture", "[integration][service]")
 {
     test_stack_setup();
