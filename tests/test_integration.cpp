@@ -66,6 +66,8 @@ static const csm_obis_code obis_script      = { 0, 0, 9, 0, 0, 255 };
 static const csm_obis_code obis_schedule    = { 0, 0, 10, 4, 0, 255 };
 static const csm_obis_code obis_special_day = { 0, 0, 11, 0, 0, 255 };
 static const csm_obis_code obis_activity    = { 0, 0, 20, 0, 0, 255 };
+static const csm_obis_code obis_reg_monitor = { 0, 0, 21, 0, 0, 255 };
+static const csm_obis_code obis_single_act  = { 0, 0, 22, 0, 0, 255 };
 static const csm_obis_code obis_nonexist    = { 0, 0, 99, 9, 9, 255 };
 
 static csm_db_code test_db_access(csm_db_context_t *ctx, csm_array *in,
@@ -1135,6 +1137,141 @@ TEST_CASE("Integration_ActivityCalendarActivatesPassiveCalendar", "[integration]
     REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
     REQUIRE(get_buf[5] == 0x06);
     REQUIRE(std::memcmp(&get_buf[6], "summer", 6) == 0);
+}
+
+TEST_CASE("Integration_RegisterMonitorSetAndResetState", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(21, &obis_reg_monitor, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t thresholds[] = {
+        AXDR_TAG_ARRAY, 0x02,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x64,
+        AXDR_TAG_UNSIGNED16, 0x00, 0xC8
+    };
+    const uint8_t monitored[] = {
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x2A
+    };
+    const uint8_t actions[] = {
+        AXDR_TAG_ARRAY, 0x01,
+        AXDR_TAG_NULL
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 21, &obis_reg_monitor, 2,
+                          thresholds, sizeof(thresholds), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_set(0x02, 21, &obis_reg_monitor, 3,
+                      monitored, sizeof(monitored), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_set(0x03, 21, &obis_reg_monitor, 4,
+                      actions, sizeof(actions), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x04, 21, &obis_reg_monitor, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x02);
+    REQUIRE(get_buf[6] == AXDR_TAG_UNSIGNED16);
+    REQUIRE(get_buf[8] == 0x64);
+    REQUIRE(get_buf[9] == AXDR_TAG_UNSIGNED16);
+    REQUIRE(get_buf[11] == 0xC8);
+
+    ret = test_do_get(0x05, 21, &obis_reg_monitor, 4, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x01);
+    REQUIRE(get_buf[6] == AXDR_TAG_NULL);
+
+    ret = test_do_action(0x06, 21, &obis_reg_monitor, 1,
+                         NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_get(0x07, 21, &obis_reg_monitor, 3, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_NULL);
+}
+
+TEST_CASE("Integration_SingleActionScheduleSetGetState", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(22, &obis_single_act, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t executed_script[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_OCTETSTRING, 0x06, 0x00, 0x00, 0x09, 0x00, 0x00, 0xFF,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x01
+    };
+    const uint8_t schedule_type[] = {
+        AXDR_TAG_ENUM, 0x01
+    };
+    const uint8_t execution_time[] = {
+        AXDR_TAG_OCTETSTRING, 0x0C,
+        0x07, 0xEA, 0x06, 0x1B, 0x0C, 0x00,
+        0x00, 0x00, 0xFF, 0x80, 0x00, 0x00
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 22, &obis_single_act, 2,
+                          executed_script, sizeof(executed_script), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_set(0x02, 22, &obis_single_act, 3,
+                      schedule_type, sizeof(schedule_type), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_set(0x03, 22, &obis_single_act, 4,
+                      execution_time, sizeof(execution_time), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x04, 22, &obis_single_act, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_STRUCTURE);
+    REQUIRE(get_buf[5] == 0x02);
+    REQUIRE(std::memcmp(&get_buf[4], executed_script, sizeof(executed_script)) == 0);
+
+    ret = test_do_get(0x05, 22, &obis_single_act, 3, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ENUM);
+    REQUIRE(get_buf[5] == 0x01);
+
+    ret = test_do_get(0x06, 22, &obis_single_act, 4, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[5] == 0x0C);
+    REQUIRE(std::memcmp(&get_buf[4], execution_time, sizeof(execution_time)) == 0);
 }
 
 TEST_CASE("Integration_ArbitratorUnsupportedRequestActionFails", "[integration][basic]")

@@ -21,7 +21,7 @@
 
 #define SINGLE_ACTION_MAX_INSTANCES  4U
 #define SINGLE_ACTION_SCRIPT_SIZE   16U
-#define SINGLE_ACTION_TIME_SIZE     12U
+#define SINGLE_ACTION_TIME_SIZE     16U
 
 typedef struct {
     uint8_t executed_script[SINGLE_ACTION_SCRIPT_SIZE];
@@ -41,9 +41,9 @@ void db_ic_single_action_reset_count(void) { single_action_data_count = 0U; sing
 
 static const db_ic_attr_descr single_action_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
-    { DB_ACCESS_GET,                  2, AXDR_TAG_STRUCTURE },
-    { DB_ACCESS_GET,                  3, AXDR_TAG_ENUM },
-    { DB_ACCESS_GET,                  4, AXDR_TAG_STRUCTURE },
+    { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_STRUCTURE },
+    { DB_ACCESS_GET | DB_ACCESS_SET,  3, AXDR_TAG_ENUM },
+    { DB_ACCESS_GET | DB_ACCESS_SET,  4, AXDR_TAG_STRUCTURE },
 };
 
 static const db_ic_method_descr single_action_methods[] = {
@@ -84,6 +84,22 @@ static db_ic_inst_t *single_action_create(const csm_obis_code *obis)
     inst->version = 0U;
     single_action_inst_count++;
     return inst;
+}
+
+static csm_db_code single_action_read_raw(csm_array *in, uint8_t *buf,
+                                          uint8_t *len, uint8_t max_len)
+{
+    uint32_t unread = csm_array_unread(in);
+    if ((unread == 0U) || (unread > max_len))
+    {
+        return CSM_ERR_BAD_ENCODING;
+    }
+    if (!csm_array_read_buff(in, buf, unread))
+    {
+        return CSM_ERR_BAD_ENCODING;
+    }
+    *len = (uint8_t)unread;
+    return CSM_OK;
 }
 
 static csm_db_code single_action_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
@@ -131,6 +147,34 @@ static csm_db_code single_action_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
             db_ic_single_action_data_t *data = (db_ic_single_action_data_t *)inst->data;
             int valid = csm_array_write_buff(out, data->execution_time, data->time_len);
             return valid ? CSM_OK : CSM_ERR_BAD_ENCODING;
+        }
+    }
+    else if (op == IC_OP_SET)
+    {
+        db_ic_single_action_data_t *data = (db_ic_single_action_data_t *)inst->data;
+
+        if (attr_id == 2U)
+        {
+            return single_action_read_raw(in, data->executed_script,
+                                          &data->script_len,
+                                          SINGLE_ACTION_SCRIPT_SIZE);
+        }
+        else if (attr_id == 3U)
+        {
+            uint8_t tag = 0U;
+            if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_ENUM ||
+                !csm_array_read_u8(in, &data->type) ||
+                csm_array_unread(in) != 0U)
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+            return CSM_OK;
+        }
+        else if (attr_id == 4U)
+        {
+            return single_action_read_raw(in, data->execution_time,
+                                          &data->time_len,
+                                          SINGLE_ACTION_TIME_SIZE);
         }
     }
 
