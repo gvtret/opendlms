@@ -125,7 +125,7 @@ int csm_array_writer_jump(csm_array *array, uint32_t nb_bytes)
     int ret = TRUE;
 
     array->wr_index += nb_bytes;
-    if (WR_INDEX(array) >= array->size)
+    if (WR_INDEX(array) > array->size)
     {
         // saturate
         array->wr_index = (array->size-array->offset); // Write index out of bound, it forbid any further write
@@ -141,7 +141,7 @@ int csm_array_reader_jump(csm_array *array, uint32_t nb_bytes)
 
     CSM_ASSERT(array != NULL);
     array->rd_index += nb_bytes;
-    if (RD_INDEX(array) >= array->size)
+    if (RD_INDEX(array) > array->size)
     {
         // saturate
         array->rd_index = (array->size-array->offset);
@@ -155,6 +155,11 @@ int csm_array_read_buff(csm_array *array, uint8_t *to_buff, uint32_t size)
 {
     CSM_ASSERT(array != NULL);
     CSM_ASSERT(to_buff != NULL);
+
+    if (csm_array_unread(array) < size)
+    {
+        return FALSE;
+    }
 
     (void) memcpy(to_buff, csm_array_rd_data(array), size);
     return csm_array_reader_jump(array, size);

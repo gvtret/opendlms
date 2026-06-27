@@ -163,6 +163,8 @@ not currently form one consistently verified product:
   gate.
 - Moved the standalone Streebog L-transform debug check into the default Catch2
   gate.
+- Hardened `csm_array_read_buff()` against short buffers and fixed read/write
+  jumps that land exactly at the logical end of the buffer.
 
 ## Verified
 
@@ -172,7 +174,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 153 test cases with 1285 assertions`.
+  reports `Passed all 153 test cases with 1293 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -238,6 +240,8 @@ not currently form one consistently verified product:
 - AES-128 GCM/GMAC tests now run in the default Catch2 gate and verify both the
   NIST GCM tag vector and the GreenBook HLS5 GMAC tag vector.
 - Streebog L-transform regression coverage now runs in the default Catch2 gate.
+- Array utility tests now cover exact-end reads/writes and short-buffer read
+  rejection.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
