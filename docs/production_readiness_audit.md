@@ -155,8 +155,8 @@ not currently form one consistently verified product:
 - Implemented mutable simulator Clock SET and an ACTION method path for live
   TCP smoke coverage.
 - Added optional CTest `reader_lab_live_smoke` covering TCP-wrapper AARQ/AARE,
-  GET, SET, ACTION, and GET error response against a real `metersimulator`
-  process.
+  GET, SET, ACTION, GET error response, and client disconnect against a real
+  `metersimulator` process.
 - Moved `test_clock.cpp` into the default Catch2 gate and fixed
   `clk_last_dow()` for February in leap years.
 - Moved AES-128 GCM/GMAC vector coverage from Unity into the default Catch2
@@ -275,8 +275,8 @@ not currently form one consistently verified product:
   legacy simulator filesystem subsystem that is not part of the active DLMS
   stack gate.
 - TCP-wrapper live coverage currently proves AARQ/AARE, GET clock, SET clock,
-  ACTION clock, GET error response, and LuaBridge `getObjectList()`. It still
-  needs automated disconnect assertions and security-profile live coverage.
+  ACTION clock, GET error response, client disconnect, and LuaBridge
+  `getObjectList()`. It still needs security-profile live coverage.
 - Configurator invocation-counter discovery/synchronization is deliberately
   gated off in the restored C reader API until the full security-client
   handshake path is implemented; callers must seed the counter explicitly.
@@ -287,8 +287,8 @@ not currently form one consistently verified product:
 
 1. Make CMake build every intended test file, or explicitly mark tests as
    experimental/disabled with a reason.
-2. Extend end-to-end TCP WPDU tests with disconnect assertions, security-profile
-   live coverage, and gateway/proxy scenarios.
+2. Extend end-to-end TCP WPDU tests with security-profile live coverage and
+   gateway/proxy scenarios.
 3. Complete remaining partial IC handlers or document unsupported operations
    with standard COSEM errors.
 4. Add CI gates for clean MinGW, live simulator smoke, and native addon builds.

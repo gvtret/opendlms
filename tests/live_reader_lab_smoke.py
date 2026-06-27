@@ -69,6 +69,13 @@ def main():
         out = run_reader(reader, port, missing, "class=999", "attr=2")
         expect(out, "GET OK:")
         expect(out, "access=4")
+
+        meter_proc.terminate()
+        meter_proc.wait(timeout=3)
+        meter_log.flush()
+        meter_log.seek(0)
+        meter_out = meter_log.read()
+        expect(meter_out, "Client disconnected")
     except Exception:
         try:
             meter_proc.terminate()
