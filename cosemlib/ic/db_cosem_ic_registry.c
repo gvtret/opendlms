@@ -18,34 +18,6 @@
 #include "csm_config.h"
 #include <string.h>
 
-/* Stub create/dispatch used by classes without real handlers yet */
-static db_ic_inst_t ic_stub_instances[DB_IC_MAX_INSTANCES];
-static uint8_t ic_stub_inst_count = 0U;
-
-void db_ic_stub_reset_count(void) { ic_stub_inst_count = 0U; }
-
-static db_ic_inst_t *ic_stub_create(const csm_obis_code *obis)
-{
-    (void) obis;
-    if (ic_stub_inst_count >= DB_IC_MAX_INSTANCES)
-    {
-        return NULL;
-    }
-    db_ic_inst_t *inst = &ic_stub_instances[ic_stub_inst_count];
-    memset(inst, 0, sizeof(db_ic_inst_t));
-    ic_stub_inst_count++;
-    return inst;
-}
-
-static csm_db_code ic_stub_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
-                                     uint8_t attr_id, uint8_t method_id,
-                                     csm_array *in, csm_array *out)
-{
-    (void) inst; (void) op; (void) attr_id; (void) method_id;
-    (void) in;   (void) out;
-    return CSM_ERR_OBJECT_NOT_FOUND;
-}
-
 /* Classes with full implementations in their own handler files:
  *   Class 1  Data              — db_cosem_data.c
  *   Class 3  Register          — db_cosem_register.c
@@ -301,7 +273,6 @@ extern void db_ic_special_days_reset_count(void);
 
 void db_ic_reset_all_counts(void)
 {
-    db_ic_stub_reset_count();
     db_ic_clock_reset_count();
     db_ic_data_reset_count();
     db_ic_register_reset_count();

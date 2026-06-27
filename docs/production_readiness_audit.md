@@ -70,8 +70,7 @@ not currently form one consistently verified product:
   simulator and performs `getObjectList()`.
 - Removed public-header enum arithmetic warnings from `csm_association.h`.
 - Replaced the Clock registry stub with a real minimal handler for logical_name
-  and time, and changed generic IC stubs to return object-not-found instead of
-  silent empty success.
+  and time, and removed unused generic IC stub infrastructure.
 - Implemented Clock `adjust_to_quarter` and made unavailable preset-time action
   return a DLMS error instead of reporting a successful no-op.
 - Made unsupported Security Setup key generation methods return a DLMS error
@@ -168,6 +167,6 @@ not currently form one consistently verified product:
    experimental/disabled with a reason.
 2. Add end-to-end TCP WPDU tests covering AARQ/AARE, GET object list, GET error
    response, SET, ACTION, and disconnect.
-3. Replace registry IC stubs with real handlers or document them as unsupported
-   and make unsupported operations return standard COSEM errors.
+3. Complete remaining partial IC handlers or document unsupported operations
+   with standard COSEM errors.
 4. Add CI gates for clean MinGW, live simulator smoke, and native addon builds.
