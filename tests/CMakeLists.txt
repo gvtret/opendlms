@@ -17,6 +17,7 @@ add_executable(${PROJECT_NAME}
     test_gost.cpp
     test_integration.cpp
     test_transport.cpp
+    test_streebog_debug.cpp
     cosem_tests_hal.c
 )
 
