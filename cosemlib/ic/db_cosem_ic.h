@@ -21,7 +21,7 @@ extern "C" {
 #include "csm_services.h"
 
 #define DB_IC_MAX_INSTANCES     64U
-#define DB_IC_MAX_CLASSES       32U
+#define DB_IC_MAX_CLASSES       40U
 #define DB_IC_MAX_ATTRS         16U
 #define DB_IC_MAX_METHODS       8U
 

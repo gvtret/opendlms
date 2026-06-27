@@ -48,14 +48,24 @@ enum data_access_result
 int svc_data_access_result_encoder(csm_array *array, csm_db_code code)
 {
     uint8_t result;
-    // Transform the code into a DLMS/Cosem valid response
-    if (code == CSM_OK)
+
+    switch (code)
     {
+    case CSM_OK:
         result = SRV_RESULT_SUCCESS;
-    }
-    else
-    {
+        break;
+    case CSM_ERR_TEMPORARY_FAILURE:
+        result = SRV_RESULT_TEMPORARY_FAILURE;
+        break;
+    case CSM_ERR_UNAUTHORIZED_ACCESS:
+        result = SRV_RESULT_READ_WRITE_DENIED;
+        break;
+    case CSM_ERR_OBJECT_NOT_FOUND:
+        result = SRV_RESULT_OBJECT_UNDEFINED;
+        break;
+    default:
         result = SRV_RESULT_OTHER_REASON;
+        break;
     }
 
     return csm_array_write_u8(array, result);

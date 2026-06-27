@@ -72,6 +72,12 @@ not currently form one consistently verified product:
 - Replaced the Clock registry stub with a real minimal handler for logical_name
   and time, and changed generic IC stubs to return object-not-found instead of
   silent empty success.
+- Made unsupported Security Setup key generation methods return a DLMS error
+  instead of reporting a successful no-op.
+- Mapped SET/ACTION database errors to more specific DLMS data-access-result
+  values for object-undefined, read-write-denied, and temporary-failure.
+- Increased the IC registry capacity so all built-in classes, including class
+  8200 Table Manager, are registered.
 
 ## Verified
 
@@ -81,14 +87,16 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 120 test cases with 729 assertions`.
+  reports `Passed all 123 test cases with 744 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 50 test cases with 202 assertions`.
+  reports `Passed all 53 test cases with 217 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
 - Integration tests now verify Clock time AXDR payload and SET/GET round-trip.
+- Integration tests now verify read-only SET denial, unsupported Security Setup
+  key-generation failure, and Table Manager built-in registration.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

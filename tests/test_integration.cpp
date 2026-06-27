@@ -51,6 +51,7 @@ static const csm_obis_code obis_push        = { 0, 0, 25, 1, 0, 255 };
 static const csm_obis_code obis_disconnect  = { 0, 0, 96, 3, 10, 255 };
 static const csm_obis_code obis_ext_reg     = { 0, 0, 10, 1, 0, 255 };
 static const csm_obis_code obis_demand_reg  = { 0, 0, 10, 2, 0, 255 };
+static const csm_obis_code obis_table_mgr   = { 0, 0, 96, 9, 0, 255 };
 static const csm_obis_code obis_nonexist    = { 0, 0, 99, 9, 9, 255 };
 
 static csm_db_code test_db_access(csm_db_context_t *ctx, csm_array *in,
@@ -328,6 +329,21 @@ TEST_CASE("Integration_ReadAssociationObject", "[integration][basic]")
     REQUIRE(buf[4] == 0x01);
 }
 
+TEST_CASE("Integration_TableManagerBuiltinRegistered", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(8200, &obis_table_mgr, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    uint8_t buf[1024];
+    int ret = test_do_get(0x01, 8200, &obis_table_mgr, 1, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC4);
+    REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(buf[5] == 0x06);
+}
+
 TEST_CASE("Integration_SetDataValue", "[integration][basic]")
 {
     test_stack_setup();
@@ -352,6 +368,20 @@ TEST_CASE("Integration_SetDataValue", "[integration][basic]")
     REQUIRE(get_buf[6] == 0x00);
     REQUIRE(get_buf[7] == 0x00);
     REQUIRE(get_buf[8] == 0x2A);
+}
+
+TEST_CASE("Integration_SetReadOnlyAttributeDenied", "[integration][basic]")
+{
+    test_stack_setup();
+    test_establish_association();
+
+    uint8_t set_data[] = { 0x09, 0x06, 0, 0, 96, 1, 0, 255 };
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 1, &obis_data, 1,
+                          set_data, sizeof(set_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x03);
 }
 
 TEST_CASE("Integration_ResetRegister", "[integration][basic]")
@@ -1201,6 +1231,19 @@ TEST_CASE("Integration_SecuritySetupSecurityActivate", "[integration][security]"
                              NULL, 0, buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
+}
+
+TEST_CASE("Integration_SecuritySetupUnsupportedKeyGenerationFails", "[integration][security]")
+{
+    test_stack_setup();
+    test_establish_association();
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 64, &obis_security, 7,
+                             NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x04);
 }
 
 TEST_CASE("Integration_Hls5GmacHandshake", "[integration][security]")

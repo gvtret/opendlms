@@ -279,12 +279,10 @@ static csm_db_code sec_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         }
 
         case 7U:
-            /* generate_key_pair: stub */
-            return CSM_OK;
+            return CSM_ERR_OBJECT_NOT_FOUND;
 
         case 8U:
-            /* generate_certificate_request: stub */
-            return CSM_OK;
+            return CSM_ERR_OBJECT_NOT_FOUND;
 
         default:
             break;
