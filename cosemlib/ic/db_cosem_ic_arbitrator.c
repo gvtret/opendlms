@@ -45,6 +45,8 @@ static uint8_t arb_pool_count = 0U;
 
 static db_ic_inst_t arb_inst_tmp;
 
+void db_ic_arbitrator_reset_count(void) { arb_pool_count = 0U; }
+
 static const db_ic_attr_descr arb_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_UNSIGNED32 },

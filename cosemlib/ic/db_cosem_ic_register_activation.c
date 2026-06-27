@@ -58,6 +58,8 @@ static uint8_t reg_act_pool_count = 0U;
 
 static db_ic_inst_t reg_act_inst_tmp;
 
+void db_ic_register_activation_reset_count(void) { reg_act_pool_count = 0U; }
+
 static const db_ic_attr_descr reg_act_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_ARRAY },

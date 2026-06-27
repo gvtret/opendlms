@@ -109,6 +109,10 @@ not currently form one consistently verified product:
   available, avoiding a misleading no-op configuration.
 - Implemented Profile Generic `capture` with real capture-object reads through
   the IC registry instead of storing `NULL` values while reporting success.
+- Reset all built-in IC handler pool counters from `db_ic_init()` so repeated
+  sessions/tests in one process do not exhaust static instance pools.
+- Added Image Transfer state guards for start, verify, and activate so
+  out-of-sequence ACTION calls return DLMS errors instead of false success.
 
 ## Verified
 
@@ -118,7 +122,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 138 test cases with 970 assertions`.
+  reports `Passed all 139 test cases with 995 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 66 test cases with 411 assertions`.
@@ -147,6 +151,8 @@ not currently form one consistently verified product:
   object values in the buffer and updates entries-in-use.
 - Integration tests now verify Profile Generic `capture` stores real captured
   AXDR object values in the profile buffer.
+- Integration tests now verify repeated Image Transfer setup across test cases
+  after IC pool reset and Image Transfer start/verify/activate state guards.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
@@ -181,6 +187,9 @@ not currently form one consistently verified product:
 - Configurator invocation-counter discovery/synchronization is deliberately
   gated off in the restored C reader API until the full security-client
   handshake path is implemented; callers must seed the counter explicitly.
+- Image Transfer `image_verify` state handling is covered at the IC dispatch
+  layer; the ACTION-with-structure service path for method 5 still needs
+  end-to-end decoder coverage and cleanup.
 - Several IC handlers remain partial implementations and must either be
   completed or documented as unsupported with standard COSEM errors.
 

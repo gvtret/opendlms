@@ -34,6 +34,8 @@ static uint8_t status_pool_count = 0U;
 
 static db_ic_inst_t status_inst_tmp;
 
+void db_ic_status_mapping_reset_count(void) { status_pool_count = 0U; }
+
 static const db_ic_attr_descr status_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_OCTETSTRING },

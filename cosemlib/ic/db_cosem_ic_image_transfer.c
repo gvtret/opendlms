@@ -60,6 +60,8 @@ static uint8_t image_pool_count = 0U;
 
 static db_ic_inst_t image_inst_tmp;
 
+void db_ic_image_transfer_reset_count(void) { image_pool_count = 0U; }
+
 static const db_ic_attr_descr image_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_ENUM },
@@ -172,6 +174,17 @@ static void image_update_first_not_transferred(db_ic_image_data *d)
         block++;
     }
     d->first_not_transferred = block;
+}
+
+static int image_all_blocks_transferred(const db_ic_image_data *d)
+{
+    uint32_t block_count = image_block_count(d);
+    if (block_count == 0U)
+    {
+        return FALSE;
+    }
+    return (d->blocks_transferred >= block_count) &&
+           (d->first_not_transferred >= block_count);
 }
 
 static int image_read_block_transfer(csm_array *in, db_ic_image_data *d, uint32_t *block_number)
@@ -315,15 +328,30 @@ static csm_db_code image_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
             d->first_not_transferred = 0U;
             return CSM_OK;
         case 3U: /* image_transfer_start */
+            if (d->transfer_status != IMG_STATUS_INITIALIZATION_OK)
+            {
+                return CSM_ERR_TEMPORARY_FAILURE;
+            }
             d->transfer_status = IMG_STATUS_INITIATED;
             return CSM_OK;
         case 4U: /* image_transfer_stop */
             d->transfer_status = IMG_STATUS_IDLE;
             return CSM_OK;
         case 5U: /* image_verify */
+            if ((d->transfer_status != IMG_STATUS_INITIATED) ||
+                !image_all_blocks_transferred(d))
+            {
+                d->transfer_status = IMG_STATUS_VERIFICATION_ERROR;
+                return CSM_ERR_TEMPORARY_FAILURE;
+            }
             d->transfer_status = IMG_STATUS_VERIFICATION_OK;
             return CSM_OK;
         case 6U: /* image_activate */
+            if (d->transfer_status != IMG_STATUS_VERIFICATION_OK)
+            {
+                d->transfer_status = IMG_STATUS_ACTIVATION_ERROR;
+                return CSM_ERR_TEMPORARY_FAILURE;
+            }
             d->transfer_status = IMG_STATUS_ACTIVATION_OK;
             return CSM_OK;
         default:

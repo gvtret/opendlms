@@ -46,6 +46,8 @@ static uint8_t param_mon_pool_count = 0U;
 
 static db_ic_inst_t param_mon_inst_tmp;
 
+void db_ic_parameter_monitor_reset_count(void) { param_mon_pool_count = 0U; }
+
 static const db_ic_attr_descr param_mon_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_UNSIGNED32 },

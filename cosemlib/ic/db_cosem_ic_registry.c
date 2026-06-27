@@ -268,6 +268,21 @@ extern void db_ic_schedule_reset_count(void);
 extern void db_ic_script_table_reset_count(void);
 extern void db_ic_single_action_reset_count(void);
 extern void db_ic_special_days_reset_count(void);
+extern void db_ic_arbitrator_reset_count(void);
+extern void db_ic_comms_reset_count(void);
+extern void db_ic_compact_data_reset_count(void);
+extern void db_ic_data_protection_reset_count(void);
+extern void db_ic_disconnect_reset_count(void);
+extern void db_ic_image_transfer_reset_count(void);
+extern void db_ic_parameter_monitor_reset_count(void);
+extern void db_ic_profile_filter_reset_count(void);
+extern void db_ic_register_activation_reset_count(void);
+extern void db_ic_register_table_reset_count(void);
+extern void db_ic_sap_assignment_reset_count(void);
+extern void db_ic_sensor_manager_reset_count(void);
+extern void db_ic_status_mapping_reset_count(void);
+extern void db_ic_table_manager_reset_count(void);
+extern void db_ic_utility_tables_reset_count(void);
 
 /* ========================= Reset all counts ========================= */
 
@@ -289,6 +304,21 @@ void db_ic_reset_all_counts(void)
     db_ic_script_table_reset_count();
     db_ic_single_action_reset_count();
     db_ic_special_days_reset_count();
+    db_ic_arbitrator_reset_count();
+    db_ic_comms_reset_count();
+    db_ic_compact_data_reset_count();
+    db_ic_data_protection_reset_count();
+    db_ic_disconnect_reset_count();
+    db_ic_image_transfer_reset_count();
+    db_ic_parameter_monitor_reset_count();
+    db_ic_profile_filter_reset_count();
+    db_ic_register_activation_reset_count();
+    db_ic_register_table_reset_count();
+    db_ic_sap_assignment_reset_count();
+    db_ic_sensor_manager_reset_count();
+    db_ic_status_mapping_reset_count();
+    db_ic_table_manager_reset_count();
+    db_ic_utility_tables_reset_count();
 }
 
 /* ========================= Registration helper ========================= */

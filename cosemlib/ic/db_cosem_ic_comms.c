@@ -274,6 +274,13 @@ static uint8_t tcp_udp_count = 0U;
 
 static db_ic_inst_t tcp_udp_inst_tmp;
 
+void db_ic_comms_reset_count(void)
+{
+    iec_local_count = 0U;
+    iec_hdlc_count = 0U;
+    tcp_udp_count = 0U;
+}
+
 static const db_ic_attr_descr tcp_udp_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_OCTETSTRING },

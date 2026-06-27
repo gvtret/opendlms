@@ -48,6 +48,8 @@ static uint8_t compact_pool_count = 0U;
 
 static db_ic_inst_t compact_inst_tmp;
 
+void db_ic_compact_data_reset_count(void) { compact_pool_count = 0U; }
+
 static const db_ic_attr_descr compact_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_OCTETSTRING },

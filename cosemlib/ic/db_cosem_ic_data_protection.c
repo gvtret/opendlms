@@ -48,6 +48,8 @@ static uint8_t data_prot_pool_count = 0U;
 
 static db_ic_inst_t data_prot_inst_tmp;
 
+void db_ic_data_protection_reset_count(void) { data_prot_pool_count = 0U; }
+
 static const db_ic_attr_descr data_prot_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_OCTETSTRING },

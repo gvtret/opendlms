@@ -40,6 +40,8 @@ static uint8_t prof_filter_pool_count = 0U;
 
 static db_ic_inst_t prof_filter_inst_tmp;
 
+void db_ic_profile_filter_reset_count(void) { prof_filter_pool_count = 0U; }
+
 static const db_ic_attr_descr prof_filter_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_UNSIGNED32 },

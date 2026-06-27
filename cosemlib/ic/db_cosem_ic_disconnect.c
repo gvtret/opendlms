@@ -46,6 +46,8 @@ static uint8_t disc_pool_count = 0U;
 
 static db_ic_inst_t disc_inst_tmp;
 
+void db_ic_disconnect_reset_count(void) { disc_pool_count = 0U; }
+
 static const db_ic_attr_descr disc_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET,                  2, AXDR_TAG_BOOLEAN },

@@ -34,6 +34,8 @@ static uint8_t utility_pool_count = 0U;
 
 static db_ic_inst_t utility_inst_tmp;
 
+void db_ic_utility_tables_reset_count(void) { utility_pool_count = 0U; }
+
 static const db_ic_attr_descr utility_attrs[] = {
     { DB_ACCESS_GET,                  1, AXDR_TAG_OCTETSTRING },
     { DB_ACCESS_GET | DB_ACCESS_SET,  2, AXDR_TAG_UNSIGNED32 },
