@@ -159,6 +159,8 @@ not currently form one consistently verified product:
   process.
 - Moved `test_clock.cpp` into the default Catch2 gate and fixed
   `clk_last_dow()` for February in leap years.
+- Moved AES-128 GCM/GMAC vector coverage from Unity into the default Catch2
+  gate.
 
 ## Verified
 
@@ -168,7 +170,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 150 test cases with 1272 assertions`.
+  reports `Passed all 152 test cases with 1284 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -231,6 +233,8 @@ not currently form one consistently verified product:
   reports `100% tests passed, 0 tests failed out of 1`.
 - Clock utility tests now run in the default Catch2 gate and verify leap-year
   last-day-of-week behavior.
+- AES-128 GCM/GMAC tests now run in the default Catch2 gate and verify both the
+  NIST GCM tag vector and the GreenBook HLS5 GMAC tag vector.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
@@ -255,7 +259,7 @@ not currently form one consistently verified product:
 ## Still open
 
 - Some checked-in tests are not part of the default Catch2/CTest gate:
-  `test_aes128gcm.cpp` uses Unity, `test_streebog_debug.cpp` has its own `main`,
+  `test_streebog_debug.cpp` has its own `main`,
   `examples/metersimulator/tests/test_fs.cpp` uses embUnit, and
   `test_cosem_read_by_block.cpp` references missing Gurux JSON/Common helpers.
 - TCP-wrapper live coverage currently proves AARQ/AARE, GET clock, SET clock,
