@@ -86,6 +86,34 @@ static db_ic_inst_t *param_mon_create(const csm_obis_code *obis)
     return &param_mon_inst_tmp;
 }
 
+static int param_mon_read_entry(csm_array *in, db_ic_param_mon_entry *entry)
+{
+    uint8_t tag = 0xFFU;
+    uint8_t fields = 0U;
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_STRUCTURE) { return FALSE; }
+    if (!csm_array_read_u8(in, &fields) || fields != 3U) { return FALSE; }
+
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED16) { return FALSE; }
+    if (!csm_array_read_u16(in, &entry->class_id)) { return FALSE; }
+
+    uint8_t obis_len = 0U;
+    uint8_t obis[6];
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_OCTETSTRING) { return FALSE; }
+    if (!csm_array_read_u8(in, &obis_len) || obis_len != sizeof(obis)) { return FALSE; }
+    if (!csm_array_read_buff(in, obis, sizeof(obis))) { return FALSE; }
+    entry->obis.A = obis[0];
+    entry->obis.B = obis[1];
+    entry->obis.C = obis[2];
+    entry->obis.D = obis[3];
+    entry->obis.E = obis[4];
+    entry->obis.F = obis[5];
+
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED8) { return FALSE; }
+    if (!csm_array_read_u8(in, &entry->attribute_id)) { return FALSE; }
+    entry->data_len = 0U;
+    return TRUE;
+}
+
 static csm_db_code param_mon_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
                                         uint8_t attr_id, uint8_t method_id,
                                         csm_array *in, csm_array *out)
@@ -172,11 +200,9 @@ static csm_db_code param_mon_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         if (method_id == 1U)
         {
-            /* add_entry: skip structure input */
-            if (d->entry_count < PARAM_MON_MAX_ENTRIES)
-            {
-                d->entry_count++;
-            }
+            if (d->entry_count >= PARAM_MON_MAX_ENTRIES) { return CSM_ERR_DATA_CONTENT_NOT_OK; }
+            if (!param_mon_read_entry(in, &d->entries[d->entry_count])) { return CSM_ERR_BAD_ENCODING; }
+            d->entry_count++;
             return CSM_OK;
         }
         else if (method_id == 2U)

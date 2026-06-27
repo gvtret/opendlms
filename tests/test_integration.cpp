@@ -52,6 +52,8 @@ static const csm_obis_code obis_disconnect  = { 0, 0, 96, 3, 10, 255 };
 static const csm_obis_code obis_utility     = { 0, 0, 10, 3, 0, 255 };
 static const csm_obis_code obis_compact     = { 0, 0, 60, 3, 0, 255 };
 static const csm_obis_code obis_reg_act     = { 0, 0, 60, 5, 0, 255 };
+static const csm_obis_code obis_param_mon   = { 0, 0, 60, 6, 0, 255 };
+static const csm_obis_code obis_arbitrator  = { 0, 0, 60, 7, 0, 255 };
 static const csm_obis_code obis_ext_reg     = { 0, 0, 10, 1, 0, 255 };
 static const csm_obis_code obis_demand_reg  = { 0, 0, 10, 2, 0, 255 };
 static const csm_obis_code obis_table_mgr   = { 0, 0, 96, 9, 0, 255 };
@@ -508,6 +510,59 @@ TEST_CASE("Integration_RegisterActivationAddMaskMutatesMaskList", "[integration]
     REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
     REQUIRE(get_buf[9] == 0x12);
     REQUIRE(get_buf[10] == 0x34);
+}
+
+TEST_CASE("Integration_ParameterMonitorAddEntryMutatesList", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(65, &obis_param_mon, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t action_data[] = {
+        AXDR_TAG_STRUCTURE, 0x03,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x03,
+        AXDR_TAG_OCTETSTRING, 0x06, 0x00, 0x00, 0x0A, 0x00, 0x00, 0xFF,
+        AXDR_TAG_UNSIGNED8, 0x02
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 65, &obis_param_mon, 1,
+                             action_data, sizeof(action_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x02, 65, &obis_param_mon, 5, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x01);
+    REQUIRE(get_buf[6] == AXDR_TAG_STRUCTURE);
+    REQUIRE(get_buf[7] == 0x03);
+    REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
+    REQUIRE(get_buf[9] == 0x00);
+    REQUIRE(get_buf[10] == 0x03);
+}
+
+TEST_CASE("Integration_ArbitratorUnsupportedRequestActionFails", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(68, &obis_arbitrator, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t action_data[] = {
+        AXDR_TAG_STRUCTURE, 0x01,
+        AXDR_TAG_UNSIGNED8, 0x01
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 68, &obis_arbitrator, 1,
+                             action_data, sizeof(action_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x04);
 }
 
 TEST_CASE("Integration_SetDataValue", "[integration][basic]")

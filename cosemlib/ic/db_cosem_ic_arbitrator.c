@@ -239,8 +239,7 @@ static csm_db_code arb_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         if (method_id == 1U)
         {
-            /* request_action: skip structure input */
-            return CSM_OK;
+            return CSM_ERR_OBJECT_NOT_FOUND;
         }
         else if (method_id == 2U)
         {
