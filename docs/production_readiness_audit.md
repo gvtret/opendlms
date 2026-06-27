@@ -54,6 +54,8 @@ not currently form one consistently verified product:
   no-response behavior.
 - Restored `opendlms_reader.h`, `opendlms_reader.c`, and `csm_keyring.c`, and
   wired `reader_lab` into top-level CMake with `OPEN_DLMS_BUILD_READER_LAB`.
+- Removed the global `opendlms_reader` transport context so each reader session
+  owns its own transport callback state.
 - Restored the legacy service execution path for `csm_channel_execute()` when
   the legacy global `csm_services_init()` database handler is used.
 - Hardened `csm_asso_init()` to clear the whole association state before setting
@@ -134,6 +136,8 @@ not currently form one consistently verified product:
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
+- `opendlms_reader` and `reader_lab` targeted build passes:
+  `cmake --build build-audit-client --target opendlms_reader reader_lab -j2`.
 - Legacy JSON CLI dependency failure is explicit:
   `OPEN_DLMS_BUILD_LEGACY_JSON_CLIENT=ON` reports the missing Gurux
   `JsonReader.h`, `JsonValue.h`, `JsonWriter.h`, and `Util.h` headers.

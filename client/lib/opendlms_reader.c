@@ -10,13 +10,6 @@
 
 #include <string.h>
 
-typedef struct
-{
-    opendlms_reader_session_t *session;
-} reader_transport_ctx_t;
-
-static reader_transport_ctx_t g_reader_transport_ctx;
-
 static int reader_transport_open(void *ctx, uint8_t channel)
 {
     (void)ctx;
@@ -27,8 +20,7 @@ static int reader_transport_open(void *ctx, uint8_t channel)
 static int reader_transport_send(void *ctx, uint8_t channel, const uint8_t *data, uint32_t len)
 {
     (void)channel;
-    reader_transport_ctx_t *transport_ctx = (reader_transport_ctx_t *)ctx;
-    opendlms_reader_session_t *session = transport_ctx ? transport_ctx->session : NULL;
+    opendlms_reader_session_t *session = (opendlms_reader_session_t *)ctx;
     uint8_t framed[CSM_WRAPPER_MAX_LEN];
 
     if (!session || !session->io.write)
@@ -50,8 +42,7 @@ static int reader_transport_recv(void *ctx, uint8_t channel, uint8_t *buf, uint3
                                  uint32_t timeout_ms)
 {
     (void)channel;
-    reader_transport_ctx_t *transport_ctx = (reader_transport_ctx_t *)ctx;
-    opendlms_reader_session_t *session = transport_ctx ? transport_ctx->session : NULL;
+    opendlms_reader_session_t *session = (opendlms_reader_session_t *)ctx;
     uint8_t header[CSM_TCP_WRAPPER_LEN];
 
     if (!session || !session->io.read || !buf)
@@ -188,9 +179,8 @@ int opendlms_reader_connect(opendlms_reader_session_t *session)
         return -1;
     }
 
-    g_reader_transport_ctx.session = session;
     session->transport.ops = &reader_transport_ops;
-    session->transport.ctx = &g_reader_transport_ctx;
+    session->transport.ctx = session;
     session->client = csm_client_create(&session->transport, 0, CSM_FRAMING_NONE);
     if (!session->client)
     {
