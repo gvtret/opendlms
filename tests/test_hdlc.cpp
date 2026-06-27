@@ -275,4 +275,26 @@ TEST_CASE( "HDLC5", "[INFO]" )
     InformationDecoder();
 }
 
+TEST_CASE("HDLC rejects undersized frames", "[HDLC]")
+{
+    hdlc_t hdlc;
+    hdlc_init(&hdlc);
+
+    REQUIRE(hdlc_decode(&hdlc, nullptr, 0U) == HDLC_ERR_SIZE);
+
+    uint8_t empty_size[] = { 0x7EU };
+    REQUIRE(hdlc_decode(&hdlc, empty_size, 0U) == HDLC_ERR_SIZE);
+
+    uint8_t bad_flag[] = { 0x00U };
+    REQUIRE(hdlc_decode(&hdlc, bad_flag, sizeof(bad_flag)) == HDLC_ERR_7E);
+
+    uint8_t missing_frame_format[] = { 0x7EU };
+    REQUIRE(hdlc_decode(&hdlc, missing_frame_format, sizeof(missing_frame_format)) == HDLC_ERR_SIZE);
+
+    uint8_t truncated_frame_format[] = { 0x7EU, 0xA0U };
+    REQUIRE(hdlc_decode(&hdlc, truncated_frame_format, sizeof(truncated_frame_format)) == HDLC_ERR_SIZE);
+
+    uint8_t below_min_frame[] = { 0x7EU, 0xA0U, 0x00U, 0x7EU };
+    REQUIRE(hdlc_decode(&hdlc, below_min_frame, sizeof(below_min_frame)) == HDLC_ERR_SIZE);
+}
 

@@ -105,6 +105,7 @@ uint16_t pppfcs16(uint16_t fcs, const uint8_t* cp, uint32_t len)
 // MASKS
 #define HDLC_FORMAT_TYPE	(0xA0)
 #define HDLC_LEN_HI         (0x03)
+#define HDLC_MIN_FRAME_SIZE (9U)
 
 // BITS
 #define HDLC_SEGMENTATION_BIT	(3)
@@ -623,9 +624,19 @@ int hdlc_decode(hdlc_t *hdlc, const uint8_t *buf, uint16_t size)
 {
 	int ret = HDLC_ERR;
 
+    if ((buf == NULL) || (size == 0U))
+    {
+        return HDLC_ERR_SIZE;
+    }
+
 	// test packet structure
 	if (buf[0] == 0x7E)
 	{
+        if (size < 3U)
+        {
+            return HDLC_ERR_SIZE;
+        }
+
         // next byte is the frame format
         uint8_t format = buf[1] & HDLC_FORMAT_TYPE;
 
@@ -637,7 +648,9 @@ int hdlc_decode(hdlc_t *hdlc, const uint8_t *buf, uint16_t size)
             hdlc->frame_size = hdlc_get_len(&buf[1]) + 2U; // The value of the frame length subfield is the count of octets in the frame excluding the opening and
                                                         // closing frame flag sequences.
 
-            if ((hdlc->frame_size <= size) && (buf[hdlc->frame_size-1] == 0x7E))
+            if ((hdlc->frame_size >= HDLC_MIN_FRAME_SIZE) &&
+                (hdlc->frame_size <= size) &&
+                (buf[hdlc->frame_size-1] == 0x7E))
             {
                 // Test FCS, always present
                 ret = hdlc_check_fcs(buf, hdlc->frame_size);
@@ -646,10 +659,6 @@ int hdlc_decode(hdlc_t *hdlc, const uint8_t *buf, uint16_t size)
                 if (ret == HDLC_OK)
                 {
                     uint16_t dummy; // stub temporary variable
-
-                    // FIXME: Sanity check: test a minimal size
-                    // 7E + frame format + dest + src +         + FCS + 7E
-                    //  1        2           1      1              2     1
 
                     const uint8_t* ptr = &buf[3];
 
@@ -797,6 +806,5 @@ void hdlc_print_result(hdlc_t *hdlc, int code)
 		printf("Unknown error code: %d\r\n", code);
 	}
 }
-
 
 
