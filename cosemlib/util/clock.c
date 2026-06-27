@@ -106,7 +106,7 @@ uint32_t clk_last_dow(uint32_t yr, uint32_t mo, uint32_t dow)
     if (clk_is_valid_month(mo))
     {
         // First get the dow of the last day of the month
-        last_day = days[mo -1];
+        last_day = days[mo -1] + ((mo == 2U) && isleap(yr) ? 1U : 0U);
         uint32_t last_dow = clk_dow(yr, mo, last_day);
 
         if (dow <= last_dow)
@@ -547,6 +547,5 @@ void clk_print_time(const clk_time_t *time)
 {
     (void) time;
 }
-
 
 

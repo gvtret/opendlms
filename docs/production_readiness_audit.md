@@ -157,6 +157,8 @@ not currently form one consistently verified product:
 - Added optional CTest `reader_lab_live_smoke` covering TCP-wrapper AARQ/AARE,
   GET, SET, ACTION, and GET error response against a real `metersimulator`
   process.
+- Moved `test_clock.cpp` into the default Catch2 gate and fixed
+  `clk_last_dow()` for February in leap years.
 
 ## Verified
 
@@ -166,7 +168,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 149 test cases with 1266 assertions`.
+  reports `Passed all 150 test cases with 1272 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -227,6 +229,8 @@ not currently form one consistently verified product:
 - Live `reader_lab`/`metersimulator` smoke passes through CTest:
   `ctest --test-dir build-audit-client -R reader_lab_live_smoke --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
+- Clock utility tests now run in the default Catch2 gate and verify leap-year
+  last-day-of-week behavior.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
@@ -253,8 +257,7 @@ not currently form one consistently verified product:
 - Some checked-in tests are not part of the default Catch2/CTest gate:
   `test_aes128gcm.cpp` uses Unity, `test_streebog_debug.cpp` has its own `main`,
   `examples/metersimulator/tests/test_fs.cpp` uses embUnit, and
-  `test_clock.cpp`/`test_cosem_read_by_block.cpp` reference missing external
-  headers (`date.h`, Gurux JSON/Common helpers).
+  `test_cosem_read_by_block.cpp` references missing Gurux JSON/Common helpers.
 - TCP-wrapper live coverage currently proves AARQ/AARE, GET clock, SET clock,
   ACTION clock, GET error response, and LuaBridge `getObjectList()`. It still
   needs automated disconnect assertions and security-profile live coverage.

@@ -4,44 +4,14 @@ extern "C" {
 }
 #include "catch.hpp"
 
-// This is our reference library to test with
-#include "date.h"
-#include <chrono>
-#include <iostream>
-
-using namespace date;
-using namespace std::chrono;
-
-// Quick simple tests to checks that the clock is working in nominal way
-// Not full test
-void SanityCheck()
-{
-    constexpr auto x1 = 2015_y/mar/sun[last];
-    constexpr auto x4 = year_month_day{x1};
-
-    int year  = x4.year().operator int();
-    unsigned int month  = x4.month().operator unsigned int();
-    unsigned int day  = x4.day().operator unsigned int();
-
-    // Check day number
-    uint32_t last_sun = clk_last_dow(year, month, SUNDAY);
-
-    REQUIRE(last_sun == day);
-
-    // Check DOW
-    uint32_t dow = clk_dow(year, month, day);
-
-    // Check that dow is sunday
-    REQUIRE(dow == SUNDAY);
-
-}
-
-
 TEST_CASE( "Clock", "[clock_test]" )
 {
-    SanityCheck();
-
+    REQUIRE(clk_dow(2015U, 3U, 29U) == SUNDAY);
+    REQUIRE(clk_last_dow(2015U, 3U, SUNDAY) == 29U);
+    REQUIRE(clk_dow(2024U, 2U, 29U) == THURSDAY);
+    REQUIRE(clk_last_dow(2024U, 2U, THURSDAY) == 29U);
+    REQUIRE(clk_is_valid_date(2024U, 2U, 29U) == 1U);
+    REQUIRE(clk_is_valid_date(2023U, 2U, 29U) == 0U);
 }
-
 
 
