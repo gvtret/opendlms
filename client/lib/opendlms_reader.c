@@ -229,6 +229,62 @@ int opendlms_reader_get(opendlms_reader_session_t *session,
     return csm_client_decode(response, &array) ? 0 : -1;
 }
 
+int opendlms_reader_set(opendlms_reader_session_t *session,
+                        uint16_t class_id,
+                        const csm_obis_code *obis,
+                        uint8_t attr_id,
+                        const uint8_t *data,
+                        uint32_t data_len,
+                        csm_response *response)
+{
+    uint8_t resp_buf[CSM_SERVER_MAX_PDU];
+
+    if (!session || !session->client || !obis || !data || data_len == 0U || !response)
+    {
+        return -1;
+    }
+
+    int rc = csm_client_set(session->client, session->invoke_id++, class_id, obis,
+                            attr_id, data, data_len, resp_buf, sizeof(resp_buf));
+    if (rc <= 0)
+    {
+        return -1;
+    }
+
+    csm_client_init(NULL, response);
+    csm_array array;
+    csm_array_init(&array, resp_buf, sizeof(resp_buf), (uint32_t)rc, 0);
+    return csm_client_decode(response, &array) ? 0 : -1;
+}
+
+int opendlms_reader_action(opendlms_reader_session_t *session,
+                           uint16_t class_id,
+                           const csm_obis_code *obis,
+                           uint8_t method_id,
+                           const uint8_t *data,
+                           uint32_t data_len,
+                           csm_response *response)
+{
+    uint8_t resp_buf[CSM_SERVER_MAX_PDU];
+
+    if (!session || !session->client || !obis || ((data == NULL) && (data_len != 0U)) || !response)
+    {
+        return -1;
+    }
+
+    int rc = csm_client_action(session->client, session->invoke_id++, class_id, obis,
+                               method_id, data, data_len, resp_buf, sizeof(resp_buf));
+    if (rc <= 0)
+    {
+        return -1;
+    }
+
+    csm_client_init(NULL, response);
+    csm_array array;
+    csm_array_init(&array, resp_buf, sizeof(resp_buf), (uint32_t)rc, 0);
+    return csm_client_decode(response, &array) ? 0 : -1;
+}
+
 void opendlms_reader_disconnect(opendlms_reader_session_t *session)
 {
     if (!session)

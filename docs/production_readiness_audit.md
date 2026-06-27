@@ -59,6 +59,8 @@ not currently form one consistently verified product:
 - Fixed high-level client receive timeout propagation so
   `csm_client_connect()` and subsequent client requests use the configured
   transport timeout instead of a hard-coded value.
+- Added public `opendlms_reader_set()` and `opendlms_reader_action()` wrappers
+  so the restored C reader API covers GET, SET, and ACTION service calls.
 - Restored the legacy service execution path for `csm_channel_execute()` when
   the legacy global `csm_services_init()` database handler is used.
 - Hardened `csm_asso_init()` to clear the whole association state before setting

@@ -73,6 +73,20 @@ int opendlms_reader_get(opendlms_reader_session_t *session,
                         const csm_obis_code *obis,
                         uint8_t attr_id,
                         csm_response *response);
+int opendlms_reader_set(opendlms_reader_session_t *session,
+                        uint16_t class_id,
+                        const csm_obis_code *obis,
+                        uint8_t attr_id,
+                        const uint8_t *data,
+                        uint32_t data_len,
+                        csm_response *response);
+int opendlms_reader_action(opendlms_reader_session_t *session,
+                           uint16_t class_id,
+                           const csm_obis_code *obis,
+                           uint8_t method_id,
+                           const uint8_t *data,
+                           uint32_t data_len,
+                           csm_response *response);
 void opendlms_reader_disconnect(opendlms_reader_session_t *session);
 
 #ifdef __cplusplus
