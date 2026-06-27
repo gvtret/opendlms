@@ -121,6 +121,56 @@ static const uint8_t clock_default_dt[DB_CLOCK_DT_LEN] = {
     0x07, 0xD2, 0x0C, 0x04, 0x03, 0x0A, 0x06, 0x0B, 0xFF, 0x00, 0x78, 0x00
 };
 
+static uint8_t clock_days_in_month(uint16_t year, uint8_t month)
+{
+    static const uint8_t days[] = {
+        31U, 28U, 31U, 30U, 31U, 30U, 31U, 31U, 30U, 31U, 30U, 31U
+    };
+    if ((month == 0U) || (month > 12U)) { return 31U; }
+
+    uint8_t ret = days[month - 1U];
+    if ((month == 2U) &&
+        ((year % 4U == 0U) && ((year % 100U != 0U) || (year % 400U == 0U))))
+    {
+        ret = 29U;
+    }
+    return ret;
+}
+
+static void clock_increment_hour(db_cosem_clock_data_t *clk)
+{
+    clk->hour++;
+    if (clk->hour < 24U) { return; }
+
+    clk->hour = 0U;
+    clk->day++;
+    if (clk->day <= clock_days_in_month(clk->year, clk->month)) { return; }
+
+    clk->day = 1U;
+    clk->month++;
+    if (clk->month <= 12U) { return; }
+
+    clk->month = 1U;
+    clk->year++;
+}
+
+static void clock_adjust_to_quarter(db_ic_inst_t *inst)
+{
+    db_cosem_clock_data_t *clk = (db_cosem_clock_data_t *)inst->data;
+    uint32_t seconds = ((uint32_t)clk->minute * 60U) + (uint32_t)clk->second;
+    uint32_t rounded = ((seconds + 450U) / 900U) * 900U;
+
+    if (rounded >= 3600U)
+    {
+        rounded = 0U;
+        clock_increment_hour(clk);
+    }
+
+    clk->minute = (uint8_t)(rounded / 60U);
+    clk->second = 0U;
+    clk->hundredths = 0U;
+}
+
 static void db_ic_clock_reset_count(void)
 {
     clock_inst_count = 0U;
@@ -198,8 +248,14 @@ static csm_db_code clock_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     }
     else if (op == IC_OP_ACTION)
     {
-        if ((method_id == 1U) || (method_id == 2U))
+        if (method_id == 1U)
         {
+            return CSM_ERR_DATA_CONTENT_NOT_OK;
+        }
+        if (method_id == 2U)
+        {
+            if ((in != NULL) && (csm_array_unread(in) != 0U)) { return CSM_ERR_BAD_ENCODING; }
+            clock_adjust_to_quarter(inst);
             return CSM_OK;
         }
     }

@@ -320,6 +320,47 @@ TEST_CASE("Integration_SetClockTime", "[integration][basic]")
     REQUIRE(std::memcmp(&get_buf[6], &clock_value[2], DB_CLOCK_DT_LEN) == 0);
 }
 
+TEST_CASE("Integration_ClockActionsDoNotReturnFakeSuccess", "[integration][basic]")
+{
+    test_stack_setup();
+    test_establish_association();
+
+    const uint8_t clock_value[] = {
+        AXDR_TAG_OCTETSTRING, DB_CLOCK_DT_LEN,
+        0x07, 0xEA, 0x06, 0x06, 0x1B, 0x0C, 0x16, 0x38, 0xFF, 0x00, 0x00, 0x00
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 8, &obis_clock, 2,
+                          clock_value, sizeof(clock_value), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_action(0x02, 8, &obis_clock, 2,
+                         NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x03, 8, &obis_clock, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[5] == DB_CLOCK_DT_LEN);
+    REQUIRE(get_buf[11] == 0x0C);
+    REQUIRE(get_buf[12] == 0x1E);
+    REQUIRE(get_buf[13] == 0x00);
+
+    ret = test_do_action(0x04, 8, &obis_clock, 1,
+                         NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 250);
+}
+
 TEST_CASE("Integration_GetObjectNotFound", "[integration][basic]")
 {
     test_stack_setup();

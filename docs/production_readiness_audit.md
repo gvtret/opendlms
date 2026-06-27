@@ -72,6 +72,8 @@ not currently form one consistently verified product:
 - Replaced the Clock registry stub with a real minimal handler for logical_name
   and time, and changed generic IC stubs to return object-not-found instead of
   silent empty success.
+- Implemented Clock `adjust_to_quarter` and made unavailable preset-time action
+  return a DLMS error instead of reporting a successful no-op.
 - Made unsupported Security Setup key generation methods return a DLMS error
   instead of reporting a successful no-op.
 - Mapped SET/ACTION database errors to more specific DLMS data-access-result
@@ -101,14 +103,16 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 135 test cases with 912 assertions`.
+  reports `Passed all 136 test cases with 930 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 64 test cases with 371 assertions`.
+  reports `Passed all 65 test cases with 389 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
 - Integration tests now verify Clock time AXDR payload and SET/GET round-trip.
+- Integration tests now verify Clock action handling for quarter-hour adjustment
+  and preset-time failure behavior.
 - Integration tests now verify read-only SET denial, unsupported Security Setup
   key-generation failure, and Table Manager built-in registration.
 - BER unit tests now cover short/long-form length boundaries, and integration
