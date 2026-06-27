@@ -13,6 +13,8 @@
  */
 
 #include "db_cosem_ic.h"
+#include "db_cosem_clock_util.h"
+#include "csm_axdr_codec.h"
 #include "csm_config.h"
 #include <string.h>
 
@@ -41,7 +43,7 @@ static csm_db_code ic_stub_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
 {
     (void) inst; (void) op; (void) attr_id; (void) method_id;
     (void) in;   (void) out;
-    return CSM_OK;
+    return CSM_ERR_OBJECT_NOT_FOUND;
 }
 
 /* Classes with full implementations in their own handler files:
@@ -51,7 +53,7 @@ static csm_db_code ic_stub_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
  *   Class 5  Demand Register   — db_cosem_demand_register.c
  *   Class 6  Register Activation — db_cosem_ic_register_activation.c
  *   Class 7  Profile Generic   — db_cosem_ic_profile.c
- *   Class 8  Clock             — (stub)
+ *   Class 8  Clock             — db_cosem_ic_registry.c
  *   Class 9  Script Table      — db_cosem_ic_script_table.c
  *   Class 10 Schedule          — db_cosem_ic_schedule.c
  *   Class 11 Special Days      — db_cosem_ic_special_days.c
@@ -111,13 +113,107 @@ static const db_ic_object_descr clock_descr = {
     .version      = 0
 };
 
+static db_ic_inst_t clock_instances[DB_IC_MAX_INSTANCES];
+static db_cosem_clock_data_t clock_data[DB_IC_MAX_INSTANCES];
+static uint8_t clock_inst_count = 0U;
+
+static const uint8_t clock_default_dt[DB_CLOCK_DT_LEN] = {
+    0x07, 0xD2, 0x0C, 0x04, 0x03, 0x0A, 0x06, 0x0B, 0xFF, 0x00, 0x78, 0x00
+};
+
+static void db_ic_clock_reset_count(void)
+{
+    clock_inst_count = 0U;
+}
+
+static db_ic_inst_t *clock_create(const csm_obis_code *obis)
+{
+    (void) obis;
+    if (clock_inst_count >= DB_IC_MAX_INSTANCES)
+    {
+        return NULL;
+    }
+
+    db_ic_inst_t *inst = &clock_instances[clock_inst_count];
+    db_cosem_clock_data_t *data = &clock_data[clock_inst_count];
+    memset(inst, 0, sizeof(*inst));
+    memset(data, 0, sizeof(*data));
+
+    inst->descr = &clock_descr;
+    inst->data = data;
+    inst->version = clock_descr.version;
+    db_cosem_clock_set_datetime(clock_default_dt, inst);
+    clock_inst_count++;
+    return inst;
+}
+
+static csm_db_code clock_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
+                                  uint8_t attr_id, uint8_t method_id,
+                                  csm_array *in, csm_array *out)
+{
+    if ((inst == NULL) || (inst->data == NULL))
+    {
+        return CSM_ERR_OBJECT_NOT_FOUND;
+    }
+
+    if (op == IC_OP_GET)
+    {
+        if (attr_id == 1U)
+        {
+            const csm_obis_code *obis = inst->has_obis ? &inst->obis : &inst->descr->obis;
+            return csm_axdr_wr_octetstring(out, (const uint8_t *)&obis->A, 6U)
+                ? CSM_OK
+                : CSM_ERR_OBJECT_ERROR;
+        }
+
+        if (attr_id == 2U)
+        {
+            uint8_t dt[DB_CLOCK_DT_LEN];
+            db_cosem_clock_get_datetime(dt, inst);
+            return csm_axdr_wr_octetstring(out, dt, DB_CLOCK_DT_LEN)
+                ? CSM_OK
+                : CSM_ERR_OBJECT_ERROR;
+        }
+    }
+    else if (op == IC_OP_SET)
+    {
+        if (attr_id == 2U)
+        {
+            uint8_t tag = 0U;
+            uint8_t len = 0U;
+            uint8_t dt[DB_CLOCK_DT_LEN];
+
+            if (!csm_array_read_u8(in, &tag) ||
+                !csm_array_read_u8(in, &len) ||
+                (tag != AXDR_TAG_OCTETSTRING) ||
+                (len != DB_CLOCK_DT_LEN) ||
+                !csm_array_read_buff(in, dt, DB_CLOCK_DT_LEN))
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+
+            db_cosem_clock_set_datetime(dt, inst);
+            return CSM_OK;
+        }
+    }
+    else if (op == IC_OP_ACTION)
+    {
+        if ((method_id == 1U) || (method_id == 2U))
+        {
+            return CSM_OK;
+        }
+    }
+
+    return CSM_ERR_OBJECT_NOT_FOUND;
+}
+
 static const db_ic_class ic_clock = {
     .class_id  = 8,
     .name      = "Clock",
     .version   = 0,
     .descr     = &clock_descr,
-    .create    = ic_stub_create,
-    .dispatch  = ic_stub_dispatch
+    .create    = clock_create,
+    .dispatch  = clock_dispatch
 };
 
 void db_ic_register_clock(void) { db_ic_register(&ic_clock); }
@@ -150,6 +246,7 @@ extern void db_ic_special_days_reset_count(void);
 void db_ic_reset_all_counts(void)
 {
     db_ic_stub_reset_count();
+    db_ic_clock_reset_count();
     db_ic_data_reset_count();
     db_ic_register_reset_count();
     db_ic_ext_register_reset_count();

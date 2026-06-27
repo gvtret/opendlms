@@ -1,14 +1,14 @@
 # OpenDLMS production readiness audit
 
-Date: 2026-06-26
+Date: 2026-06-27
 Branch: full-rework
 
 ## Current status
 
-The core in-process DLMS/COSEM stack is now buildable and test-green in the
-current repository state. The repository is closer to a production-ready stack,
-but external dependency wiring, CI gates, and live Electron/simulator validation
-still need to be closed before release.
+The core in-process DLMS/COSEM stack and the primary TCP-wrapper examples are
+buildable and test-green in the current repository state. The repository is
+closer to a production-ready stack, but broader protocol coverage, CI gates, and
+legacy/manual test classification still need to be closed before release.
 
 The repository contains a compilable core library, a legacy meter simulator, a newer
 high-level client/server API, Electron Studio bindings, and tests. These pieces do
@@ -17,17 +17,19 @@ not currently form one consistently verified product:
 - `examples/reader_lab` previously referenced missing `client/lib/opendlms_reader.c`
   and `client/include/opendlms_reader.h`. These files have been restored as a
   buildable TCP-wrapper reader API.
-- The CMake test target builds only part of the checked-in tests.
+- The default CMake test target builds the active Catch2 suite. Several checked-in
+  legacy/manual tests still need either migration or explicit exclusion metadata.
 - A clean MinGW test build compiles after C++ `nullptr` fixes, and the full
   `cosemtest` executable passes.
-- `OPEN_DLMS_BUILD_CLIENT=ON` fails because the Gurux JSON dependency is not
-  declared or discovered by CMake.
+- `OPEN_DLMS_BUILD_CLIENT=ON` now builds the restored `opendlms_reader` API.
+  The old JSON CLI is isolated behind `OPEN_DLMS_BUILD_LEGACY_JSON_CLIENT`.
 - Legacy COSEM-TCP simulator code uses the IEC 62056 TCP WPDU header, while the
   newer TCP transport previously implemented only the LLC `E6 E6/E7 00` wrapper.
 - The high-level `csm_client_connect()` previously opened only the socket and did
   not perform ACSE AARQ/AARE association.
 - Several public scripting APIs were stubs.
-- Some IC handlers remain registry stubs or partial implementations.
+- Clock now has a minimal real registry handler for logical_name/time GET and
+  time SET. Some other IC handlers remain partial implementations.
 
 ## Changes made in this pass
 
@@ -60,6 +62,16 @@ not currently form one consistently verified product:
   instead of re-decoding the request header.
 - Updated integration expectations for standard GET error responses with
   `data-access-result` instead of exception APDUs.
+- Added a simulator port override via argv or `OPENDLMS_METER_PORT`, allowing
+  isolated live tests without touching an already-running simulator.
+- Split the restored C reader API into an `opendlms_reader` CMake target and
+  made the legacy JSON CLI opt-in with an explicit Gurux header diagnostic.
+- Added an Electron `test:live` smoke script that connects LuaBridge to a live
+  simulator and performs `getObjectList()`.
+- Removed public-header enum arithmetic warnings from `csm_association.h`.
+- Replaced the Clock registry stub with a real minimal handler for logical_name
+  and time, and changed generic IC stubs to return object-not-found instead of
+  silent empty success.
 
 ## Verified
 
@@ -69,37 +81,50 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 119 test cases with 715 assertions`.
+  reports `Passed all 120 test cases with 729 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 49 test cases with 188 assertions`.
+  reports `Passed all 50 test cases with 202 assertions`.
 - CTest passes:
-  `ctest --test-dir build-audit-tests --output-on-failure`
+  `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
+- Integration tests now verify Clock time AXDR payload and SET/GET round-trip.
+- Client/API build passes:
+  `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
+  followed by `cmake --build build-audit-client -j2`.
+- Legacy JSON CLI dependency failure is explicit:
+  `OPEN_DLMS_BUILD_LEGACY_JSON_CLIENT=ON` reports the missing Gurux
+  `JsonReader.h`, `JsonValue.h`, `JsonWriter.h`, and `Util.h` headers.
 - Electron native addon rebuilds successfully.
-- LuaBridge can connect to the local meter simulator and decode AARE.
+- Electron native tests pass:
+  `npm test` reports `44 tests, 44 passed, 0 failed`.
+- LuaBridge live smoke passes against a freshly built simulator on port 4165:
+  `npm run test:live -- 4165` reports a non-empty object-list response.
 - `reader_lab` builds from a clean CMake directory with
   `OPEN_DLMS_BUILD_READER_LAB=ON`.
+- `reader_lab` live GET passes against a freshly built simulator on port 4165:
+  `reader_lab public 127.0.0.1 4165 0.0.1.0.0.255` reports `Association OK`
+  and `GET OK`.
 
 ## Still open
 
-- Lua `getObjectList()` and `reader_lab` live GET need to be re-verified against
-  a freshly built simulator process.
-- The old `metersimulator.exe` process on port 4063 could not be terminated from
-  this session (`Access is denied`), so live simulator verification was performed
-  against the already-running process.
-- Build output still contains enum arithmetic warnings in `csm_association.h`.
+- Some checked-in tests are not part of the default Catch2/CTest gate:
+  `test_aes128gcm.cpp` uses Unity, `test_streebog_debug.cpp` has its own `main`,
+  `examples/metersimulator/tests/test_fs.cpp` uses embUnit, and
+  `test_clock.cpp`/`test_cosem_read_by_block.cpp` reference missing external
+  headers (`date.h`, Gurux JSON/Common helpers).
+- TCP-wrapper live coverage currently proves AARQ/AARE, GET clock, and
+  LuaBridge `getObjectList()`. It still needs automated live SET, ACTION, error
+  response, and disconnect assertions.
+- Several IC handlers remain partial implementations and must either be
+  completed or documented as unsupported with standard COSEM errors.
 
 ## Required before calling this production-ready
 
-1. Re-run end-to-end live simulator validation with a freshly built
-   `metersimulator.exe`, `reader_lab`, and Electron LuaBridge.
-2. Make CMake build every intended test file, or explicitly mark tests as
+1. Make CMake build every intended test file, or explicitly mark tests as
    experimental/disabled with a reason.
-3. Add end-to-end TCP WPDU tests covering AARQ/AARE, GET object list, GET error
+2. Add end-to-end TCP WPDU tests covering AARQ/AARE, GET object list, GET error
    response, SET, ACTION, and disconnect.
-4. Replace registry IC stubs with real handlers or document them as unsupported
+3. Replace registry IC stubs with real handlers or document them as unsupported
    and make unsupported operations return standard COSEM errors.
-5. Make all optional external dependencies discoverable at configure time with
-   clear failure messages.
-6. Add CI gates for clean MinGW and native addon builds.
+4. Add CI gates for clean MinGW, live simulator smoke, and native addon builds.

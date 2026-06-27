@@ -23,6 +23,7 @@ extern "C" {
 #include "csm_security.h"
 #include "csm_ber.h"
 #include "db_cosem_ic.h"
+#include "db_cosem_clock_util.h"
 #include "os_util.h"
 #include "server_config.h"
 }
@@ -266,6 +267,37 @@ TEST_CASE("Integration_GetClockTime", "[integration][basic]")
     REQUIRE(buf[1] == 0x01);
     REQUIRE(buf[2] == 0x01);
     REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(buf[5] == DB_CLOCK_DT_LEN);
+    REQUIRE(buf[6] == 0x07);
+    REQUIRE(buf[7] == 0xD2);
+}
+
+TEST_CASE("Integration_SetClockTime", "[integration][basic]")
+{
+    test_stack_setup();
+    test_establish_association();
+
+    const uint8_t clock_value[] = {
+        AXDR_TAG_OCTETSTRING, DB_CLOCK_DT_LEN,
+        0x07, 0xEA, 0x06, 0x06, 0x1B, 0x0C, 0x22, 0x38, 0xFF, 0x00, 0x00, 0x00
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 8, &obis_clock, 2,
+                          clock_value, sizeof(clock_value), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x02, 8, &obis_clock, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[5] == DB_CLOCK_DT_LEN);
+    REQUIRE(std::memcmp(&get_buf[6], &clock_value[2], DB_CLOCK_DT_LEN) == 0);
 }
 
 TEST_CASE("Integration_GetObjectNotFound", "[integration][basic]")

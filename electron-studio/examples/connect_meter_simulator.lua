@@ -1,5 +1,5 @@
 local host = "127.0.0.1"
-local port = 4063
+local port = tonumber(os.getenv("OPENDLMS_METER_PORT") or "4063")
 
 print(string.format("Connecting to meter simulator at %s:%d", host, port))
 

@@ -9,12 +9,17 @@ if(NOT TARGET cosemlib)
 endif()
 
 if(OPEN_DLMS_BUILD_READER_LAB)
-    add_executable(reader_lab
-        src/main.c
-        ../../client/lib/reader_hal.c
-        ../../client/lib/opendlms_reader.c
-        ../../client/lib/opendlms_reader_auth.c
-    )
+    if(TARGET opendlms_reader)
+        add_executable(reader_lab src/main.c)
+        target_link_libraries(reader_lab PRIVATE opendlms_reader)
+    else()
+        add_executable(reader_lab
+            src/main.c
+            ../../client/lib/reader_hal.c
+            ../../client/lib/opendlms_reader.c
+            ../../client/lib/opendlms_reader_auth.c
+        )
+    endif()
 
     target_link_libraries(reader_lab PRIVATE cosemlib)
 

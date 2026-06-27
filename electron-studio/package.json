@@ -8,6 +8,7 @@
     "build:native": "cmake-js build --directory native",
     "rebuild": "electron-rebuild -f -w opendlms-native",
     "test": "node tests/test_native.js",
+    "test:live": "electron test_lua_bridge_live.js",
     "dist": "electron-builder"
   },
   "dependencies": {

@@ -196,8 +196,22 @@ void csm_init()
 
 int main(int argc, const char * argv[])
 {
-    (void) argc;
-    (void) argv;
+    int tcp_port = TCP_PORT;
+    const char *env_port = getenv("OPENDLMS_METER_PORT");
+
+    if ((env_port != NULL) && (env_port[0] != '\0'))
+    {
+        tcp_port = atoi(env_port);
+    }
+    if (argc >= 2)
+    {
+        tcp_port = atoi(argv[1]);
+    }
+    if ((tcp_port <= 0) || (tcp_port > 65535))
+    {
+        fprintf(stderr, "Invalid TCP port: %d\r\n", tcp_port);
+        return 1;
+    }
 
     uint8_t gBuffer[BUF_SIZE]; // working buffer, keep it private
 
@@ -210,8 +224,8 @@ int main(int argc, const char * argv[])
     buff.max_size = BUF_SIZE;
 
     csm_init();
-    printf("Starting DLMS/Cosem meter simulator\r\nCosem library version: %s\r\n\r\n", CSM_DEF_LIB_VERSION);
+    printf("Starting DLMS/Cosem meter simulator on port %d\r\nCosem library version: %s\r\n\r\n",
+           tcp_port, CSM_DEF_LIB_VERSION);
 
-    return tcp_server_init(tcp_data_handler, tcp_conn_handler, &buff, TCP_PORT);
+    return tcp_server_init(tcp_data_handler, tcp_conn_handler, &buff, tcp_port);
 }
-
