@@ -117,6 +117,13 @@ not currently form one consistently verified product:
   unexpected payloads return a DLMS error instead of being ignored.
 - Made delete-style ACTION methods for Register Activation masks and Parameter
   Monitor entries report a DLMS error when the requested item does not exist.
+- Implemented Schedule `insert`/`delete` ACTION handling with persistent AXDR
+  entry storage keyed by entry id.
+- Implemented Special Days `insert`/`delete` ACTION handling with persistent
+  AXDR entry storage keyed by day id.
+- Made Script Table `execute` validate its script id parameter and report a
+  DLMS error when the target script is not present instead of returning a
+  successful no-op.
 
 ## Verified
 
@@ -126,10 +133,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 140 test cases with 1039 assertions`.
+  reports `Passed all 143 test cases with 1096 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 66 test cases with 411 assertions`.
+  reports `Passed all 71 test cases with 550 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
@@ -162,6 +169,11 @@ not currently form one consistently verified product:
   payloads and still accept an explicit AXDR NULL parameter.
 - Integration tests now verify failed Register Activation mask deletion and
   Parameter Monitor entry deletion leave their lists unchanged.
+- Integration tests now verify Schedule and Special Days insert/delete mutate
+  their entry arrays through the normal ACTION service path, including missing
+  delete target errors.
+- Integration tests now verify Script Table execute returns a DLMS error when
+  the requested script id is not present.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

@@ -59,6 +59,9 @@ static const csm_obis_code obis_arbitrator  = { 0, 0, 60, 7, 0, 255 };
 static const csm_obis_code obis_ext_reg     = { 0, 0, 10, 1, 0, 255 };
 static const csm_obis_code obis_demand_reg  = { 0, 0, 10, 2, 0, 255 };
 static const csm_obis_code obis_table_mgr   = { 0, 0, 96, 9, 0, 255 };
+static const csm_obis_code obis_script      = { 0, 0, 9, 0, 0, 255 };
+static const csm_obis_code obis_schedule    = { 0, 0, 10, 4, 0, 255 };
+static const csm_obis_code obis_special_day = { 0, 0, 11, 0, 0, 255 };
 static const csm_obis_code obis_nonexist    = { 0, 0, 99, 9, 9, 255 };
 
 static csm_db_code test_db_access(csm_db_context_t *ctx, csm_array *in,
@@ -732,6 +735,140 @@ TEST_CASE("Integration_ParameterMonitorAddEntryMutatesList", "[integration][basi
     REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
     REQUIRE(get_buf[9] == 0x00);
     REQUIRE(get_buf[10] == 0x03);
+}
+
+TEST_CASE("Integration_ScheduleInsertDeleteMutatesEntries", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(10, &obis_schedule, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t entry[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x07,
+        AXDR_TAG_BOOLEAN, 0x01
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 10, &obis_schedule, 3,
+                             entry, sizeof(entry), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x02, 10, &obis_schedule, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x01);
+    REQUIRE(get_buf[6] == AXDR_TAG_STRUCTURE);
+    REQUIRE(get_buf[7] == 0x02);
+    REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
+    REQUIRE(get_buf[9] == 0x00);
+    REQUIRE(get_buf[10] == 0x07);
+
+    const uint8_t missing_entry[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x09
+    };
+    ret = test_do_action(0x03, 10, &obis_schedule, 4,
+                         missing_entry, sizeof(missing_entry), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
+
+    const uint8_t delete_entry[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x07
+    };
+    ret = test_do_action(0x04, 10, &obis_schedule, 4,
+                         delete_entry, sizeof(delete_entry), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_get(0x05, 10, &obis_schedule, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x00);
+}
+
+TEST_CASE("Integration_SpecialDaysInsertDeleteMutatesEntries", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(11, &obis_special_day, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t entry[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x11,
+        AXDR_TAG_OCTETSTRING, 0x05, 0x07, 0xEA, 0x06, 0x1B, 0xFF
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 11, &obis_special_day, 1,
+                             entry, sizeof(entry), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x02, 11, &obis_special_day, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x01);
+    REQUIRE(get_buf[6] == AXDR_TAG_STRUCTURE);
+    REQUIRE(get_buf[7] == 0x02);
+    REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
+    REQUIRE(get_buf[9] == 0x00);
+    REQUIRE(get_buf[10] == 0x11);
+
+    const uint8_t missing_day[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x22
+    };
+    ret = test_do_action(0x03, 11, &obis_special_day, 2,
+                         missing_day, sizeof(missing_day), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
+
+    const uint8_t delete_day[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x11
+    };
+    ret = test_do_action(0x04, 11, &obis_special_day, 2,
+                         delete_day, sizeof(delete_day), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_get(0x05, 11, &obis_special_day, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x00);
+}
+
+TEST_CASE("Integration_ScriptTableExecuteMissingScriptFails", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(9, &obis_script, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t script_id[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x01
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 9, &obis_script, 1,
+                             script_id, sizeof(script_id), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
 }
 
 TEST_CASE("Integration_ArbitratorUnsupportedRequestActionFails", "[integration][basic]")

@@ -41,7 +41,7 @@ static const db_ic_attr_descr script_table_attrs[] = {
 };
 
 static const db_ic_method_descr script_table_methods[] = {
-    { DB_ACCESS_ACTION, 1, AXDR_TAG_NULL },
+    { DB_ACCESS_ACTION, 1, AXDR_TAG_UNSIGNED16 },
 };
 
 static const db_ic_object_descr script_table_descr = {
@@ -64,7 +64,7 @@ static db_ic_inst_t *script_table_create(const csm_obis_code *obis)
     }
 
     db_ic_script_table_data_t *data = &script_table_data_pool[script_table_data_count];
-    data->script_count = 0U;
+    memset(data, 0, sizeof(db_ic_script_table_data_t));
     script_table_data_count++;
 
     db_ic_inst_t *inst = &script_table_inst_pool[script_table_inst_count];
@@ -115,7 +115,26 @@ static csm_db_code script_table_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         if (method_id == 1U)
         {
-            return CSM_OK;
+            uint8_t tag = 0U;
+            uint16_t script_id = 0U;
+            db_ic_script_table_data_t *data = (db_ic_script_table_data_t *)inst->data;
+
+            if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED16 ||
+                !csm_array_read_u16(in, &script_id) || csm_array_unread(in) != 0U)
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+
+            for (uint8_t i = 0U; i < data->script_count; i++)
+            {
+                if (data->scripts[i][0] == (uint8_t)(script_id >> 8) &&
+                    data->scripts[i][1] == (uint8_t)script_id)
+                {
+                    return CSM_OK;
+                }
+            }
+
+            return CSM_ERR_DATA_CONTENT_NOT_OK;
         }
     }
 
