@@ -128,6 +128,8 @@ not currently form one consistently verified product:
   a successful no-op.
 - Made Register Table `capture` validate its configured active target and read
   it through the IC registry instead of returning unconditional success.
+- Made SAP Assignment `connect_logical_device` validate that the requested SAP
+  exists in the assignment list instead of accepting any SAP id.
 
 ## Verified
 
@@ -137,10 +139,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 145 test cases with 1148 assertions`.
+  reports `Passed all 146 test cases with 1159 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 73 test cases with 602 assertions`.
+  reports `Passed all 74 test cases with 613 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
@@ -183,6 +185,8 @@ not currently form one consistently verified product:
 - Integration tests now verify Register Table `capture` fails without a
   configured readable target, succeeds for a real Register object attribute, and
   rejects an out-of-range active index.
+- Integration tests now verify SAP Assignment `connect_logical_device` fails for
+  unassigned SAP ids and succeeds after the SAP assignment list is configured.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

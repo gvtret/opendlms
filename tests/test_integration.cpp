@@ -61,6 +61,7 @@ static const csm_obis_code obis_sensor_mgr  = { 0, 0, 60, 8, 0, 255 };
 static const csm_obis_code obis_ext_reg     = { 0, 0, 10, 1, 0, 255 };
 static const csm_obis_code obis_demand_reg  = { 0, 0, 10, 2, 0, 255 };
 static const csm_obis_code obis_table_mgr   = { 0, 0, 96, 9, 0, 255 };
+static const csm_obis_code obis_sap         = { 0, 0, 41, 0, 0, 255 };
 static const csm_obis_code obis_script      = { 0, 0, 9, 0, 0, 255 };
 static const csm_obis_code obis_schedule    = { 0, 0, 10, 4, 0, 255 };
 static const csm_obis_code obis_special_day = { 0, 0, 11, 0, 0, 255 };
@@ -994,6 +995,42 @@ TEST_CASE("Integration_RegisterTableCaptureRequiresReadableTarget", "[integratio
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
+}
+
+TEST_CASE("Integration_SapAssignmentConnectRequiresAssignedSap", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(17, &obis_sap, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t sap_1[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x01
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 17, &obis_sap, 1,
+                             sap_1, sizeof(sap_1), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OBJECT_UNDEFINED);
+
+    const uint8_t sap_list[] = {
+        AXDR_TAG_ARRAY, 0x01,
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x01,
+        AXDR_TAG_OCTETSTRING, 0x06, 'p', 'u', 'b', 'l', 'i', 'c'
+    };
+    ret = test_do_set(0x02, 17, &obis_sap, 2,
+                      sap_list, sizeof(sap_list), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_action(0x03, 17, &obis_sap, 1,
+                         sap_1, sizeof(sap_1), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
 }
 
 TEST_CASE("Integration_ArbitratorUnsupportedRequestActionFails", "[integration][basic]")

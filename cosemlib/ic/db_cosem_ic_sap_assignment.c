@@ -156,13 +156,20 @@ static csm_db_code sap_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         if (method_id == 1U)
         {
-            /* connect_logical_device: read the SAP ID, return CSM_OK */
             uint8_t tag = 0xFFU;
             if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED16) { return CSM_ERR_BAD_ENCODING; }
             uint16_t sap_id = 0U;
-            if (!csm_array_read_u16(in, &sap_id)) { return CSM_ERR_BAD_ENCODING; }
-            (void) sap_id;
-            return CSM_OK;
+            if (!csm_array_read_u16(in, &sap_id) || csm_array_unread(in) != 0U) { return CSM_ERR_BAD_ENCODING; }
+
+            for (uint8_t i = 0U; i < d->entry_count; i++)
+            {
+                if (d->entries[i].sap_id == sap_id)
+                {
+                    return CSM_OK;
+                }
+            }
+
+            return CSM_ERR_OBJECT_NOT_FOUND;
         }
     }
     return CSM_ERR_OBJECT_NOT_FOUND;
