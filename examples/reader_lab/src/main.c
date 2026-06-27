@@ -7,6 +7,8 @@
  *   reader_lab config   [host] [port]
  *   reader_lab config   192.168.1.116 4059 0.0.1.0.0.255
  *   reader_lab config   192.168.1.116 4059 0.0.1.0.0.255 sync-ic
+ *   reader_lab public   127.0.0.1 4059 0.0.10.0.0.255 class=3 set-u32=42
+ *   reader_lab public   127.0.0.1 4059 0.0.10.0.0.255 class=3 action=1
  *
  * Defaults: host=192.168.1.116 port=4059
  */
@@ -15,6 +17,7 @@
 #include "reader_hal.h"
 
 #include "csm_association.h"
+#include "csm_axdr_codec.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -236,6 +239,9 @@ int main(int argc, char **argv)
     const char *host    = "192.168.1.116";
     int           port  = 4059;
     int           obis_arg = -1;
+    int           class_override = -1;
+    int           set_u32 = -1;
+    int           action_method = -1;
     uint8_t       sync_ic = 0U;
     uint8_t       plain_hls = 0U;
 
@@ -250,7 +256,7 @@ int main(int argc, char **argv)
 
     if (argc < 2)
     {
-        printf("Usage: %s <public|reader|config> [host] [port] [obis] [plain|sync-ic]\n", argv[0]);
+        printf("Usage: %s <public|reader|config> [host] [port] [obis] [plain|sync-ic] [class=N] [set-u32=N|action=N]\n", argv[0]);
         return 1;
     }
 
@@ -274,6 +280,18 @@ int main(int argc, char **argv)
         else if (strcmp(argv[i], "plain") == 0)
         {
             plain_hls = 1U;
+        }
+        else if (strncmp(argv[i], "class=", 6) == 0)
+        {
+            class_override = atoi(argv[i] + 6);
+        }
+        else if (strncmp(argv[i], "set-u32=", 8) == 0)
+        {
+            set_u32 = atoi(argv[i] + 8);
+        }
+        else if (strncmp(argv[i], "action=", 7) == 0)
+        {
+            action_method = atoi(argv[i] + 7);
         }
         else
         {
@@ -359,18 +377,67 @@ int main(int argc, char **argv)
         platform_cleanup();
         return 1;
     }
-
-    printf("GET %u.%u.%u.%u.%u.%u class=%u attr=2\n", obis.A, obis.B, obis.C, obis.D, obis.E,
-           obis.F, (unsigned)class_id);
-
-    if (opendlms_reader_get(&session, class_id, &obis, 2U, &response) < 0)
+    if (class_override >= 0)
     {
-        fprintf(stderr, "GET failed\n");
+        class_id = (uint16_t)class_override;
+    }
+
+    if (set_u32 >= 0)
+    {
+        uint8_t set_data[] = {
+            AXDR_TAG_UNSIGNED32,
+            (uint8_t)(((uint32_t)set_u32 >> 24U) & 0xFFU),
+            (uint8_t)(((uint32_t)set_u32 >> 16U) & 0xFFU),
+            (uint8_t)(((uint32_t)set_u32 >> 8U) & 0xFFU),
+            (uint8_t)((uint32_t)set_u32 & 0xFFU)
+        };
+
+        printf("SET %u.%u.%u.%u.%u.%u class=%u attr=2 value=%d\n",
+               obis.A, obis.B, obis.C, obis.D, obis.E, obis.F,
+               (unsigned)class_id, set_u32);
+
+        if (opendlms_reader_set(&session, class_id, &obis, 2U, set_data, sizeof(set_data),
+                                &response) < 0)
+        {
+            fprintf(stderr, "SET failed\n");
+        }
+        else
+        {
+            printf("SET OK: service=%d result=%u access=%u\n", (int)response.service,
+                   (unsigned)response.result, (unsigned)response.access_result);
+        }
+    }
+    else if (action_method >= 0)
+    {
+        printf("ACTION %u.%u.%u.%u.%u.%u class=%u method=%d\n",
+               obis.A, obis.B, obis.C, obis.D, obis.E, obis.F,
+               (unsigned)class_id, action_method);
+
+        if (opendlms_reader_action(&session, class_id, &obis, (uint8_t)action_method,
+                                   NULL, 0U, &response) < 0)
+        {
+            fprintf(stderr, "ACTION failed\n");
+        }
+        else
+        {
+            printf("ACTION OK: service=%d result=%u access=%u\n", (int)response.service,
+                   (unsigned)response.result, (unsigned)response.access_result);
+        }
     }
     else
     {
-        printf("GET OK: service=%d result=%u access=%u\n", (int)response.service,
-               (unsigned)response.result, (unsigned)response.access_result);
+        printf("GET %u.%u.%u.%u.%u.%u class=%u attr=2\n",
+               obis.A, obis.B, obis.C, obis.D, obis.E, obis.F, (unsigned)class_id);
+
+        if (opendlms_reader_get(&session, class_id, &obis, 2U, &response) < 0)
+        {
+            fprintf(stderr, "GET failed\n");
+        }
+        else
+        {
+            printf("GET OK: service=%d result=%u access=%u\n", (int)response.service,
+                   (unsigned)response.result, (unsigned)response.access_result);
+        }
     }
 
     opendlms_reader_disconnect(&session);

@@ -61,6 +61,8 @@ not currently form one consistently verified product:
   transport timeout instead of a hard-coded value.
 - Added public `opendlms_reader_set()` and `opendlms_reader_action()` wrappers
   so the restored C reader API covers GET, SET, and ACTION service calls.
+- Extended `reader_lab` so examples cover GET by default and optional SET/ACTION
+  calls via `set-u32=N`, `action=N`, and `class=N` flags.
 - Restored the legacy service execution path for `csm_channel_execute()` when
   the legacy global `csm_services_init()` database handler is used.
 - Hardened `csm_asso_init()` to clear the whole association state before setting
