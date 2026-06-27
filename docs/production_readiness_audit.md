@@ -166,8 +166,8 @@ not currently form one consistently verified product:
 - Hardened `csm_array_read_buff()` against short buffers and fixed read/write
   jumps that land exactly at the logical end of the buffer.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
-  fixed `csm_axdr_decode_tags()` success reporting, and documented the current
-  flat-decoder limitation for nested AXDR blocks.
+  fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
+  recursively walk arrays and structures after block-transfer reassembly.
 
 ## Verified
 
@@ -177,7 +177,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 155 test cases with 1302 assertions`.
+  reports `Passed all 155 test cases with 1360 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -245,8 +245,9 @@ not currently form one consistently verified product:
 - Streebog L-transform regression coverage now runs in the default Catch2 gate.
 - Array utility tests now cover exact-end reads/writes and short-buffer read
   rejection.
-- Block-read AXDR tests now run in the default Catch2 gate and verify both
-  block-length decoding and flat tag decoder success behavior.
+- Block-read AXDR tests now run in the default Catch2 gate and verify partial
+  block detection, block-transfer payload reassembly, recursive nested AXDR
+  traversal, and flat tag decoder success behavior.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

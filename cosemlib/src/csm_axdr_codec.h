@@ -74,6 +74,12 @@ enum axdr_tag
     AXDR_TAG_INTEGER64      = 20U,
     AXDR_TAG_UNSIGNED64     = 21U,
     AXDR_TAG_ENUM           = 22U,
+    AXDR_TAG_FLOAT32        = 23U,
+    AXDR_TAG_FLOAT64        = 24U,
+    AXDR_TAG_DATE_TIME      = 25U,
+    AXDR_TAG_DATE           = 26U,
+    AXDR_TAG_TIME           = 27U,
+    AXDR_TAG_DONT_CARE      = 255U,
     AXDR_TAG_UNKNOWN        = 255U
 
 };

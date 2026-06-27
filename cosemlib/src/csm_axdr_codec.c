@@ -64,7 +64,9 @@ typedef enum
     AXDR_SIZE_1 = 1,
     AXDR_SIZE_2 = 2,
     AXDR_SIZE_4 = 4,
+    AXDR_SIZE_5 = 5,
     AXDR_SIZE_8 = 8,
+    AXDR_SIZE_12 = 12,
     AXDR_SIZE_CODED,
 } axdr_size_t;
 
@@ -93,68 +95,91 @@ static const tag_t tags[] = {
         { AXDR_TAG_UNSIGNED16,      0, AXDR_SIZE_2},
         { AXDR_TAG_INTEGER64,       0, AXDR_SIZE_8},
         { AXDR_TAG_UNSIGNED64,      0, AXDR_SIZE_8},
-        { AXDR_TAG_ENUM,            0, AXDR_SIZE_1}
+        { AXDR_TAG_ENUM,            0, AXDR_SIZE_1},
+        { AXDR_TAG_FLOAT32,         0, AXDR_SIZE_4},
+        { AXDR_TAG_FLOAT64,         0, AXDR_SIZE_8},
+        { AXDR_TAG_DATE_TIME,       0, AXDR_SIZE_12},
+        { AXDR_TAG_DATE,            0, AXDR_SIZE_5},
+        { AXDR_TAG_TIME,            0, AXDR_SIZE_4},
+        { AXDR_TAG_DONT_CARE,       0, AXDR_SIZE_NONE}
 };
 
 static const uint32_t tags_size = sizeof(tags) / sizeof(tags[0]);
 
-
-int csm_axdr_decode_tags(csm_array *array, axdr_data_cb callback)
+static const tag_t *csm_axdr_find_tag(uint8_t tag)
 {
-    int ret = FALSE;
-    uint8_t tag = 0xFFU;
-
-    int error = 0;
-
-    while (csm_array_read_u8(array, &tag) && !error)
+    for (uint32_t i = 0U; i < tags_size; i++)
     {
-    	uint32_t i;
-        for (i = 0; (i < tags_size) && !error; i++)
+        if (tags[i].tag == tag)
         {
-            if (tags[i].tag == tag)
-            {
-                uint32_t size = tags[i].size;
-
-                if (tags[i].size == AXDR_SIZE_CODED)
-                {
-                    if (!csm_axdr_size(array, &size))
-                    {
-                        error = 1;
-                    }
-                }
-
-                if (callback != NULL)
-                {
-                    callback(tag, size, csm_array_rd_data(array));
-                }
-
-                // jump over the data, if any
-                if ((!tags[i].is_struct) && size)
-                {
-                    // Special case: transform the size in bytes
-                    if (tag == AXDR_TAG_BITSTRING)
-                    {
-                        size = BITFIELD_BYTES(size);
-                    }
-                    if (!csm_array_reader_jump(array, size))
-                    {
-                        error = 1;
-                    }
-                }
-                break; // enough
-            }
+            return &tags[i];
         }
+    }
+    return NULL;
+}
 
-        // tag not found?
-        if (i >= tags_size)
+static int csm_axdr_decode_one(csm_array *array, axdr_data_cb callback)
+{
+    uint8_t tag = 0xFFU;
+    if (!csm_array_read_u8(array, &tag))
+    {
+        return FALSE;
+    }
+
+    const tag_t *descriptor = csm_axdr_find_tag(tag);
+    if (descriptor == NULL)
+    {
+        return FALSE;
+    }
+
+    uint32_t size = descriptor->size;
+    if (descriptor->size == AXDR_SIZE_CODED)
+    {
+        if (!csm_axdr_size(array, &size))
         {
-        	error = 1;
+            return FALSE;
         }
     }
 
-    ret = !error;
+    if (callback != NULL)
+    {
+        callback(tag, size, csm_array_rd_data(array));
+    }
 
-    return ret;
+    if (descriptor->is_struct)
+    {
+        for (uint32_t i = 0U; i < size; i++)
+        {
+            if (!csm_axdr_decode_one(array, callback))
+            {
+                return FALSE;
+            }
+        }
+        return TRUE;
+    }
+
+    if (size == 0U)
+    {
+        return TRUE;
+    }
+    if (tag == AXDR_TAG_BITSTRING)
+    {
+        size = BITFIELD_BYTES(size);
+    }
+    return csm_array_reader_jump(array, size);
+}
+
+int csm_axdr_decode_tags(csm_array *array, axdr_data_cb callback)
+{
+    while (csm_array_unread(array) > 0U)
+    {
+        if (!csm_axdr_decode_one(array, callback))
+        {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
 }
 
 int csm_axdr_decode_block(csm_array *array, uint32_t *size)

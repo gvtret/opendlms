@@ -43,9 +43,31 @@ static void TestBigBlockProfile()
 
     decoded_items = 0U;
     decoded_payload_bytes = 0U;
-    REQUIRE(csm_axdr_decode_tags(&array, AxdrData) == FALSE);
+    csm_array first_payload;
+    csm_array_init(&first_payload, csm_array_rd_data(&array), size, size, 0U);
+    REQUIRE(csm_axdr_decode_tags(&first_payload, AxdrData) == FALSE);
     REQUIRE(decoded_items > 0U);
-    REQUIRE(csm_array_unread(&array) > 0U);
+    REQUIRE(decoded_payload_bytes > 0U);
+
+    csm_array_init(&array, packet.data(), (uint32_t)packet.size(), (uint32_t)packet.size(), 0);
+    std::vector<uint8_t> assembled;
+    while (csm_array_unread(&array) > 0U)
+    {
+        REQUIRE(csm_axdr_decode_block(&array, &size) == TRUE);
+        REQUIRE(csm_array_unread(&array) >= size);
+        assembled.insert(assembled.end(), csm_array_rd_data(&array), csm_array_rd_data(&array) + size);
+        REQUIRE(csm_array_reader_jump(&array, size) == TRUE);
+    }
+
+    csm_array payload;
+    csm_array_init(&payload, assembled.data(), (uint32_t)assembled.size(), (uint32_t)assembled.size(), 0U);
+
+    decoded_items = 0U;
+    decoded_payload_bytes = 0U;
+    REQUIRE(csm_axdr_decode_tags(&payload, AxdrData) == TRUE);
+    REQUIRE(decoded_items > 0U);
+    REQUIRE(decoded_payload_bytes > 0U);
+    REQUIRE(csm_array_unread(&payload) == 0U);
 
 }
 
