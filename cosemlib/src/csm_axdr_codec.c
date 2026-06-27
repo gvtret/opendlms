@@ -123,7 +123,10 @@ int csm_axdr_decode_tags(csm_array *array, axdr_data_cb callback)
                     }
                 }
 
-                callback(tag, size, csm_array_rd_data(array));
+                if (callback != NULL)
+                {
+                    callback(tag, size, csm_array_rd_data(array));
+                }
 
                 // jump over the data, if any
                 if ((!tags[i].is_struct) && size)
@@ -133,7 +136,10 @@ int csm_axdr_decode_tags(csm_array *array, axdr_data_cb callback)
                     {
                         size = BITFIELD_BYTES(size);
                     }
-                    csm_array_reader_jump(array, size);
+                    if (!csm_array_reader_jump(array, size))
+                    {
+                        error = 1;
+                    }
                 }
                 break; // enough
             }
@@ -146,10 +152,7 @@ int csm_axdr_decode_tags(csm_array *array, axdr_data_cb callback)
         }
     }
 
-    if (error)
-    {
-        ret = FALSE;
-    }
+    ret = !error;
 
     return ret;
 }
@@ -223,4 +226,3 @@ int csm_axdr_wr_capture_object(csm_array *array, csm_object_t *data)
     valid = valid && csm_axdr_wr_u16(array, data->data_index);
     return valid;
 }
-

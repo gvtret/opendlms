@@ -8,6 +8,7 @@ endif()
 add_executable(${PROJECT_NAME}
     main.cpp
     test_cosemlib.cpp
+    test_cosem_read_by_block.cpp
     test_csm_array.cpp
     test_hdlc.cpp
     test_association.cpp
