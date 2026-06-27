@@ -210,10 +210,20 @@ static csm_db_code table_mgr_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
             uint32_t from = 0U;
             uint32_t count = 0U;
             if (!table_mgr_read_row_selector(in, &from, &count)) { return CSM_ERR_BAD_ENCODING; }
-            (void)from;
-            (void)count;
+
+            if ((count > 0xFFU) || (from > d->table_data_len) ||
+                (count > ((uint32_t)d->table_data_len - from)))
+            {
+                return CSM_ERR_DATA_CONTENT_NOT_OK;
+            }
+
             int valid = csm_array_write_u8(out, AXDR_TAG_ARRAY);
-            valid = valid && csm_array_write_u8(out, 0U);
+            valid = valid && csm_array_write_u8(out, (uint8_t)count);
+            for (uint32_t i = 0U; valid && i < count; i++)
+            {
+                valid = csm_array_write_u8(out, AXDR_TAG_UNSIGNED8);
+                valid = valid && csm_array_write_u8(out, d->table_data[from + i]);
+            }
             return valid ? CSM_OK : CSM_ERR_BAD_ENCODING;
         }
     }

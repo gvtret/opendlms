@@ -551,25 +551,53 @@ TEST_CASE("Integration_TableManagerRetrieveRowsValidatesSelector", "[integration
     REQUIRE(db_ic_create_inst(8200, &obis_table_mgr, NULL, NULL) == TRUE);
     test_establish_association();
 
+    const uint8_t table_data[] = {
+        AXDR_TAG_OCTETSTRING, 0x04, 0x10, 0x20, 0x30, 0x40
+    };
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 8200, &obis_table_mgr, 4,
+                          table_data, sizeof(table_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
     const uint8_t valid_selector[] = {
         AXDR_TAG_STRUCTURE, 0x02,
-        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x00,
-        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x01
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x01,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x02
     };
 
-    uint8_t buf[1024];
-    int ret = test_do_action(0x01, 8200, &obis_table_mgr, 1,
+    ret = test_do_action(0x02, 8200, &obis_table_mgr, 1,
                              valid_selector, sizeof(valid_selector), buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == 0x01);
+    REQUIRE(buf[5] == 0x00);
+    REQUIRE(buf[6] == AXDR_TAG_ARRAY);
+    REQUIRE(buf[7] == 0x02);
+    REQUIRE(buf[8] == AXDR_TAG_UNSIGNED8);
+    REQUIRE(buf[9] == 0x20);
+    REQUIRE(buf[10] == AXDR_TAG_UNSIGNED8);
+    REQUIRE(buf[11] == 0x30);
 
     const uint8_t bad_selector[] = { AXDR_TAG_STRUCTURE, 0x01, AXDR_TAG_UNSIGNED8, 0x00 };
-    ret = test_do_action(0x02, 8200, &obis_table_mgr, 1,
+    ret = test_do_action(0x03, 8200, &obis_table_mgr, 1,
                          bad_selector, sizeof(bad_selector), buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 250);
+
+    const uint8_t out_of_range_selector[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x03,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x02
+    };
+    ret = test_do_action(0x04, 8200, &obis_table_mgr, 1,
+                         out_of_range_selector, sizeof(out_of_range_selector), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
 }
 
 TEST_CASE("Integration_ProfileFilterRetrieveRowsValidatesSelector", "[integration][basic]")
