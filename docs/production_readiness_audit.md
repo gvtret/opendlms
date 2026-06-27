@@ -136,6 +136,8 @@ not currently form one consistently verified product:
 - Implemented Table Manager `retrieve_entries_by_row` over configured
   `table_data` instead of returning an empty successful result for every valid
   selector.
+- Implemented Profile Filter `retrieve_entries_by_row` over configured filter
+  entries by reading target object attributes through the IC registry.
 
 ## Verified
 
@@ -145,10 +147,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 147 test cases with 1187 assertions`.
+  reports `Passed all 147 test cases with 1205 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 75 test cases with 641 assertions`.
+  reports `Passed all 75 test cases with 659 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
@@ -197,6 +199,8 @@ not currently form one consistently verified product:
   by activate promotes the configured calendar into active-calendar GET.
 - Integration tests now verify Table Manager row retrieval returns selected
   table-data rows and rejects out-of-range selectors.
+- Integration tests now verify Profile Filter row retrieval returns configured
+  target object values and rejects out-of-range selectors.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

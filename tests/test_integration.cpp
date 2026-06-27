@@ -606,25 +606,67 @@ TEST_CASE("Integration_ProfileFilterRetrieveRowsValidatesSelector", "[integratio
     REQUIRE(db_ic_create_inst(31, &obis_prof_filter, NULL, NULL) == TRUE);
     test_establish_association();
 
+    const uint8_t data_value[] = {
+        AXDR_TAG_UNSIGNED32, 0x12, 0x34, 0x56, 0x78
+    };
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 1, &obis_data, 2,
+                          data_value, sizeof(data_value), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t filter_list[] = {
+        AXDR_TAG_ARRAY, 0x01,
+        AXDR_TAG_STRUCTURE, 0x03,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x01,
+        AXDR_TAG_OCTETSTRING, 0x06, 0x00, 0x00, 0x60, 0x01, 0x00, 0xFF,
+        AXDR_TAG_UNSIGNED8, 0x02
+    };
+    ret = test_do_set(0x02, 31, &obis_prof_filter, 3,
+                      filter_list, sizeof(filter_list), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
     const uint8_t valid_selector[] = {
         AXDR_TAG_STRUCTURE, 0x02,
         AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x00,
         AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x01
     };
 
-    uint8_t buf[1024];
-    int ret = test_do_action(0x01, 31, &obis_prof_filter, 1,
+    ret = test_do_action(0x03, 31, &obis_prof_filter, 1,
                              valid_selector, sizeof(valid_selector), buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == 0x01);
+    REQUIRE(buf[5] == 0x00);
+    REQUIRE(buf[6] == AXDR_TAG_ARRAY);
+    REQUIRE(buf[7] == 0x01);
+    REQUIRE(buf[8] == AXDR_TAG_UNSIGNED32);
+    REQUIRE(buf[9] == 0x12);
+    REQUIRE(buf[10] == 0x34);
+    REQUIRE(buf[11] == 0x56);
+    REQUIRE(buf[12] == 0x78);
 
     const uint8_t bad_selector[] = { AXDR_TAG_STRUCTURE, 0x01, AXDR_TAG_UNSIGNED8, 0x00 };
-    ret = test_do_action(0x02, 31, &obis_prof_filter, 1,
+    ret = test_do_action(0x04, 31, &obis_prof_filter, 1,
                          bad_selector, sizeof(bad_selector), buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 250);
+
+    const uint8_t out_of_range_selector[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x01,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x01
+    };
+    ret = test_do_action(0x05, 31, &obis_prof_filter, 1,
+                         out_of_range_selector, sizeof(out_of_range_selector), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
 }
 
 TEST_CASE("Integration_RegisterActivationAddRegisterMutatesObjectList", "[integration][basic]")

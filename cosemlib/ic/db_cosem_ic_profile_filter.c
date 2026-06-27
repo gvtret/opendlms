@@ -200,10 +200,36 @@ static csm_db_code prof_filter_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
             uint32_t from = 0U;
             uint32_t count = 0U;
             if (!prof_filter_read_row_selector(in, &from, &count)) { return CSM_ERR_BAD_ENCODING; }
-            (void)from;
-            (void)count;
+
+            if ((count > 0xFFU) || (from > d->entry_count) ||
+                (count > ((uint32_t)d->entry_count - from)))
+            {
+                return CSM_ERR_DATA_CONTENT_NOT_OK;
+            }
+
             int valid = csm_array_write_u8(out, AXDR_TAG_ARRAY);
-            valid = valid && csm_array_write_u8(out, 0U);
+            valid = valid && csm_array_write_u8(out, (uint8_t)count);
+            for (uint32_t i = 0U; valid && i < count; i++)
+            {
+                db_ic_prof_filter_entry *entry = &d->entries[from + i];
+                db_ic_inst_t *target = NULL;
+                if (!db_ic_find(entry->class_id, &entry->obis, &target) || target == NULL)
+                {
+                    return CSM_ERR_OBJECT_NOT_FOUND;
+                }
+
+                uint8_t value_buf[128];
+                csm_array value;
+                csm_array_init(&value, value_buf, sizeof(value_buf), 0U, 0U);
+                csm_db_code rc = (csm_db_code) db_ic_dispatch(target, IC_OP_GET,
+                                                              entry->attribute_id, 0U,
+                                                              NULL, &value);
+                if (rc != CSM_OK)
+                {
+                    return rc;
+                }
+                valid = csm_array_write_buff(out, value_buf, value.wr_index);
+            }
             return valid ? CSM_OK : CSM_ERR_BAD_ENCODING;
         }
     }
