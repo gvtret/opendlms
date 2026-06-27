@@ -97,6 +97,64 @@ static db_ic_inst_t *reg_act_create(const csm_obis_code *obis)
     return &reg_act_inst_tmp;
 }
 
+static int reg_act_read_object(csm_array *in, db_ic_reg_act_obj *obj)
+{
+    uint8_t tag = 0xFFU;
+    uint8_t fields = 0U;
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_STRUCTURE) { return FALSE; }
+    if (!csm_array_read_u8(in, &fields) || fields != 3U) { return FALSE; }
+
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED16) { return FALSE; }
+    if (!csm_array_read_u16(in, &obj->class_id)) { return FALSE; }
+
+    uint8_t obis_len = 0U;
+    uint8_t obis[6];
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_OCTETSTRING) { return FALSE; }
+    if (!csm_array_read_u8(in, &obis_len) || obis_len != sizeof(obis)) { return FALSE; }
+    if (!csm_array_read_buff(in, obis, sizeof(obis))) { return FALSE; }
+    obj->obis.A = obis[0];
+    obj->obis.B = obis[1];
+    obj->obis.C = obis[2];
+    obj->obis.D = obis[3];
+    obj->obis.E = obis[4];
+    obj->obis.F = obis[5];
+
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED8) { return FALSE; }
+    if (!csm_array_read_u8(in, &obj->attribute_id)) { return FALSE; }
+    return TRUE;
+}
+
+static int reg_act_read_mask(csm_array *in, db_ic_reg_act_mask *mask)
+{
+    uint8_t tag = 0xFFU;
+    uint8_t fields = 0U;
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_STRUCTURE) { return FALSE; }
+    if (!csm_array_read_u8(in, &fields) || fields != 2U) { return FALSE; }
+
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED16) { return FALSE; }
+    if (!csm_array_read_u16(in, &mask->mask_id)) { return FALSE; }
+
+    uint8_t entry_count = 0U;
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_ARRAY) { return FALSE; }
+    if (!csm_array_read_u8(in, &entry_count) || entry_count > 4U) { return FALSE; }
+    mask->entry_count = entry_count;
+
+    for (uint8_t i = 0U; i < entry_count; i++)
+    {
+        uint8_t entry_fields = 0U;
+        if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_STRUCTURE) { return FALSE; }
+        if (!csm_array_read_u8(in, &entry_fields) || entry_fields != 2U) { return FALSE; }
+
+        if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED16) { return FALSE; }
+        if (!csm_array_read_u16(in, &mask->entries[i].mask_id)) { return FALSE; }
+
+        if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED16) { return FALSE; }
+        if (!csm_array_read_u16(in, &mask->entries[i].object_index)) { return FALSE; }
+    }
+
+    return TRUE;
+}
+
 static csm_db_code reg_act_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
                                       uint8_t attr_id, uint8_t method_id,
                                       csm_array *in, csm_array *out)
@@ -183,10 +241,20 @@ static csm_db_code reg_act_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         switch (method_id)
         {
-        case 1U: /* add_register: skip structure input */
+        case 1U:
+            if (d->object_count >= REG_ACT_MAX_OBJECTS) { return CSM_ERR_DATA_CONTENT_NOT_OK; }
+            if (!reg_act_read_object(in, &d->objects[d->object_count])) { return CSM_ERR_BAD_ENCODING; }
+            d->indices[d->index_count] = d->object_count;
+            d->object_count++;
+            d->index_count++;
             return CSM_OK;
-        case 2U: /* add_mask: skip structure input */
+
+        case 2U:
+            if (d->mask_count >= REG_ACT_MAX_MASKS) { return CSM_ERR_DATA_CONTENT_NOT_OK; }
+            if (!reg_act_read_mask(in, &d->masks[d->mask_count])) { return CSM_ERR_BAD_ENCODING; }
+            d->mask_count++;
             return CSM_OK;
+
         case 3U: /* delete_mask: read Unsigned16, remove from mask list */
         {
             uint8_t tag = 0xFFU;
