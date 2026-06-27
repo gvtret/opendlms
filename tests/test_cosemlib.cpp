@@ -8,6 +8,7 @@
 
 #include "catch.hpp"
 #include "cosemlib.h"
+#include "csm_ber.h"
 #include <cstring>
 
 extern "C" void csm_sys_init();
@@ -75,6 +76,38 @@ TEST_CASE("csm_array basic operations", "[cosemlib][array]")
     REQUIRE(u8 == 0x01);
     REQUIRE(csm_array_read_u16(&arr, &u16) == 1);
     REQUIRE(u16 == 0x1234);
+}
+
+TEST_CASE("BER length encoding uses standard short and long forms", "[cosemlib][ber]")
+{
+    uint8_t buf[16];
+    csm_array arr;
+    csm_array_init(&arr, buf, sizeof(buf), 0, 0);
+
+    REQUIRE(csm_ber_write_len(&arr, 127U) == 1);
+    REQUIRE(csm_ber_write_len(&arr, 128U) == 1);
+    REQUIRE(csm_ber_write_len(&arr, 255U) == 1);
+    REQUIRE(csm_ber_write_len(&arr, 256U) == 1);
+
+    const uint8_t expected[] = {
+        0x7F,
+        0x81, 0x80,
+        0x81, 0xFF,
+        0x82, 0x01, 0x00
+    };
+    REQUIRE(csm_array_written(&arr) == sizeof(expected));
+    REQUIRE(std::memcmp(buf, expected, sizeof(expected)) == 0);
+
+    arr.rd_index = 0;
+    ber_length len;
+    REQUIRE(csm_ber_read_len(&arr, &len) == 1);
+    REQUIRE(len.length == 127U);
+    REQUIRE(csm_ber_read_len(&arr, &len) == 1);
+    REQUIRE(len.length == 128U);
+    REQUIRE(csm_ber_read_len(&arr, &len) == 1);
+    REQUIRE(len.length == 255U);
+    REQUIRE(csm_ber_read_len(&arr, &len) == 1);
+    REQUIRE(len.length == 256U);
 }
 
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")

@@ -82,23 +82,23 @@ static int csm_ber_read_tag(csm_array *i_array, ber_tag *o_tag)
 
 int csm_ber_write_len(csm_array *array, uint16_t len)
 {
-    uint8_t byte;
-    uint8_t nbBytes = 1U;
     int ret = TRUE;
 
-    if (len > 127U)
+    if (len <= 127U)
     {
-        nbBytes++;
-        byte = (LEN_XTND | nbBytes);
-        ret = csm_array_write_u8(array, byte);
-
-        // Encode length first part
-        byte = ((len >> 8U) & LEN_MASK) | LEN_XTND;
-        ret = ret && csm_array_write_u8(array, byte);
+        ret = csm_array_write_u8(array, (uint8_t)len);
     }
-
-    byte = len & LEN_MASK;
-    ret = ret && csm_array_write_u8(array, byte);
+    else if (len <= 255U)
+    {
+        ret = csm_array_write_u8(array, LEN_XTND | 1U);
+        ret = ret && csm_array_write_u8(array, (uint8_t)len);
+    }
+    else
+    {
+        ret = csm_array_write_u8(array, LEN_XTND | 2U);
+        ret = ret && csm_array_write_u8(array, (uint8_t)(len >> 8U));
+        ret = ret && csm_array_write_u8(array, (uint8_t)(len & 0xFFU));
+    }
 
     return ret;
 }

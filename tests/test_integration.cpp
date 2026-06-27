@@ -49,6 +49,8 @@ static const csm_obis_code obis_profile     = { 0, 0, 96, 1, 1, 255 };
 static const csm_obis_code obis_security    = { 0, 0, 43, 0, 0, 255 };
 static const csm_obis_code obis_push        = { 0, 0, 25, 1, 0, 255 };
 static const csm_obis_code obis_disconnect  = { 0, 0, 96, 3, 10, 255 };
+static const csm_obis_code obis_utility     = { 0, 0, 10, 3, 0, 255 };
+static const csm_obis_code obis_compact     = { 0, 0, 60, 3, 0, 255 };
 static const csm_obis_code obis_ext_reg     = { 0, 0, 10, 1, 0, 255 };
 static const csm_obis_code obis_demand_reg  = { 0, 0, 10, 2, 0, 255 };
 static const csm_obis_code obis_table_mgr   = { 0, 0, 96, 9, 0, 255 };
@@ -232,6 +234,18 @@ static int test_do_action(uint8_t invoke_id, uint16_t class_id,
     return csm_channel_execute(&test_db_ctx, 0, &pkt);
 }
 
+static void test_make_long_octet_string(uint8_t *data, uint8_t size)
+{
+    REQUIRE(size >= 133U);
+    data[0] = AXDR_TAG_OCTETSTRING;
+    data[1] = 0x81U;
+    data[2] = 130U;
+    for (uint8_t i = 0U; i < 130U; i++)
+    {
+        data[3U + i] = (uint8_t)(0xA0U + (i & 0x0FU));
+    }
+}
+
 /* ========================= Basic Tests (10) ========================= */
 
 TEST_CASE("Integration_AarqHandshake", "[integration][basic]")
@@ -342,6 +356,87 @@ TEST_CASE("Integration_TableManagerBuiltinRegistered", "[integration][basic]")
     REQUIRE(buf[3] == 0x00);
     REQUIRE(buf[4] == AXDR_TAG_OCTETSTRING);
     REQUIRE(buf[5] == 0x06);
+}
+
+TEST_CASE("Integration_UtilityTablesLongOctetStringUsesBerLength", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(26, &obis_utility, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    uint8_t set_data[133];
+    test_make_long_octet_string(set_data, sizeof(set_data));
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 26, &obis_utility, 3,
+                          set_data, sizeof(set_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x02, 26, &obis_utility, 3, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[5] == 0x81);
+    REQUIRE(get_buf[6] == 130);
+    REQUIRE(std::memcmp(&get_buf[7], &set_data[3], 130U) == 0);
+}
+
+TEST_CASE("Integration_CompactDataLongOctetStringUsesBerLength", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(62, &obis_compact, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    uint8_t set_data[133];
+    test_make_long_octet_string(set_data, sizeof(set_data));
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 62, &obis_compact, 2,
+                          set_data, sizeof(set_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x02, 62, &obis_compact, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[5] == 0x81);
+    REQUIRE(get_buf[6] == 130);
+    REQUIRE(std::memcmp(&get_buf[7], &set_data[3], 130U) == 0);
+}
+
+TEST_CASE("Integration_TableManagerLongOctetStringUsesBerLength", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(8200, &obis_table_mgr, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    uint8_t set_data[133];
+    test_make_long_octet_string(set_data, sizeof(set_data));
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 8200, &obis_table_mgr, 4,
+                          set_data, sizeof(set_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x02, 8200, &obis_table_mgr, 4, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[5] == 0x81);
+    REQUIRE(get_buf[6] == 130);
+    REQUIRE(std::memcmp(&get_buf[7], &set_data[3], 130U) == 0);
 }
 
 TEST_CASE("Integration_SetDataValue", "[integration][basic]")

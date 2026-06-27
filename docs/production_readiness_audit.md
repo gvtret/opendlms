@@ -78,6 +78,8 @@ not currently form one consistently verified product:
   values for object-undefined, read-write-denied, and temporary-failure.
 - Increased the IC registry capacity so all built-in classes, including class
   8200 Table Manager, are registered.
+- Fixed BER length encoding for long-form lengths and switched long
+  octet-string IC buffers to standard AXDR length encoding/decoding.
 
 ## Verified
 
@@ -87,16 +89,19 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 123 test cases with 744 assertions`.
+  reports `Passed all 127 test cases with 797 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 53 test cases with 217 assertions`.
+  reports `Passed all 56 test cases with 256 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
 - Integration tests now verify Clock time AXDR payload and SET/GET round-trip.
 - Integration tests now verify read-only SET denial, unsupported Security Setup
   key-generation failure, and Table Manager built-in registration.
+- BER unit tests now cover short/long-form length boundaries, and integration
+  tests verify 130-byte AXDR octet-string SET/GET round-trips for Utility
+  Tables, Compact Data, and Table Manager.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

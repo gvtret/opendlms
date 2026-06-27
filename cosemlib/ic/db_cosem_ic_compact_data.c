@@ -113,13 +113,9 @@ static csm_db_code compact_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         }
         else if (attr_id == 2U)
         {
-            int valid = csm_array_write_u8(out, AXDR_TAG_OCTETSTRING);
-            valid = valid && csm_array_write_u16(out, d->buffer_len);
-            if (d->buffer_len > 0U)
-            {
-                valid = valid && csm_array_write_buff(out, d->buffer, (uint8_t)d->buffer_len);
-            }
-            return valid ? CSM_OK : CSM_ERR_BAD_ENCODING;
+            return csm_axdr_wr_octetstring(out, d->buffer, d->buffer_len)
+                ? CSM_OK
+                : CSM_ERR_BAD_ENCODING;
         }
         else if (attr_id == 3U)
         {
@@ -167,14 +163,12 @@ static csm_db_code compact_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         if (attr_id == 2U)
         {
-            uint8_t tag = 0xFFU;
-            uint16_t len = 0U;
-            if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_OCTETSTRING) { return CSM_ERR_BAD_ENCODING; }
-            if (!csm_array_read_u16(in, &len) || len > COMPACT_BUFFER_MAX) { return CSM_ERR_BAD_ENCODING; }
-            d->buffer_len = len;
+            uint32_t len = 0U;
+            if (!csm_axdr_rd_octetstring(in, &len) || len > COMPACT_BUFFER_MAX) { return CSM_ERR_BAD_ENCODING; }
+            d->buffer_len = (uint16_t)len;
             if (len > 0U)
             {
-                if (!csm_array_read_buff(in, d->buffer, (uint8_t)len)) { return CSM_ERR_BAD_ENCODING; }
+                if (!csm_array_read_buff(in, d->buffer, len)) { return CSM_ERR_BAD_ENCODING; }
             }
             return CSM_OK;
         }
