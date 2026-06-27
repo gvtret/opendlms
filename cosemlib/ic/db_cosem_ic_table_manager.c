@@ -81,6 +81,19 @@ static db_ic_inst_t *table_mgr_create(const csm_obis_code *obis)
     return &table_mgr_inst_tmp;
 }
 
+static int table_mgr_read_row_selector(csm_array *in, uint32_t *from, uint32_t *count)
+{
+    uint8_t tag = 0xFFU;
+    uint8_t fields = 0U;
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_STRUCTURE) { return FALSE; }
+    if (!csm_array_read_u8(in, &fields) || fields != 2U) { return FALSE; }
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED32) { return FALSE; }
+    if (!csm_array_read_u32(in, from)) { return FALSE; }
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED32) { return FALSE; }
+    if (!csm_array_read_u32(in, count)) { return FALSE; }
+    return TRUE;
+}
+
 static csm_db_code table_mgr_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
                                         uint8_t attr_id, uint8_t method_id,
                                         csm_array *in, csm_array *out)
@@ -192,7 +205,11 @@ static csm_db_code table_mgr_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         if (method_id == 1U)
         {
-            /* retrieve_entries_by_row: skip structure input, return empty array */
+            uint32_t from = 0U;
+            uint32_t count = 0U;
+            if (!table_mgr_read_row_selector(in, &from, &count)) { return CSM_ERR_BAD_ENCODING; }
+            (void)from;
+            (void)count;
             int valid = csm_array_write_u8(out, AXDR_TAG_ARRAY);
             valid = valid && csm_array_write_u8(out, 0U);
             return valid ? CSM_OK : CSM_ERR_BAD_ENCODING;

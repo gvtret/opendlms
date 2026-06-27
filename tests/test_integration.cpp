@@ -48,6 +48,7 @@ static const csm_obis_code obis_asso        = { 0, 0, 40, 0, 0, 255 };
 static const csm_obis_code obis_profile     = { 0, 0, 96, 1, 1, 255 };
 static const csm_obis_code obis_security    = { 0, 0, 43, 0, 0, 255 };
 static const csm_obis_code obis_image       = { 0, 0, 44, 0, 0, 255 };
+static const csm_obis_code obis_prof_filter = { 0, 0, 43, 1, 0, 255 };
 static const csm_obis_code obis_push        = { 0, 0, 25, 1, 0, 255 };
 static const csm_obis_code obis_disconnect  = { 0, 0, 96, 3, 10, 255 };
 static const csm_obis_code obis_utility     = { 0, 0, 10, 3, 0, 255 };
@@ -441,6 +442,60 @@ TEST_CASE("Integration_TableManagerLongOctetStringUsesBerLength", "[integration]
     REQUIRE(get_buf[5] == 0x81);
     REQUIRE(get_buf[6] == 130);
     REQUIRE(std::memcmp(&get_buf[7], &set_data[3], 130U) == 0);
+}
+
+TEST_CASE("Integration_TableManagerRetrieveRowsValidatesSelector", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(8200, &obis_table_mgr, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t valid_selector[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x00,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x01
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 8200, &obis_table_mgr, 1,
+                             valid_selector, sizeof(valid_selector), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t bad_selector[] = { AXDR_TAG_STRUCTURE, 0x01, AXDR_TAG_UNSIGNED8, 0x00 };
+    ret = test_do_action(0x02, 8200, &obis_table_mgr, 1,
+                         bad_selector, sizeof(bad_selector), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 250);
+}
+
+TEST_CASE("Integration_ProfileFilterRetrieveRowsValidatesSelector", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(31, &obis_prof_filter, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t valid_selector[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x00,
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x01
+    };
+
+    uint8_t buf[1024];
+    int ret = test_do_action(0x01, 31, &obis_prof_filter, 1,
+                             valid_selector, sizeof(valid_selector), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t bad_selector[] = { AXDR_TAG_STRUCTURE, 0x01, AXDR_TAG_UNSIGNED8, 0x00 };
+    ret = test_do_action(0x02, 31, &obis_prof_filter, 1,
+                         bad_selector, sizeof(bad_selector), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 250);
 }
 
 TEST_CASE("Integration_RegisterActivationAddRegisterMutatesObjectList", "[integration][basic]")

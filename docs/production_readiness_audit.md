@@ -87,6 +87,9 @@ not currently form one consistently verified product:
   successful no-op.
 - Implemented Image Transfer `image_transfer_init` payload parsing and block
   status initialization instead of accepting any structure as success.
+- Validated Profile Filter and Table Manager `retrieve_entries_by_row` selector
+  payloads so malformed ACTION requests return DLMS errors instead of being
+  accepted silently.
 
 ## Verified
 
@@ -96,10 +99,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 132 test cases with 866 assertions`.
+  reports `Passed all 134 test cases with 882 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 61 test cases with 325 assertions`.
+  reports `Passed all 63 test cases with 341 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
@@ -115,6 +118,8 @@ not currently form one consistently verified product:
   list and unsupported Arbitrator `request_action` returns a DLMS error.
 - Integration tests now verify Image Transfer init parses the image identifier
   and image size structure and initializes transferred-block status.
+- Integration tests now verify Profile Filter and Table Manager row retrieval
+  selector validation for both valid and malformed ACTION payloads.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
