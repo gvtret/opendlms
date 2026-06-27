@@ -458,6 +458,59 @@ TEST_CASE("Integration_CompactDataLongOctetStringUsesBerLength", "[integration][
     REQUIRE(std::memcmp(&get_buf[7], &set_data[3], 130U) == 0);
 }
 
+TEST_CASE("Integration_CompactDataCaptureStoresObjectValue", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(62, &obis_compact, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t data_value[] = {
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x2A
+    };
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 1, &obis_data, 2,
+                          data_value, sizeof(data_value), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t capture_objects[] = {
+        AXDR_TAG_ARRAY, 0x01,
+        AXDR_TAG_STRUCTURE, 0x03,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x01,
+        AXDR_TAG_OCTETSTRING, 0x06, 0x00, 0x00, 0x60, 0x01, 0x00, 0xFF,
+        AXDR_TAG_UNSIGNED8, 0x02
+    };
+    ret = test_do_set(0x02, 62, &obis_compact, 3,
+                      capture_objects, sizeof(capture_objects), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_action(0x03, 62, &obis_compact, 2,
+                         NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t buffer_buf[1024];
+    ret = test_do_get(0x04, 62, &obis_compact, 2, buffer_buf, sizeof(buffer_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buffer_buf[0] == 0xC4);
+    REQUIRE(buffer_buf[3] == 0x00);
+    REQUIRE(buffer_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(buffer_buf[5] == sizeof(data_value));
+    REQUIRE(std::memcmp(&buffer_buf[6], data_value, sizeof(data_value)) == 0);
+
+    uint8_t entries_buf[1024];
+    ret = test_do_get(0x05, 62, &obis_compact, 6, entries_buf, sizeof(entries_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(entries_buf[0] == 0xC4);
+    REQUIRE(entries_buf[3] == 0x00);
+    REQUIRE(entries_buf[4] == AXDR_TAG_UNSIGNED32);
+    REQUIRE(entries_buf[8] == 0x01);
+}
+
 TEST_CASE("Integration_TableManagerLongOctetStringUsesBerLength", "[integration][basic]")
 {
     test_stack_setup();

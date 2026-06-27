@@ -94,6 +94,8 @@ not currently form one consistently verified product:
   accepted silently.
 - Implemented Image Transfer `image_block_transfer` payload parsing and progress
   accounting instead of accepting any data as success.
+- Implemented Compact Data `capture` by reading configured capture objects
+  through the IC registry instead of only incrementing counters.
 
 ## Verified
 
@@ -103,10 +105,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 136 test cases with 930 assertions`.
+  reports `Passed all 137 test cases with 952 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 65 test cases with 389 assertions`.
+  reports `Passed all 66 test cases with 411 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
@@ -128,6 +130,8 @@ not currently form one consistently verified product:
   selector validation for both valid and malformed ACTION payloads.
 - Integration tests now verify Image Transfer block transfer updates transferred
   block count, block status bitmap, and first-not-transferred block number.
+- Integration tests now verify Compact Data `capture` stores real captured AXDR
+  object values in the buffer and updates entries-in-use.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

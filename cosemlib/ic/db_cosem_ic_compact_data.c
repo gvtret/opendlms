@@ -88,6 +88,39 @@ static db_ic_inst_t *compact_create(const csm_obis_code *obis)
     return &compact_inst_tmp;
 }
 
+static csm_db_code compact_capture(db_ic_compact_data *d)
+{
+    if (d->capture_count == 0U) { return CSM_ERR_DATA_CONTENT_NOT_OK; }
+
+    uint8_t new_buffer[COMPACT_BUFFER_MAX];
+    uint8_t empty_byte = 0U;
+    csm_array capture_out;
+    csm_array capture_in;
+
+    memcpy(new_buffer, d->buffer, d->buffer_len);
+    csm_array_init(&capture_out, new_buffer, COMPACT_BUFFER_MAX, d->buffer_len, 0U);
+    csm_array_init(&capture_in, &empty_byte, 1U, 0U, 0U);
+
+    for (uint8_t i = 0U; i < d->capture_count; i++)
+    {
+        db_ic_inst_t *captured = NULL;
+        if (!db_ic_find(d->captures[i].class_id, &d->captures[i].obis, &captured))
+        {
+            return CSM_ERR_OBJECT_NOT_FOUND;
+        }
+
+        csm_db_code code = (csm_db_code)db_ic_dispatch(captured, IC_OP_GET,
+                                                       d->captures[i].attribute_id, 0U,
+                                                       &capture_in, &capture_out);
+        if (code != CSM_OK) { return code; }
+    }
+
+    d->buffer_len = (uint16_t)csm_array_written(&capture_out);
+    memcpy(d->buffer, new_buffer, d->buffer_len);
+    d->entries_in_use++;
+    return CSM_OK;
+}
+
 static csm_db_code compact_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
                                       uint8_t attr_id, uint8_t method_id,
                                       csm_array *in, csm_array *out)
@@ -230,9 +263,7 @@ static csm_db_code compact_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         }
         else if (method_id == 2U)
         {
-            /* capture: store null data as placeholder */
-            d->entries_in_use++;
-            return CSM_OK;
+            return compact_capture(d);
         }
     }
     return CSM_ERR_OBJECT_NOT_FOUND;
