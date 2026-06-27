@@ -1334,14 +1334,43 @@ TEST_CASE("Integration_ProfileGenericCaptureSelectiveAccess", "[integration][ser
     test_stack_setup();
     test_establish_association();
 
+    const uint8_t data_value[] = {
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x2A
+    };
     uint8_t buf[1024];
-    int ret = test_do_action(0x01, 7, &obis_profile, 2, NULL, 0, buf, sizeof(buf));
+    int ret = test_do_set(0x01, 1, &obis_data, 2,
+                          data_value, sizeof(data_value), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t capture_objects[] = {
+        AXDR_TAG_ARRAY, 0x01,
+        AXDR_TAG_STRUCTURE, 0x03,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x01,
+        AXDR_TAG_OCTETSTRING, 0x06, 0x00, 0x00, 0x60, 0x01, 0x00, 0xFF,
+        AXDR_TAG_UNSIGNED8, 0x02
+    };
+    ret = test_do_set(0x02, 7, &obis_profile, 3,
+                      capture_objects, sizeof(capture_objects), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_action(0x03, 7, &obis_profile, 2, NULL, 0, buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
 
-    ret = test_do_get(0x02, 7, &obis_profile, 2, buf, sizeof(buf));
+    ret = test_do_get(0x04, 7, &obis_profile, 2, buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC4);
+    REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(buf[5] == 0x01);
+    REQUIRE(buf[6] == AXDR_TAG_STRUCTURE);
+    REQUIRE(buf[7] == 0x02);
+    REQUIRE(std::memcmp(&buf[20], data_value, sizeof(data_value)) == 0);
 }
 
 TEST_CASE("Integration_ProfileGenericGetBlockTransfer", "[integration][service]")

@@ -107,6 +107,8 @@ not currently form one consistently verified product:
 - Made `reader_lab sync-ic` fail before opening TCP and made the C reader reject
   invocation-counter sync sessions until the full security-client handshake is
   available, avoiding a misleading no-op configuration.
+- Implemented Profile Generic `capture` with real capture-object reads through
+  the IC registry instead of storing `NULL` values while reporting success.
 
 ## Verified
 
@@ -116,7 +118,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 138 test cases with 957 assertions`.
+  reports `Passed all 138 test cases with 970 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 66 test cases with 411 assertions`.
@@ -143,6 +145,8 @@ not currently form one consistently verified product:
   block count, block status bitmap, and first-not-transferred block number.
 - Integration tests now verify Compact Data `capture` stores real captured AXDR
   object values in the buffer and updates entries-in-use.
+- Integration tests now verify Profile Generic `capture` stores real captured
+  AXDR object values in the profile buffer.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

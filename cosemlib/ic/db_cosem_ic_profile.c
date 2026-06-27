@@ -771,6 +771,47 @@ static void pg_add_entry(db_ic_profile_data *pg, const db_ic_profile_entry *new_
     pg->entries_in_use = pg->entry_count;
 }
 
+static csm_db_code pg_capture(db_ic_profile_data *pg)
+{
+    db_ic_profile_entry entry;
+    uint8_t empty_byte = 0U;
+    csm_array capture_in;
+
+    pg_init_datetime(entry.datetime);
+    entry.value_count = pg->capture_count;
+
+    for (uint8_t i = 0U; i < PG_MAX_CAPTURE; i++)
+    {
+        entry.values[i][0] = AXDR_TAG_NULL;
+        entry.value_len[i] = 1U;
+    }
+
+    csm_array_init(&capture_in, &empty_byte, 1U, 0U, 0U);
+    for (uint8_t i = 0U; i < pg->capture_count; i++)
+    {
+        db_ic_inst_t *captured = NULL;
+        if (!db_ic_find(pg->captures[i].class_id, &pg->captures[i].obis, &captured))
+        {
+            return CSM_ERR_OBJECT_NOT_FOUND;
+        }
+
+        csm_array capture_out;
+        csm_array_init(&capture_out, entry.values[i], PG_VALUE_SIZE, 0U, 0U);
+        csm_db_code code = (csm_db_code)db_ic_dispatch(captured, IC_OP_GET,
+                                                       pg->captures[i].attribute_id, 0U,
+                                                       &capture_in, &capture_out);
+        if (code != CSM_OK)
+        {
+            return code;
+        }
+
+        entry.value_len[i] = (uint8_t)csm_array_written(&capture_out);
+    }
+
+    pg_add_entry(pg, &entry);
+    return CSM_OK;
+}
+
 static csm_db_code pg_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
                                  uint8_t attr_id, uint8_t method_id,
                                  csm_array *in, csm_array *out)
@@ -886,24 +927,7 @@ static csm_db_code pg_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
             return CSM_OK;
 
         case 2U:
-        {
-            /* capture: store a new entry with null values */
-            db_ic_profile_entry entry;
-            pg_init_datetime(entry.datetime);
-            entry.value_count = pg->capture_count;
-            for (uint8_t i = 0U; i < pg->capture_count; i++)
-            {
-                entry.values[i][0] = AXDR_TAG_NULL;
-                entry.value_len[i] = 1U;
-            }
-            for (uint8_t i = pg->capture_count; i < PG_MAX_CAPTURE; i++)
-            {
-                entry.values[i][0] = AXDR_TAG_NULL;
-                entry.value_len[i] = 1U;
-            }
-            pg_add_entry(pg, &entry);
-            return CSM_OK;
-        }
+            return pg_capture(pg);
 
         case 3U:
             return pg_read_entries_by_range(pg, in, out);
