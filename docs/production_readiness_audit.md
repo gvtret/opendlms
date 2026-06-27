@@ -85,6 +85,8 @@ not currently form one consistently verified product:
 - Implemented Parameter Monitor `add_entry` ACTION handling and made unsupported
   Arbitrator `request_action` fail with a standard DLMS error instead of a
   successful no-op.
+- Implemented Image Transfer `image_transfer_init` payload parsing and block
+  status initialization instead of accepting any structure as success.
 
 ## Verified
 
@@ -94,10 +96,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 131 test cases with 847 assertions`.
+  reports `Passed all 132 test cases with 866 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 60 test cases with 306 assertions`.
+  reports `Passed all 61 test cases with 325 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
@@ -111,6 +113,8 @@ not currently form one consistently verified product:
   mutate their object and mask lists through the normal ACTION service path.
 - Integration tests now verify Parameter Monitor `add_entry` mutates its monitor
   list and unsupported Arbitrator `request_action` returns a DLMS error.
+- Integration tests now verify Image Transfer init parses the image identifier
+  and image size structure and initializes transferred-block status.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

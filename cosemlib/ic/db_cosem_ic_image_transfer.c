@@ -45,7 +45,10 @@
 typedef struct {
     uint8_t  transfer_status;
     uint32_t blocks_transferred;
+    uint32_t image_size;
     uint32_t block_size;
+    uint8_t  image_identifier[IMG_BLOCK_STATUS_MAX];
+    uint8_t  image_identifier_len;
     uint8_t  transferred_blocks_status[IMG_BLOCK_STATUS_MAX];
     uint8_t  transferred_blocks_len;
     uint32_t first_not_transferred;
@@ -103,6 +106,37 @@ static db_ic_inst_t *image_create(const csm_obis_code *obis)
     image_inst_tmp.data    = d;
     image_inst_tmp.version = 0U;
     return &image_inst_tmp;
+}
+
+static int image_read_init(csm_array *in, db_ic_image_data *d)
+{
+    uint8_t tag = 0xFFU;
+    uint8_t fields = 0U;
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_STRUCTURE) { return FALSE; }
+    if (!csm_array_read_u8(in, &fields) || fields != 2U) { return FALSE; }
+
+    uint32_t identifier_len = 0U;
+    if (!csm_axdr_rd_octetstring(in, &identifier_len) || identifier_len > IMG_BLOCK_STATUS_MAX)
+    {
+        return FALSE;
+    }
+    if (identifier_len > 0U)
+    {
+        if (!csm_array_read_buff(in, d->image_identifier, identifier_len)) { return FALSE; }
+    }
+    d->image_identifier_len = (uint8_t)identifier_len;
+
+    if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED32) { return FALSE; }
+    if (!csm_array_read_u32(in, &d->image_size)) { return FALSE; }
+    if (d->block_size == 0U) { return FALSE; }
+
+    uint32_t block_count = (d->image_size + d->block_size - 1U) / d->block_size;
+    uint32_t status_len = (block_count + 7U) / 8U;
+    if (status_len > IMG_BLOCK_STATUS_MAX) { return FALSE; }
+
+    memset(d->transferred_blocks_status, 0, sizeof(d->transferred_blocks_status));
+    d->transferred_blocks_len = (uint8_t)status_len;
+    return TRUE;
 }
 
 static csm_db_code image_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
@@ -193,7 +227,13 @@ static csm_db_code image_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         {
         case 1U: /* image_block_transfer: skip input data, acknowledge */
             return CSM_OK;
-        case 2U: /* image_transfer_init: skip structure input */
+        case 2U:
+            if (d->transfer_enabled == 0U) { return CSM_ERR_UNAUTHORIZED_ACCESS; }
+            if (!image_read_init(in, d))
+            {
+                d->transfer_status = IMG_STATUS_INITIALIZATION_ERROR;
+                return CSM_ERR_BAD_ENCODING;
+            }
             d->transfer_status = IMG_STATUS_INITIALIZATION_OK;
             d->blocks_transferred = 0U;
             d->first_not_transferred = 0U;

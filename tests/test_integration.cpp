@@ -47,6 +47,7 @@ static const csm_obis_code obis_clock       = { 0, 0, 1, 0, 0, 255 };
 static const csm_obis_code obis_asso        = { 0, 0, 40, 0, 0, 255 };
 static const csm_obis_code obis_profile     = { 0, 0, 96, 1, 1, 255 };
 static const csm_obis_code obis_security    = { 0, 0, 43, 0, 0, 255 };
+static const csm_obis_code obis_image       = { 0, 0, 44, 0, 0, 255 };
 static const csm_obis_code obis_push        = { 0, 0, 25, 1, 0, 255 };
 static const csm_obis_code obis_disconnect  = { 0, 0, 96, 3, 10, 255 };
 static const csm_obis_code obis_utility     = { 0, 0, 10, 3, 0, 255 };
@@ -563,6 +564,51 @@ TEST_CASE("Integration_ArbitratorUnsupportedRequestActionFails", "[integration][
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x04);
+}
+
+TEST_CASE("Integration_ImageTransferInitParsesStructure", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(18, &obis_image, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t block_size[] = {
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x32
+    };
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 18, &obis_image, 4,
+                          block_size, sizeof(block_size), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    const uint8_t init_data[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_OCTETSTRING, 0x02, 'f', 'w',
+        AXDR_TAG_UNSIGNED32, 0x00, 0x00, 0x00, 0x64
+    };
+    ret = test_do_action(0x02, 18, &obis_image, 2,
+                         init_data, sizeof(init_data), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    uint8_t status_buf[1024];
+    ret = test_do_get(0x03, 18, &obis_image, 2, status_buf, sizeof(status_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(status_buf[0] == 0xC4);
+    REQUIRE(status_buf[3] == 0x00);
+    REQUIRE(status_buf[4] == AXDR_TAG_ENUM);
+    REQUIRE(status_buf[5] == 0x02);
+
+    uint8_t blocks_buf[1024];
+    ret = test_do_get(0x04, 18, &obis_image, 5, blocks_buf, sizeof(blocks_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(blocks_buf[0] == 0xC4);
+    REQUIRE(blocks_buf[3] == 0x00);
+    REQUIRE(blocks_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(blocks_buf[5] == 0x01);
+    REQUIRE(blocks_buf[6] == 0x00);
 }
 
 TEST_CASE("Integration_SetDataValue", "[integration][basic]")
