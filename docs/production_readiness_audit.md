@@ -115,6 +115,8 @@ not currently form one consistently verified product:
   out-of-sequence ACTION calls return DLMS errors instead of false success.
 - Added generic validation for ACTION methods declared as `AXDR_TAG_NULL` so
   unexpected payloads return a DLMS error instead of being ignored.
+- Made delete-style ACTION methods for Register Activation masks and Parameter
+  Monitor entries report a DLMS error when the requested item does not exist.
 
 ## Verified
 
@@ -124,7 +126,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 140 test cases with 1017 assertions`.
+  reports `Passed all 140 test cases with 1039 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 66 test cases with 411 assertions`.
@@ -158,6 +160,8 @@ not currently form one consistently verified product:
   guards.
 - Integration tests now verify `AXDR_TAG_NULL` ACTION methods reject unexpected
   payloads and still accept an explicit AXDR NULL parameter.
+- Integration tests now verify failed Register Activation mask deletion and
+  Parameter Monitor entry deletion leave their lists unchanged.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

@@ -660,6 +660,25 @@ TEST_CASE("Integration_RegisterActivationAddMaskMutatesMaskList", "[integration]
     REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
     REQUIRE(get_buf[9] == 0x12);
     REQUIRE(get_buf[10] == 0x34);
+
+    const uint8_t missing_mask[] = {
+        AXDR_TAG_UNSIGNED16, 0x99, 0x99
+    };
+    ret = test_do_action(0x03, 6, &obis_reg_act, 3,
+                         missing_mask, sizeof(missing_mask), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
+
+    ret = test_do_get(0x04, 6, &obis_reg_act, 4, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x01);
+    REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
+    REQUIRE(get_buf[9] == 0x12);
+    REQUIRE(get_buf[10] == 0x34);
 }
 
 TEST_CASE("Integration_ParameterMonitorAddEntryMutatesList", "[integration][basic]")
@@ -691,6 +710,25 @@ TEST_CASE("Integration_ParameterMonitorAddEntryMutatesList", "[integration][basi
     REQUIRE(get_buf[5] == 0x01);
     REQUIRE(get_buf[6] == AXDR_TAG_STRUCTURE);
     REQUIRE(get_buf[7] == 0x03);
+    REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
+    REQUIRE(get_buf[9] == 0x00);
+    REQUIRE(get_buf[10] == 0x03);
+
+    const uint8_t missing_entry[] = {
+        AXDR_TAG_UNSIGNED16, 0x00, 0x05
+    };
+    ret = test_do_action(0x03, 65, &obis_param_mon, 2,
+                         missing_entry, sizeof(missing_entry), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == CSM_ACTION_RESULT_OTHER_REASON);
+
+    ret = test_do_get(0x04, 65, &obis_param_mon, 5, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x01);
     REQUIRE(get_buf[8] == AXDR_TAG_UNSIGNED16);
     REQUIRE(get_buf[9] == 0x00);
     REQUIRE(get_buf[10] == 0x03);

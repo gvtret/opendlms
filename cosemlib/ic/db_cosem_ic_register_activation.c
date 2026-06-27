@@ -272,10 +272,10 @@ static csm_db_code reg_act_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
                         d->masks[j] = d->masks[j + 1U];
                     }
                     d->mask_count--;
-                    break;
+                    return CSM_OK;
                 }
             }
-            return CSM_OK;
+            return CSM_ERR_DATA_CONTENT_NOT_OK;
         }
         default:
             break;

@@ -221,8 +221,9 @@ static csm_db_code param_mon_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
                     d->entries[i] = d->entries[i + 1U];
                 }
                 d->entry_count--;
+                return CSM_OK;
             }
-            return CSM_OK;
+            return CSM_ERR_DATA_CONTENT_NOT_OK;
         }
     }
     return CSM_ERR_OBJECT_NOT_FOUND;
