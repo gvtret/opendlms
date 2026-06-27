@@ -297,6 +297,7 @@ static csm_db_code sens_mgr_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
     {
         if (method_id == 1U)
         {
+            memset(d, 0, sizeof(db_ic_sens_mgr_data));
             return CSM_OK;
         }
     }

@@ -124,6 +124,8 @@ not currently form one consistently verified product:
 - Made Script Table `execute` validate its script id parameter and report a
   DLMS error when the target script is not present instead of returning a
   successful no-op.
+- Implemented Sensor Manager `reset` as a real state reset instead of reporting
+  a successful no-op.
 
 ## Verified
 
@@ -133,10 +135,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 143 test cases with 1096 assertions`.
+  reports `Passed all 144 test cases with 1128 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 71 test cases with 550 assertions`.
+  reports `Passed all 72 test cases with 582 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 1`.
@@ -174,6 +176,8 @@ not currently form one consistently verified product:
   delete target errors.
 - Integration tests now verify Script Table execute returns a DLMS error when
   the requested script id is not present.
+- Integration tests now verify Sensor Manager `reset` clears previously SET
+  active-variant, retry-count, and data-protection state.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
