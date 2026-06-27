@@ -104,6 +104,9 @@ not currently form one consistently verified product:
   accounting instead of accepting any data as success.
 - Implemented Compact Data `capture` by reading configured capture objects
   through the IC registry instead of only incrementing counters.
+- Made `reader_lab sync-ic` fail before opening TCP and made the C reader reject
+  invocation-counter sync sessions until the full security-client handshake is
+  available, avoiding a misleading no-op configuration.
 
 ## Verified
 
@@ -171,6 +174,9 @@ not currently form one consistently verified product:
 - TCP-wrapper live coverage currently proves AARQ/AARE, GET clock, and
   LuaBridge `getObjectList()`. It still needs automated live SET, ACTION, error
   response, and disconnect assertions.
+- Configurator invocation-counter discovery/synchronization is deliberately
+  gated off in the restored C reader API until the full security-client
+  handshake path is implemented; callers must seed the counter explicitly.
 - Several IC handlers remain partial implementations and must either be
   completed or documented as unsupported with standard COSEM errors.
 

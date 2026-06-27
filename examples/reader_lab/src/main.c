@@ -6,7 +6,6 @@
  *   reader_lab reader   [host] [port]
  *   reader_lab config   [host] [port]
  *   reader_lab config   192.168.1.116 4059 0.0.1.0.0.255
- *   reader_lab config   192.168.1.116 4059 0.0.1.0.0.255 sync-ic
  *   reader_lab public   127.0.0.1 4059 0.0.10.0.0.255 class=3 set-u32=42
  *   reader_lab public   127.0.0.1 4059 0.0.10.0.0.255 class=3 action=1
  *
@@ -256,7 +255,7 @@ int main(int argc, char **argv)
 
     if (argc < 2)
     {
-        printf("Usage: %s <public|reader|config> [host] [port] [obis] [plain|sync-ic] [class=N] [set-u32=N|action=N]\n", argv[0]);
+        printf("Usage: %s <public|reader|config> [host] [port] [obis] [plain] [class=N] [set-u32=N|action=N]\n", argv[0]);
         return 1;
     }
 
@@ -308,6 +307,15 @@ int main(int argc, char **argv)
     reader_hal_sys_init();
     setup_profile(profile, &auth, &asso_cfg, plain_hls);
 
+    if (sync_ic != 0U)
+    {
+        fprintf(stderr,
+                "Invocation counter sync requires the security-client handshake path; "
+                "seed the counter with reader_hal_set_invocation_counter() for now.\n");
+        platform_cleanup();
+        return 1;
+    }
+
     if (tcp_connect(host, port) < 0)
     {
         platform_cleanup();
@@ -331,12 +339,6 @@ int main(int argc, char **argv)
                                           asso_cfg.llc.ssap,
                                           OPENDLMS_READER_TCP_LOGICAL_DEVICE);
     opendlms_reader_session_set_auth(&session, &auth);
-    if (sync_ic != 0U)
-    {
-        opendlms_reader_session_set_invocation_counter_sync(&session, 1U);
-        printf("Invocation counter sync: enabled\n");
-    }
-
     if (plain_hls != 0U)
     {
         printf("Configurator: plain HLS (context 1)\n");

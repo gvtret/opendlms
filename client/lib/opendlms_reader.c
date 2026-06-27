@@ -178,6 +178,10 @@ int opendlms_reader_connect(opendlms_reader_session_t *session)
     {
         return -1;
     }
+    if (session->sync_invocation_counter != 0U)
+    {
+        return -1;
+    }
 
     session->transport.ops = &reader_transport_ops;
     session->transport.ctx = session;
