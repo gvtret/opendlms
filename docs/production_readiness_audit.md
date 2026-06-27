@@ -56,6 +56,9 @@ not currently form one consistently verified product:
   wired `reader_lab` into top-level CMake with `OPEN_DLMS_BUILD_READER_LAB`.
 - Removed the global `opendlms_reader` transport context so each reader session
   owns its own transport callback state.
+- Fixed high-level client receive timeout propagation so
+  `csm_client_connect()` and subsequent client requests use the configured
+  transport timeout instead of a hard-coded value.
 - Restored the legacy service execution path for `csm_channel_execute()` when
   the legacy global `csm_services_init()` database handler is used.
 - Hardened `csm_asso_init()` to clear the whole association state before setting
@@ -106,7 +109,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 137 test cases with 952 assertions`.
+  reports `Passed all 138 test cases with 957 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 66 test cases with 411 assertions`.
@@ -138,6 +141,8 @@ not currently form one consistently verified product:
   followed by `cmake --build build-audit-client -j2`.
 - `opendlms_reader` and `reader_lab` targeted build passes:
   `cmake --build build-audit-client --target opendlms_reader reader_lab -j2`.
+- Transport tests now verify client connect propagates the configured receive
+  timeout to the transport receive callback.
 - Legacy JSON CLI dependency failure is explicit:
   `OPEN_DLMS_BUILD_LEGACY_JSON_CLIENT=ON` reports the missing Gurux
   `JsonReader.h`, `JsonValue.h`, `JsonWriter.h`, and `Util.h` headers.

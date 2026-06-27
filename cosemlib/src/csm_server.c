@@ -166,6 +166,7 @@ struct csm_client {
     csm_db_context_t   db_ctx;
     uint8_t            rx_buf[CSM_SERVER_MAX_PDU];
     uint8_t            tx_buf[CSM_SERVER_MAX_PDU];
+    uint32_t           rx_timeout_ms;
 };
 
 static int client_send_recv(csm_client *client, uint8_t *apdu, uint32_t apdu_len,
@@ -195,6 +196,7 @@ int csm_dlms_client_init(csm_client *client, csm_transport *transport,
                          client->asso_states, client->asso_configs, CSM_SERVER_MAX_CHANNELS);
 
     memset(&client->db_ctx, 0, sizeof(client->db_ctx));
+    client->rx_timeout_ms = CSM_TRANSPORT_DEFAULT_TIMEOUT;
 
     return 0;
 }
@@ -206,6 +208,7 @@ int csm_client_connect(csm_client *client, uint32_t timeout_ms)
     int rc = CSM_TRANSPORT_OPEN(client->transport, client->channel);
     if (rc != CSM_TRANSPORT_OK) return rc;
 
+    client->rx_timeout_ms = timeout_ms;
     csm_asso_state *asso = &client->asso_states[0];
     asso->config = &client->asso_configs[0];
     asso->ref = (client->asso_configs[0].application_context != 0U)
@@ -227,7 +230,6 @@ int csm_client_connect(csm_client *client, uint32_t timeout_ms)
     if (!asso->handshake.accepted) return -1;
 
     asso->state_cf = CF_ASSOCIATED;
-    (void)timeout_ms;
     return CSM_TRANSPORT_OK;
 }
 
@@ -249,7 +251,8 @@ static int client_send_recv(csm_client *client, uint8_t *apdu, uint32_t apdu_len
     /* Receive response */
     uint8_t rx_framed[CSM_WRAPPER_MAX_LEN];
     int recv_len = CSM_TRANSPORT_RECV(client->transport, ch,
-                                       rx_framed, sizeof(rx_framed), 5000);
+                                       rx_framed, sizeof(rx_framed),
+                                       client->rx_timeout_ms);
     if (recv_len <= 0) return recv_len;
 
     /* Deframe */

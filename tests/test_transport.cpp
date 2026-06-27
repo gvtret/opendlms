@@ -10,6 +10,7 @@ extern "C" {
 #include "csm_transport.h"
 #include "csm_framing.h"
 #include "csm_array.h"
+#include "csm_server.h"
 }
 
 #include "catch.hpp"
@@ -171,6 +172,65 @@ TEST_CASE("Transport: destroy clears state", "[transport]")
     CSM_TRANSPORT_DESTROY(&t);
     REQUIRE(t.ops == nullptr);
     REQUIRE(t.ctx == nullptr);
+}
+
+typedef struct
+{
+    uint32_t last_timeout_ms;
+    int send_calls;
+    int recv_calls;
+} timeout_transport_ctx_t;
+
+static int timeout_transport_open(void *ctx, uint8_t channel)
+{
+    (void)ctx;
+    (void)channel;
+    return CSM_TRANSPORT_OK;
+}
+
+static int timeout_transport_send(void *ctx, uint8_t channel, const uint8_t *data, uint32_t len)
+{
+    timeout_transport_ctx_t *tctx = (timeout_transport_ctx_t *)ctx;
+    (void)channel;
+    (void)data;
+    (void)len;
+    tctx->send_calls++;
+    return (int)len;
+}
+
+static int timeout_transport_recv(void *ctx, uint8_t channel, uint8_t *buf,
+                                  uint32_t buf_size, uint32_t timeout_ms)
+{
+    timeout_transport_ctx_t *tctx = (timeout_transport_ctx_t *)ctx;
+    (void)channel;
+    (void)buf;
+    (void)buf_size;
+    tctx->recv_calls++;
+    tctx->last_timeout_ms = timeout_ms;
+    return CSM_TRANSPORT_ERR_TIMEOUT;
+}
+
+TEST_CASE("Client: connect uses configured receive timeout", "[transport][client]")
+{
+    static const csm_transport_ops timeout_ops = {
+        timeout_transport_open,
+        timeout_transport_send,
+        timeout_transport_recv,
+        NULL,
+        NULL,
+        NULL
+    };
+    timeout_transport_ctx_t ctx = {};
+    csm_transport transport = { &timeout_ops, &ctx };
+    csm_client *client = csm_client_create(&transport, 0, CSM_FRAMING_NONE);
+
+    REQUIRE(client != nullptr);
+    REQUIRE(csm_client_connect(client, 1234U) == CSM_TRANSPORT_ERR_TIMEOUT);
+    REQUIRE(ctx.send_calls == 1);
+    REQUIRE(ctx.recv_calls == 1);
+    REQUIRE(ctx.last_timeout_ms == 1234U);
+
+    csm_client_delete(client);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════ */
