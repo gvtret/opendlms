@@ -56,6 +56,11 @@ void opendlms_reader_auth_configurator(opendlms_reader_auth_t *auth)
 
 void opendlms_reader_auth_configurator_plain(opendlms_reader_auth_t *auth)
 {
+    if (auth == NULL)
+    {
+        return;
+    }
+
     opendlms_reader_auth_configurator(auth);
     auth->ciphering           = 0U;
     auth->application_context = (uint8_t)LN_REF;

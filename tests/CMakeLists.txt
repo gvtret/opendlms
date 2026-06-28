@@ -19,11 +19,14 @@ add_executable(${PROJECT_NAME}
     test_integration.cpp
     test_transport.cpp
     test_streebog_debug.cpp
+    test_reader_auth.cpp
+    ../client/lib/opendlms_reader_auth.c
     cosem_tests_hal.c
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../client/include
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC cosemlib cosemserver)

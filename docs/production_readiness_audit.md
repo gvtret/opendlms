@@ -170,6 +170,8 @@ not currently form one consistently verified product:
   recursively walk arrays and structures after block-transfer reassembly.
 - Hardened `hdlc_decode()` against null, empty, truncated, and below-minimum
   frame buffers before reading frame-format or FCS fields.
+- Hardened reader auth preset helpers against null output pointers and moved
+  the preset role mapping into the default Catch2 gate.
 
 ## Verified
 
@@ -179,7 +181,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 156 test cases with 1366 assertions`.
+  reports `Passed all 158 test cases with 1385 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -252,6 +254,8 @@ not currently form one consistently verified product:
   traversal, and flat tag decoder success behavior.
 - HDLC tests now verify undersized frame rejection before parser reads beyond
   the provided buffer.
+- Reader auth tests now verify null-output safety and Public, Reader,
+  Configurator, and plain Configurator association profile mappings.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
