@@ -184,6 +184,8 @@ not currently form one consistently verified product:
   contexts.
 - Added explicit casts and default-gate round-trip coverage for the shared
   big-endian 64-bit utility helpers.
+- Added bounded casts for decoded ACSE authentication-value lengths after the
+  existing challenge-size validation.
 
 ## Verified
 

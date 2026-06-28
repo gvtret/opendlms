@@ -259,7 +259,7 @@ static csm_acse_code acse_auth_value_decoder(csm_asso_state *state, csm_ber *ber
                     // It is a GraphicString, the size is dynamic
                     if (csm_array_read_buff(array, &state->handshake.ctos.value[0], ber->length.length))
                     {
-                        state->handshake.ctos.size = ber->length.length;
+                        state->handshake.ctos.size = (uint8_t)ber->length.length;
                         ret = CSM_ACSE_OK;
                     }
                 }
@@ -268,7 +268,7 @@ static csm_acse_code acse_auth_value_decoder(csm_asso_state *state, csm_ber *ber
                     // It is a GraphicString, the size is dynamic
                     if (csm_array_read_buff(array, &state->handshake.stoc.value[0], ber->length.length))
                     {
-                        state->handshake.stoc.size = ber->length.length;
+                        state->handshake.stoc.size = (uint8_t)ber->length.length;
                         ret = CSM_ACSE_OK;
                     }
                 }
