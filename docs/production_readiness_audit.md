@@ -174,6 +174,8 @@ not currently form one consistently verified product:
   the preset role mapping into the default Catch2 gate.
 - Added default-gate TCP wrapper tests for WPDU version, source/destination
   ports, payload length, malformed version, and truncated frame detection.
+- Fixed `csm_transport_tcp` receive handling so TCP wrapper frames split across
+  multiple socket reads are accumulated until a complete APDU is available.
 
 ## Verified
 
@@ -183,7 +185,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 160 test cases with 1402 assertions`.
+  reports `Passed all 161 test cases with 1409 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -260,6 +262,8 @@ not currently form one consistently verified product:
   Configurator, and plain Configurator association profile mappings.
 - TCP wrapper tests now verify frame/deframe round-trips and malformed WPDU
   rejection in the default transport gate.
+- TCP transport tests now verify split WPDU receive reassembly across multiple
+  socket reads.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

@@ -15,6 +15,45 @@ extern "C" {
 
 #include "catch.hpp"
 #include <cstring>
+#include <chrono>
+#include <thread>
+
+extern "C" {
+#include "csm_transport_tcp.h"
+}
+
+#if defined(_WIN32) || defined(WIN32)
+#include <winsock2.h>
+#include <ws2tcpip.h>
+typedef SOCKET test_socket_t;
+#define TEST_SOCKET_INVALID INVALID_SOCKET
+static void test_close_socket(test_socket_t fd) { closesocket(fd); }
+struct test_socket_runtime
+{
+    test_socket_runtime()
+    {
+        WSADATA wsa;
+        WSAStartup(MAKEWORD(2, 2), &wsa);
+    }
+
+    ~test_socket_runtime()
+    {
+        WSACleanup();
+    }
+};
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+typedef int test_socket_t;
+#define TEST_SOCKET_INVALID (-1)
+static void test_close_socket(test_socket_t fd) { close(fd); }
+struct test_socket_runtime
+{
+};
+#endif
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* COSEM-TCP Wrapper framing tests                                          */
@@ -145,6 +184,86 @@ TEST_CASE("TCP wrapper: reject malformed frames", "[transport][wrapper]")
     framed[7] = 0x10U;
     REQUIRE(csm_tcp_wrapper_deframe(framed, (uint32_t)flen, &out_apdu, &out_len,
                                     NULL, NULL) == CSM_TRANSPORT_ERR_TIMEOUT);
+}
+
+static test_socket_t create_loopback_listener(uint16_t *port)
+{
+    test_socket_t fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == TEST_SOCKET_INVALID)
+    {
+        return TEST_SOCKET_INVALID;
+    }
+
+    int reuse = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse, sizeof(reuse));
+
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    if (bind(fd, (sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        test_close_socket(fd);
+        return TEST_SOCKET_INVALID;
+    }
+
+    if (listen(fd, 1) < 0)
+    {
+        test_close_socket(fd);
+        return TEST_SOCKET_INVALID;
+    }
+
+    socklen_t len = sizeof(addr);
+    if (getsockname(fd, (sockaddr *)&addr, &len) < 0)
+    {
+        test_close_socket(fd);
+        return TEST_SOCKET_INVALID;
+    }
+
+    *port = ntohs(addr.sin_port);
+    return fd;
+}
+
+TEST_CASE("TCP transport: receive split wrapper frame", "[transport][tcp]")
+{
+    test_socket_runtime sockets;
+    uint16_t port = 0U;
+    test_socket_t listen_fd = create_loopback_listener(&port);
+    REQUIRE(listen_fd != TEST_SOCKET_INVALID);
+
+    csm_transport transport;
+    REQUIRE(csm_transport_tcp_client_init(&transport, "127.0.0.1", port,
+                                          CSM_FRAMING_TCP_WRAPPER) == CSM_TRANSPORT_OK);
+    REQUIRE(CSM_TRANSPORT_OPEN(&transport, 0U) == CSM_TRANSPORT_OK);
+
+    sockaddr_in peer;
+    socklen_t peer_len = sizeof(peer);
+    test_socket_t server_fd = accept(listen_fd, (sockaddr *)&peer, &peer_len);
+    REQUIRE(server_fd != TEST_SOCKET_INVALID);
+
+    uint8_t apdu[] = { 0xC4, 0x01, 0x02, 0x03 };
+    uint8_t framed[64];
+    int framed_len = csm_tcp_wrapper_frame(1U, 16U, apdu, sizeof(apdu), framed, sizeof(framed));
+    REQUIRE(framed_len > 8);
+
+    std::thread sender([server_fd, framed, framed_len]() {
+        send(server_fd, (const char *)framed, 4, 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        send(server_fd, (const char *)(framed + 4), framed_len - 4, 0);
+    });
+
+    uint8_t out[16];
+    int rc = CSM_TRANSPORT_RECV(&transport, 0U, out, sizeof(out), 1000U);
+
+    sender.join();
+    test_close_socket(server_fd);
+    test_close_socket(listen_fd);
+    csm_transport_tcp_destroy(&transport);
+
+    REQUIRE(rc == (int)sizeof(apdu));
+    REQUIRE(memcmp(out, apdu, sizeof(apdu)) == 0);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════ */

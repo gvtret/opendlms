@@ -31,5 +31,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PUBLIC cosemlib cosemserver)
 
+if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ws2_32)
+endif()
+
 enable_testing()
 add_test(NAME cosemtest COMMAND ${PROJECT_NAME})

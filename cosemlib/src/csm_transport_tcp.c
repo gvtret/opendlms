@@ -344,38 +344,34 @@ static int tcp_recv(void *ctx, uint8_t channel, uint8_t *buf, uint32_t buf_size,
 
     if (!c->channels[channel].connected) return CSM_TRANSPORT_ERR_CONN;
 
-    /* Try to extract a complete PDU from the receive buffer */
-    uint32_t consumed = 0;
-    int pdu_len = tcp_extract_pdu(c, channel, buf, buf_size, &consumed);
-
-    if (pdu_len > 0 && consumed > 0)
+    for (;;)
     {
-        /* Remove consumed bytes from buffer */
-        memmove(c->channels[channel].recv_buf,
-                c->channels[channel].recv_buf + consumed,
-                c->channels[channel].recv_len - consumed);
-        c->channels[channel].recv_len -= consumed;
-        return pdu_len;
+        /* Try to extract a complete PDU from the receive buffer */
+        uint32_t consumed = 0;
+        int pdu_len = tcp_extract_pdu(c, channel, buf, buf_size, &consumed);
+
+        if (pdu_len < 0)
+        {
+            return pdu_len;
+        }
+
+        if (pdu_len > 0 && consumed > 0)
+        {
+            /* Remove consumed bytes from buffer */
+            memmove(c->channels[channel].recv_buf,
+                    c->channels[channel].recv_buf + consumed,
+                    c->channels[channel].recv_len - consumed);
+            c->channels[channel].recv_len -= consumed;
+            return pdu_len;
+        }
+
+        int wait_rc = tcp_wait_readable(c->channels[channel].fd, timeout_ms);
+        if (wait_rc != CSM_TRANSPORT_OK) return wait_rc;
+
+        /* No complete PDU yet — receive more data and try again. */
+        int rc = tcp_fill_recv_buf(c, channel);
+        if (rc != CSM_TRANSPORT_OK) return rc;
     }
-
-    int wait_rc = tcp_wait_readable(c->channels[channel].fd, timeout_ms);
-    if (wait_rc != CSM_TRANSPORT_OK) return wait_rc;
-
-    /* No complete PDU yet — try to receive more data */
-    int rc = tcp_fill_recv_buf(c, channel);
-    if (rc != CSM_TRANSPORT_OK) return rc;
-
-    /* Try again */
-    pdu_len = tcp_extract_pdu(c, channel, buf, buf_size, &consumed);
-    if (pdu_len > 0 && consumed > 0)
-    {
-        memmove(c->channels[channel].recv_buf,
-                c->channels[channel].recv_buf + consumed,
-                c->channels[channel].recv_len - consumed);
-        c->channels[channel].recv_len -= consumed;
-    }
-
-    return pdu_len;
 }
 
 static void tcp_close(void *ctx, uint8_t channel)
