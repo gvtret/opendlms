@@ -54,6 +54,30 @@ test('Framing constants defined', () => {
     assert.strictEqual(native.FRAMING_HDLC, 2);
 });
 
+test('Security key constants defined', () => {
+    assert.strictEqual(native.SEC_KEK, 0);
+    assert.strictEqual(native.SEC_GUEK, 1);
+    assert.strictEqual(native.SEC_GBEK, 2);
+    assert.strictEqual(native.SEC_GAK, 3);
+});
+
+test('Security keyring stores 128-bit and 256-bit keys', () => {
+    native.clearSecurityKeys();
+    assert.strictEqual(native.setSecurityKey(1, native.SEC_GUEK, Buffer.alloc(16, 0x11)), true);
+    assert.strictEqual(native.getSecurityKeyLength(1, native.SEC_GUEK), 16);
+    assert.strictEqual(native.setSecurityKey(1, native.SEC_GAK, Buffer.alloc(32, 0x22)), true);
+    assert.strictEqual(native.getSecurityKeyLength(1, native.SEC_GAK), 32);
+    native.clearSecurityKeys();
+    assert.strictEqual(native.getSecurityKeyLength(1, native.SEC_GUEK), 0);
+});
+
+test('Security keyring rejects invalid key lengths', () => {
+    native.clearSecurityKeys();
+    assert.strictEqual(native.setSecurityKey(1, native.SEC_GUEK, Buffer.alloc(15, 0x11)), false);
+    assert.strictEqual(native.setSecurityKey(1, native.SEC_GUEK, Buffer.alloc(24, 0x11)), false);
+    assert.strictEqual(native.getSecurityKeyLength(1, native.SEC_GUEK), 0);
+});
+
 /* ── LuaBridge ───────────────────────────────────────────────────────────── */
 
 console.log('\nLuaBridge:');

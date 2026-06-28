@@ -293,7 +293,11 @@ not currently form one consistently verified product:
   `JsonReader.h`, `JsonValue.h`, `JsonWriter.h`, and `Util.h` headers.
 - Electron native addon rebuilds successfully.
 - Electron native tests pass:
-  `npm test` reports `46 tests, 46 passed, 0 failed`.
+  `npm test` reports `49 tests, 49 passed, 0 failed`.
+- Electron native HAL now uses the core MD5/SHA1/SHA256 and AES-GCM
+  primitives, stores configured 128-bit/256-bit security keys, and fails secure
+  GCM setup when no key is configured instead of silently using zero keys or
+  pass-through data.
 - LuaBridge live smoke passes against a freshly built simulator on port 4165:
   `npm run test:live -- 4165` reports a non-empty object-list response.
 - `reader_lab` builds from a clean CMake directory with
