@@ -38,7 +38,10 @@ mbedtls_gcm_context chan_ctx[NUMBER_OF_CHANNELS];
 
 void csm_sys_set_system_title(const uint8_t *buf)
 {
-    memcpy(system_title, buf, sizeof(system_title));
+    if (buf != NULL)
+    {
+        memcpy(system_title, buf, sizeof(system_title));
+    }
 }
 
 
@@ -94,24 +97,39 @@ uint8_t *csm_sys_get_key(uint8_t sap, csm_sec_key key_id)
 
 int csm_sys_gcm_init(uint8_t channel, uint8_t sap, csm_sec_key key_id, csm_sec_mode mode, const uint8_t *iv, const uint8_t *aad, uint32_t aad_len)
 {
+    uint8_t *key = csm_sys_get_key(sap, key_id);
+    if ((channel >= NUMBER_OF_CHANNELS) || (key == NULL) || (iv == NULL))
+    {
+        return FALSE;
+    }
+
     int mbed_mode = (mode == CSM_SEC_ENCRYPT) ? MBEDTLS_GCM_ENCRYPT : MBEDTLS_GCM_DECRYPT;
     mbedtls_gcm_init(&chan_ctx[channel]);
-    mbedtls_gcm_setkey(&chan_ctx[channel], MBEDTLS_CIPHER_ID_AES, csm_sys_get_key(sap, key_id), 128);
+    if (mbedtls_gcm_setkey(&chan_ctx[channel], MBEDTLS_CIPHER_ID_AES, key, 128) != 0)
+    {
+        return FALSE;
+    }
     int res = mbedtls_gcm_starts(&chan_ctx[channel], mbed_mode, iv, 12, aad, aad_len);
     return (res == 0) ? TRUE : FALSE;
 }
 
 int csm_sys_gcm_update(uint8_t channel, const uint8_t *plain, uint32_t plain_len, uint8_t *crypt)
 {
-    mbedtls_gcm_update(&chan_ctx[channel], plain_len, plain, crypt);
-    return TRUE;
+    if ((channel >= NUMBER_OF_CHANNELS) || ((plain_len > 0U) && ((plain == NULL) || (crypt == NULL))))
+    {
+        return FALSE;
+    }
+    return (mbedtls_gcm_update(&chan_ctx[channel], plain_len, plain, crypt) == 0) ? TRUE : FALSE;
 }
 
 // Sizes are total sizes of plain and AAD
 int csm_sys_gcm_finish(uint8_t channel, uint8_t *tag)
 {
-    mbedtls_gcm_finish(&chan_ctx[channel], tag, 16);
-    return TRUE;
+    if ((channel >= NUMBER_OF_CHANNELS) || (tag == NULL))
+    {
+        return FALSE;
+    }
+    return (mbedtls_gcm_finish(&chan_ctx[channel], tag, 16) == 0) ? TRUE : FALSE;
 }
 
 typedef struct
@@ -208,6 +226,10 @@ uint8_t csm_sys_get_mechanism_id(uint8_t sap)
 // TODO: Write a note on the randomize function, it should be NIST compliant (use a target-dependant implementation)
 uint8_t csm_hal_get_random_u8(uint8_t min, uint8_t max)
 {
+    if (max <= min)
+    {
+        return min;
+    }
     return min + rand() % ((max + 1) - min);
 }
 
@@ -241,4 +263,3 @@ static const cfg_cosem cDefaultSap[] = {
 
 
 */
-

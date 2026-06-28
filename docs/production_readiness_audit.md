@@ -200,6 +200,9 @@ not currently form one consistently verified product:
 - Implemented HAL selective-access payload pass-through for simulator/test
   builds so services no longer reject every selective-access request during
   decoding.
+- Hardened reader, simulator, and test HAL crypto/system hooks against null
+  system-title input, invalid random ranges, null GCM keys, invalid channels,
+  and GCM update/finish errors.
 
 ## Verified
 

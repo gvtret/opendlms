@@ -257,7 +257,8 @@ void csm_hal_sha256(const uint8_t *input, uint32_t size, uint8_t *output)
 int csm_sys_gcm_init(uint8_t channel, uint8_t sap, csm_sec_key key_id, csm_sec_mode mode,
                      const uint8_t *iv, const uint8_t *aad, uint32_t aad_len)
 {
-    if (channel >= READER_HAL_MAX_CHANNELS)
+    uint8_t *key = csm_sys_get_key(sap, key_id);
+    if ((channel >= READER_HAL_MAX_CHANNELS) || (key == NULL) || (iv == NULL))
     {
         return 0;
     }
@@ -267,8 +268,11 @@ int csm_sys_gcm_init(uint8_t channel, uint8_t sap, csm_sec_key key_id, csm_sec_m
     mbedtls_gcm_init(&reader_gcm_ctx[channel]);
     {
         unsigned int key_bits = (csm_sys_get_key_len(sap, key_id) == 32U) ? 256U : 128U;
-        mbedtls_gcm_setkey(&reader_gcm_ctx[channel], MBEDTLS_CIPHER_ID_AES,
-                           csm_sys_get_key(sap, key_id), key_bits);
+        if (mbedtls_gcm_setkey(&reader_gcm_ctx[channel], MBEDTLS_CIPHER_ID_AES,
+                               key, key_bits) != 0)
+        {
+            return 0;
+        }
     }
     return (mbedtls_gcm_starts(&reader_gcm_ctx[channel], mbed_mode, iv, 12, aad, aad_len) == 0)
                ? 1
@@ -277,26 +281,28 @@ int csm_sys_gcm_init(uint8_t channel, uint8_t sap, csm_sec_key key_id, csm_sec_m
 
 int csm_sys_gcm_update(uint8_t channel, const uint8_t *plain, uint32_t plain_len, uint8_t *crypt)
 {
-    if (channel >= READER_HAL_MAX_CHANNELS)
+    if ((channel >= READER_HAL_MAX_CHANNELS) || ((plain_len > 0U) && ((plain == NULL) || (crypt == NULL))))
     {
         return 0;
     }
-    mbedtls_gcm_update(&reader_gcm_ctx[channel], plain_len, plain, crypt);
-    return 1;
+    return (mbedtls_gcm_update(&reader_gcm_ctx[channel], plain_len, plain, crypt) == 0) ? 1 : 0;
 }
 
 int csm_sys_gcm_finish(uint8_t channel, uint8_t *tag)
 {
-    if (channel >= READER_HAL_MAX_CHANNELS)
+    if ((channel >= READER_HAL_MAX_CHANNELS) || (tag == NULL))
     {
         return 0;
     }
-    mbedtls_gcm_finish(&reader_gcm_ctx[channel], tag, 16);
-    return 1;
+    return (mbedtls_gcm_finish(&reader_gcm_ctx[channel], tag, 16) == 0) ? 1 : 0;
 }
 
 uint8_t csm_hal_get_random_u8(uint8_t min, uint8_t max)
 {
+    if (max <= min)
+    {
+        return min;
+    }
     return min + (uint8_t)(rand() % ((max + 1) - min));
 }
 

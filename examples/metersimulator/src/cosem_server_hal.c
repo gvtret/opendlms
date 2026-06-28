@@ -87,7 +87,10 @@ mbedtls_gcm_context chan_ctx[NUMBER_OF_CHANNELS];
 
 void csm_sys_set_system_title(const uint8_t *buf)
 {
-    memcpy(system_title, buf, sizeof(system_title));
+    if (buf != NULL)
+    {
+        memcpy(system_title, buf, sizeof(system_title));
+    }
 }
 
 
@@ -218,6 +221,10 @@ uint8_t csm_sys_get_mechanism_id(uint8_t sap)
 // TODO: Write a note on the randomize function, it should be NIST compliant (use a target-dependant implementation)
 uint8_t csm_hal_get_random_u8(uint8_t min, uint8_t max)
 {
+    if (max <= min)
+    {
+        return min;
+    }
     return min + rand() % ((max + 1) - min);
 }
 
