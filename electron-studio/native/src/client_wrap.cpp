@@ -6,7 +6,66 @@
 #include "client_wrap.h"
 #include "csm_transport_tcp.h"
 #include <cstring>
-#include <cstdio>
+#include <limits>
+
+static bool buffer_len_u32(Napi::Env env, size_t len, uint32_t *out)
+{
+    if (len > (size_t)std::numeric_limits<uint32_t>::max())
+    {
+        Napi::RangeError::New(env, "Buffer too large").ThrowAsJavaScriptException();
+        return false;
+    }
+    *out = (uint32_t)len;
+    return true;
+}
+
+static bool parse_obis(const std::string &text, csm_obis_code *obis)
+{
+    if (!obis) return false;
+
+    uint32_t values[6] = {0, 0, 0, 0, 0, 0};
+    uint32_t part = 0U;
+    bool have_digit = false;
+
+    for (char ch : text)
+    {
+        if (ch >= '0' && ch <= '9')
+        {
+            have_digit = true;
+            values[part] = values[part] * 10U + (uint32_t)(ch - '0');
+            if (values[part] > 255U)
+            {
+                return false;
+            }
+        }
+        else if (ch == '.')
+        {
+            if (!have_digit || part >= 5U)
+            {
+                return false;
+            }
+            part++;
+            have_digit = false;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    if (!have_digit || part != 5U)
+    {
+        return false;
+    }
+
+    obis->A = (uint8_t)values[0];
+    obis->B = (uint8_t)values[1];
+    obis->C = (uint8_t)values[2];
+    obis->D = (uint8_t)values[3];
+    obis->E = (uint8_t)values[4];
+    obis->F = (uint8_t)values[5];
+    return true;
+}
 
 Napi::Function ClientWrap::Init(Napi::Env env, Napi::Object exports)
 {
@@ -107,15 +166,10 @@ Napi::Value ClientWrap::Get(const Napi::CallbackInfo &info)
     uint8_t attr_id = info[3].As<Napi::Number>().Uint32Value();
 
     csm_obis_code obis = {0, 0, 0, 0, 0, 0};
-    unsigned int a, b, c, d, e, f;
-    if (sscanf(obis_str.c_str(), "%u.%u.%u.%u.%u.%u", &a, &b, &c, &d, &e, &f) == 6)
+    if (!parse_obis(obis_str, &obis))
     {
-        obis.A = (uint8_t)a;
-        obis.B = (uint8_t)b;
-        obis.C = (uint8_t)c;
-        obis.D = (uint8_t)d;
-        obis.E = (uint8_t)e;
-        obis.F = (uint8_t)f;
+        Napi::TypeError::New(env, "Invalid OBIS code").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
     uint8_t resp_buf[4096];
@@ -150,22 +204,19 @@ Napi::Value ClientWrap::Set(const Napi::CallbackInfo &info)
     std::string obis_str = info[2].As<Napi::String>().Utf8Value();
     uint8_t attr_id = info[3].As<Napi::Number>().Uint32Value();
     Napi::Uint8Array data_arr = info[4].As<Napi::Uint8Array>();
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data_arr.ByteLength(), &data_len)) return env.Null();
 
     csm_obis_code obis = {0, 0, 0, 0, 0, 0};
-    unsigned int a, b, c, d, e, f;
-    if (sscanf(obis_str.c_str(), "%u.%u.%u.%u.%u.%u", &a, &b, &c, &d, &e, &f) == 6)
+    if (!parse_obis(obis_str, &obis))
     {
-        obis.A = (uint8_t)a;
-        obis.B = (uint8_t)b;
-        obis.C = (uint8_t)c;
-        obis.D = (uint8_t)d;
-        obis.E = (uint8_t)e;
-        obis.F = (uint8_t)f;
+        Napi::TypeError::New(env, "Invalid OBIS code").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
     uint8_t resp_buf[4096];
     int rc = csm_client_set(client_, invoke_id, class_id, &obis, attr_id,
-                            data_arr.Data(), data_arr.ByteLength(),
+                            data_arr.Data(), data_len,
                             resp_buf, sizeof(resp_buf));
 
     if (rc < 0)
@@ -197,22 +248,19 @@ Napi::Value ClientWrap::Action(const Napi::CallbackInfo &info)
     std::string obis_str = info[2].As<Napi::String>().Utf8Value();
     uint8_t method_id = info[3].As<Napi::Number>().Uint32Value();
     Napi::Uint8Array data_arr = info[4].As<Napi::Uint8Array>();
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data_arr.ByteLength(), &data_len)) return env.Null();
 
     csm_obis_code obis = {0, 0, 0, 0, 0, 0};
-    unsigned int a, b, c, d, e, f;
-    if (sscanf(obis_str.c_str(), "%u.%u.%u.%u.%u.%u", &a, &b, &c, &d, &e, &f) == 6)
+    if (!parse_obis(obis_str, &obis))
     {
-        obis.A = (uint8_t)a;
-        obis.B = (uint8_t)b;
-        obis.C = (uint8_t)c;
-        obis.D = (uint8_t)d;
-        obis.E = (uint8_t)e;
-        obis.F = (uint8_t)f;
+        Napi::TypeError::New(env, "Invalid OBIS code").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
     uint8_t resp_buf[4096];
     int rc = csm_client_action(client_, invoke_id, class_id, &obis, method_id,
-                               data_arr.Data(), data_arr.ByteLength(),
+                               data_arr.Data(), data_len,
                                resp_buf, sizeof(resp_buf));
 
     if (rc < 0)
@@ -245,15 +293,10 @@ Napi::Value ClientWrap::GetBlock(const Napi::CallbackInfo &info)
     uint8_t attr_id = info[3].As<Napi::Number>().Uint32Value();
 
     csm_obis_code obis = {0, 0, 0, 0, 0, 0};
-    unsigned int a, b, c, d, e, f;
-    if (sscanf(obis_str.c_str(), "%u.%u.%u.%u.%u.%u", &a, &b, &c, &d, &e, &f) == 6)
+    if (!parse_obis(obis_str, &obis))
     {
-        obis.A = (uint8_t)a;
-        obis.B = (uint8_t)b;
-        obis.C = (uint8_t)c;
-        obis.D = (uint8_t)d;
-        obis.E = (uint8_t)e;
-        obis.F = (uint8_t)f;
+        Napi::TypeError::New(env, "Invalid OBIS code").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
     uint8_t resp_buf[65536];
@@ -288,22 +331,19 @@ Napi::Value ClientWrap::SetBlock(const Napi::CallbackInfo &info)
     std::string obis_str = info[2].As<Napi::String>().Utf8Value();
     uint8_t attr_id = info[3].As<Napi::Number>().Uint32Value();
     Napi::Uint8Array data_arr = info[4].As<Napi::Uint8Array>();
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data_arr.ByteLength(), &data_len)) return env.Null();
 
     csm_obis_code obis = {0, 0, 0, 0, 0, 0};
-    unsigned int a, b, c, d, e, f;
-    if (sscanf(obis_str.c_str(), "%u.%u.%u.%u.%u.%u", &a, &b, &c, &d, &e, &f) == 6)
+    if (!parse_obis(obis_str, &obis))
     {
-        obis.A = (uint8_t)a;
-        obis.B = (uint8_t)b;
-        obis.C = (uint8_t)c;
-        obis.D = (uint8_t)d;
-        obis.E = (uint8_t)e;
-        obis.F = (uint8_t)f;
+        Napi::TypeError::New(env, "Invalid OBIS code").ThrowAsJavaScriptException();
+        return env.Null();
     }
 
     uint8_t resp_buf[4096];
     int rc = csm_client_set_block(client_, invoke_id, class_id, &obis, attr_id,
-                                  data_arr.Data(), data_arr.ByteLength(),
+                                  data_arr.Data(), data_len,
                                   resp_buf, sizeof(resp_buf));
 
     if (rc < 0)

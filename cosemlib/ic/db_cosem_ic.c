@@ -25,7 +25,7 @@ int db_ic_init(void)
     class_count = 0U;
     instance_count = 0U;
     memset(instances, 0, sizeof(instances));
-    memset(class_registry, 0, sizeof(class_registry));
+    memset((void *)class_registry, 0, sizeof(class_registry));
     db_ic_reset_all_counts();
     return TRUE;
 }

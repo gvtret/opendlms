@@ -6,6 +6,18 @@
 #include "data_wrap.h"
 #include "csm_axdr_codec.h"
 #include <cstring>
+#include <limits>
+
+static bool buffer_len_u32(Napi::Env env, size_t len, uint32_t *out)
+{
+    if (len > (size_t)std::numeric_limits<uint32_t>::max())
+    {
+        Napi::RangeError::New(env, "Buffer too large").ThrowAsJavaScriptException();
+        return false;
+    }
+    *out = (uint32_t)len;
+    return true;
+}
 
 Napi::Function DataWrap::Init(Napi::Env env, Napi::Object exports)
 {
@@ -109,7 +121,10 @@ Napi::Value DataWrap::WriteBuffer(const Napi::CallbackInfo &info)
     }
 
     Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
-    int rc = csm_array_write_buff(&array_, data.Data(), data.ByteLength());
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data.ByteLength(), &data_len)) return env.Null();
+
+    int rc = csm_array_write_buff(&array_, data.Data(), data_len);
     return Napi::Number::New(env, rc);
 }
 
@@ -139,7 +154,10 @@ Napi::Value DataWrap::WriteOctetString(const Napi::CallbackInfo &info)
     }
 
     Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
-    int rc = csm_axdr_wr_octetstring(&array_, data.Data(), data.ByteLength());
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data.ByteLength(), &data_len)) return env.Null();
+
+    int rc = csm_axdr_wr_octetstring(&array_, data.Data(), data_len);
     return Napi::Number::New(env, rc);
 }
 

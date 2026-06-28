@@ -5,6 +5,18 @@
 
 #include "block_wrap.h"
 #include <cstring>
+#include <limits>
+
+static bool buffer_len_u32(Napi::Env env, size_t len, uint32_t *out)
+{
+    if (len > (size_t)std::numeric_limits<uint32_t>::max())
+    {
+        Napi::RangeError::New(env, "Buffer too large").ThrowAsJavaScriptException();
+        return false;
+    }
+    *out = (uint32_t)len;
+    return true;
+}
 
 Napi::Function BlockWrap::Init(Napi::Env env, Napi::Object exports)
 {
@@ -64,6 +76,8 @@ Napi::Value BlockWrap::StartServer(const Napi::CallbackInfo &info)
 
     uint8_t invoke_id = info[0].As<Napi::Number>().Uint32Value();
     Napi::Uint8Array data = info[1].As<Napi::Uint8Array>();
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data.ByteLength(), &data_len)) return env.Null();
 
     uint32_t block_size = 0;
     if (info.Length() >= 3 && info[2].IsNumber())
@@ -71,7 +85,7 @@ Napi::Value BlockWrap::StartServer(const Napi::CallbackInfo &info)
         block_size = info[2].As<Napi::Number>().Uint32Value();
     }
 
-    int rc = csm_block_start_server(&state_, invoke_id, data.Data(), data.ByteLength(), block_size);
+    int rc = csm_block_start_server(&state_, invoke_id, data.Data(), data_len, block_size);
     if (rc != 0) active_ = true;
     return Napi::Number::New(env, rc);
 }
@@ -148,6 +162,8 @@ Napi::Value BlockWrap::StartClient(const Napi::CallbackInfo &info)
 
     uint8_t invoke_id = info[0].As<Napi::Number>().Uint32Value();
     Napi::Uint8Array data = info[1].As<Napi::Uint8Array>();
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data.ByteLength(), &data_len)) return env.Null();
 
     uint32_t block_size = 0;
     if (info.Length() >= 3 && info[2].IsNumber())
@@ -155,7 +171,7 @@ Napi::Value BlockWrap::StartClient(const Napi::CallbackInfo &info)
         block_size = info[2].As<Napi::Number>().Uint32Value();
     }
 
-    int rc = csm_block_start_client(&state_, invoke_id, data.Data(), data.ByteLength(), block_size);
+    int rc = csm_block_start_client(&state_, invoke_id, data.Data(), data_len, block_size);
     if (rc != 0) active_ = true;
     return Napi::Number::New(env, rc);
 }
@@ -245,8 +261,10 @@ Napi::Value BlockWrap::GetReceiveData(const Napi::CallbackInfo &info)
 
     Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
     uint8_t is_last = info[1].As<Napi::Boolean>().Value() ? 1 : 0;
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data.ByteLength(), &data_len)) return env.Null();
 
-    int rc = csm_block_get_receive_data(&state_, data.Data(), data.ByteLength(), is_last);
+    int rc = csm_block_get_receive_data(&state_, data.Data(), data_len, is_last);
     return Napi::Number::New(env, rc);
 }
 
@@ -327,8 +345,10 @@ Napi::Value BlockWrap::ReceiveData(const Napi::CallbackInfo &info)
 
     Napi::Uint8Array data = info[0].As<Napi::Uint8Array>();
     uint8_t is_last = info[1].As<Napi::Boolean>().Value() ? 1 : 0;
+    uint32_t data_len = 0U;
+    if (!buffer_len_u32(env, data.ByteLength(), &data_len)) return env.Null();
 
-    int rc = csm_block_receive_data(&state_, data.Data(), data.ByteLength(), is_last);
+    int rc = csm_block_receive_data(&state_, data.Data(), data_len, is_last);
     return Napi::Number::New(env, rc);
 }
 
