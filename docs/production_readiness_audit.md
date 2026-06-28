@@ -194,6 +194,9 @@ not currently form one consistently verified product:
 - Replaced `reader_lab` OBIS parsing with strict bounded component parsing and
   moved CLI validation ahead of platform/TCP setup so malformed input fails
   before opening a network connection.
+- Fixed the simulator HAL to use its SAP configuration for keys, LLS password,
+  and mechanism lookup, added GCM bounds checks, and aligned `reader_lab reader`
+  with a working 32-to-1 LLS association covered by live smoke.
 
 ## Verified
 

@@ -13,8 +13,8 @@ def find_free_port():
         return sock.getsockname()[1]
 
 
-def run_reader(reader, port, *args):
-    cmd = [reader, "public", "127.0.0.1", str(port), *args]
+def run_reader(reader, port, *args, profile="public"):
+    cmd = [reader, profile, "127.0.0.1", str(port), *args]
     proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT, timeout=10)
     if proc.returncode != 0:
@@ -51,6 +51,11 @@ def main():
 
         clock = "0.0.1.0.0.255"
         out = run_reader(reader, port, clock, "class=8", "attr=2")
+        expect(out, "Association OK")
+        expect(out, "GET OK:")
+        expect(out, "access=0")
+
+        out = run_reader(reader, port, clock, "class=8", "attr=2", profile="reader")
         expect(out, "Association OK")
         expect(out, "GET OK:")
         expect(out, "access=0")

@@ -846,8 +846,13 @@ static csm_acse_code acse_aarq_auth_value_encoder(csm_asso_state *state, csm_ber
 
     if (state->auth_level == CSM_AUTH_LOW_LEVEL)
     {
+        uint8_t sap = 0U;
         state->handshake.ctos.size = 8U;
-        csm_hal_get_lls_password(0U, &state->handshake.ctos.value[0], state->handshake.ctos.size);
+        if ((state->config != NULL) && (state->config->llc.ssap <= 0xFFU))
+        {
+            sap = (uint8_t)state->config->llc.ssap;
+        }
+        csm_hal_get_lls_password(sap, &state->handshake.ctos.value[0], state->handshake.ctos.size);
     }
     else
     {

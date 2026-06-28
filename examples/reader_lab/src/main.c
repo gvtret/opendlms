@@ -302,9 +302,9 @@ static void setup_profile(const char *profile,
     {
         opendlms_reader_auth_reader(auth);
         asso_cfg->llc.ssap               = 32U;
-        asso_cfg->llc.dsap               = 32U;
+        asso_cfg->llc.dsap               = 1U;
         asso_cfg->application_context    = (uint8_t)LN_REF;
-        reader_hal_set_lls_password(32U, "password");
+        reader_hal_set_lls_password(32U, "00000001");
     }
     else if (strcmp(profile, "config") == 0 || strcmp(profile, "configurator") == 0)
     {
