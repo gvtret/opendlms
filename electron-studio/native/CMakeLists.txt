@@ -51,7 +51,7 @@ add_library(${PROJECT_NAME} SHARED
     src/server_wrap.cpp
     src/data_wrap.cpp
     src/block_wrap.cpp
-    src/hal_stubs.cpp
+    src/native_hal.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

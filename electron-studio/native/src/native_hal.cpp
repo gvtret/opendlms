@@ -1,6 +1,6 @@
 /**
- * \file hal_stubs.cpp
- * \brief HAL/system stubs for native addon linking
+ * \file native_hal.cpp
+ * \brief HAL/system services for native addon linking
  */
 
 #include "csm_definitions.h"
