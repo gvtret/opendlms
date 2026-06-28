@@ -6,6 +6,6 @@ includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 Name: opendlms
 Description: Open-source DLMS/COSEM protocol stack (IEC 62056)
 Version: @PROJECT_VERSION@
-URL: https://github.com/open dlms/opendlms
+URL: https://github.com/open-dlms/opendlms
 Libs: -L${libdir} -lcosemlib
 Cflags: -I${includedir}/opendlms
