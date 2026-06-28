@@ -124,6 +124,14 @@ test('execReturn: obis function', () => {
     assert.strictEqual(result, 'table');
 });
 
+test('execReturn: obis rejects malformed input', () => {
+    const lb = new native.LuaBridge();
+    lb.execReturn('obis("0.0.999.0.0.255")');
+    assert.ok(lb.getError().includes('invalid OBIS code'));
+    lb.execReturn('obis("0.0.1.0.0.255x")');
+    assert.ok(lb.getError().includes('invalid OBIS code'));
+});
+
 test('execReturn: delay waits', () => {
     const lb = new native.LuaBridge();
     const start = Date.now();

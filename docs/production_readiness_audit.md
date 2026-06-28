@@ -231,6 +231,8 @@ not currently form one consistently verified product:
   consumer, and deterministic Electron dependency install via `npm ci`.
 - Added Electron Studio native addon tests to CI after the native build, before
   packaging.
+- Hardened Electron Studio Lua `obis()` and table OBIS parsing against malformed
+  strings and out-of-range components.
 - Added a `production` CMake preset that enables the full local production gate:
   tests, server, restored reader API, meter simulator, and reader_lab live smoke.
 

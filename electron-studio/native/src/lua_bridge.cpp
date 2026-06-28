@@ -117,7 +117,13 @@ static int read_obis(lua_State *L, int index, csm_obis_code *obis)
                 lua_pop(L, 1);
                 return 0;
             }
-            *parts[i] = (uint8_t)lua_tointeger(L, -1);
+            lua_Integer value = lua_tointeger(L, -1);
+            if (value < 0 || value > 255)
+            {
+                lua_pop(L, 1);
+                return 0;
+            }
+            *parts[i] = (uint8_t)value;
             lua_pop(L, 1);
         }
         return 1;
@@ -200,16 +206,18 @@ static int lua_hex(lua_State *L)
 static int lua_obis(lua_State *L)
 {
     const char *str = luaL_checkstring(L, 1);
-    lua_newtable(L);
-    int idx = 0;
-    const char *p = str;
-    while (*p && idx < 6)
+    csm_obis_code obis;
+    if (!parse_obis_string(str, &obis))
     {
-        lua_pushinteger(L, atoi(p));
-        lua_rawseti(L, -2, idx + 1);
-        while (*p && *p != '.') p++;
-        if (*p == '.') p++;
-        idx++;
+        return luaL_error(L, "invalid OBIS code");
+    }
+
+    lua_newtable(L);
+    uint8_t parts[] = { obis.A, obis.B, obis.C, obis.D, obis.E, obis.F };
+    for (int i = 0; i < 6; i++)
+    {
+        lua_pushinteger(L, parts[i]);
+        lua_rawseti(L, -2, i + 1);
     }
     return 1;
 }
