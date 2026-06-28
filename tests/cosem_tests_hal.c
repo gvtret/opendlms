@@ -35,6 +35,7 @@ static uint8_t system_title[CSM_DEF_APP_TITLE_SIZE] = { 0x4DU, 0x4DU, 0x4DU, 0x0
 
 // Keep a context by channel to be thread safe
 mbedtls_gcm_context chan_ctx[NUMBER_OF_CHANNELS];
+static uint8_t chan_ctx_active[NUMBER_OF_CHANNELS];
 
 void csm_sys_set_system_title(const uint8_t *buf)
 {
@@ -104,18 +105,33 @@ int csm_sys_gcm_init(uint8_t channel, uint8_t sap, csm_sec_key key_id, csm_sec_m
     }
 
     int mbed_mode = (mode == CSM_SEC_ENCRYPT) ? MBEDTLS_GCM_ENCRYPT : MBEDTLS_GCM_DECRYPT;
+    if (chan_ctx_active[channel] != 0U)
+    {
+        mbedtls_gcm_free(&chan_ctx[channel]);
+        chan_ctx_active[channel] = 0U;
+    }
     mbedtls_gcm_init(&chan_ctx[channel]);
     if (mbedtls_gcm_setkey(&chan_ctx[channel], MBEDTLS_CIPHER_ID_AES, key, 128) != 0)
     {
+        mbedtls_gcm_free(&chan_ctx[channel]);
         return FALSE;
     }
     int res = mbedtls_gcm_starts(&chan_ctx[channel], mbed_mode, iv, 12, aad, aad_len);
+    if (res == 0)
+    {
+        chan_ctx_active[channel] = 1U;
+    }
+    else
+    {
+        mbedtls_gcm_free(&chan_ctx[channel]);
+    }
     return (res == 0) ? TRUE : FALSE;
 }
 
 int csm_sys_gcm_update(uint8_t channel, const uint8_t *plain, uint32_t plain_len, uint8_t *crypt)
 {
-    if ((channel >= NUMBER_OF_CHANNELS) || ((plain_len > 0U) && ((plain == NULL) || (crypt == NULL))))
+    if ((channel >= NUMBER_OF_CHANNELS) || (chan_ctx_active[channel] == 0U) ||
+        ((plain_len > 0U) && ((plain == NULL) || (crypt == NULL))))
     {
         return FALSE;
     }
@@ -125,11 +141,14 @@ int csm_sys_gcm_update(uint8_t channel, const uint8_t *plain, uint32_t plain_len
 // Sizes are total sizes of plain and AAD
 int csm_sys_gcm_finish(uint8_t channel, uint8_t *tag)
 {
-    if ((channel >= NUMBER_OF_CHANNELS) || (tag == NULL))
+    if ((channel >= NUMBER_OF_CHANNELS) || (chan_ctx_active[channel] == 0U) || (tag == NULL))
     {
         return FALSE;
     }
-    return (mbedtls_gcm_finish(&chan_ctx[channel], tag, 16) == 0) ? TRUE : FALSE;
+    int rc = mbedtls_gcm_finish(&chan_ctx[channel], tag, 16);
+    mbedtls_gcm_free(&chan_ctx[channel]);
+    chan_ctx_active[channel] = 0U;
+    return (rc == 0) ? TRUE : FALSE;
 }
 
 typedef struct

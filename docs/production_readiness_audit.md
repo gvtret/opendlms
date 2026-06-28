@@ -203,6 +203,9 @@ not currently form one consistently verified product:
 - Hardened reader, simulator, and test HAL crypto/system hooks against null
   system-title input, invalid random ranges, null GCM keys, invalid channels,
   and GCM update/finish errors.
+- Added active-state tracking and cleanup for HAL GCM contexts so update/finish
+  calls fail before init, repeated init frees the prior context, and finish
+  releases the active context.
 
 ## Verified
 
