@@ -233,6 +233,8 @@ not currently form one consistently verified product:
   packaging.
 - Hardened Electron Studio Lua `obis()` and table OBIS parsing against malformed
   strings and out-of-range components.
+- Hardened Electron Studio Lua `connect()` against invalid TCP port values
+  before transport setup.
 - Added a `production` CMake preset that enables the full local production gate:
   tests, server, restored reader API, meter simulator, and reader_lab live smoke.
 
@@ -346,7 +348,7 @@ not currently form one consistently verified product:
   `JsonReader.h`, `JsonValue.h`, `JsonWriter.h`, and `Util.h` headers.
 - Electron native addon rebuilds successfully.
 - Electron native tests pass:
-  `npm test` reports `49 tests, 49 passed, 0 failed`.
+  `npm test` reports `51 tests, 51 passed, 0 failed`.
 - Electron native HAL now uses the core MD5/SHA1/SHA256 and AES-GCM
   primitives, stores configured 128-bit/256-bit security keys, and fails secure
   GCM setup when no key is configured instead of silently using zero keys or

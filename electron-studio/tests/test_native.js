@@ -132,6 +132,13 @@ test('execReturn: obis rejects malformed input', () => {
     assert.ok(lb.getError().includes('invalid OBIS code'));
 });
 
+test('execReturn: connect rejects invalid port', () => {
+    const lb = new native.LuaBridge();
+    const result = lb.execReturn('select(1, connect("127.0.0.1", 70000))');
+    assert.strictEqual(result, 'false');
+    assert.ok(lb.getError().includes('invalid TCP port'));
+});
+
 test('execReturn: delay waits', () => {
     const lb = new native.LuaBridge();
     const start = Date.now();

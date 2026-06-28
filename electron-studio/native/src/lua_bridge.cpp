@@ -230,7 +230,15 @@ static int lua_connect(lua_State *L)
     if (!b) { lua_pushboolean(L, 0); lua_pushstring(L, "no bridge"); return 2; }
 
     const char *host = luaL_checkstring(L, 1);
-    int port = (int)luaL_optinteger(L, 2, 4056);
+    lua_Integer port_value = luaL_optinteger(L, 2, 4056);
+    if (port_value < 1 || port_value > 65535)
+    {
+        snprintf(b->last_error, sizeof(b->last_error), "invalid TCP port");
+        lua_pushboolean(L, 0);
+        lua_pushstring(L, b->last_error);
+        return 2;
+    }
+    int port = (int)port_value;
 
     copy_cstr(b->host, sizeof(b->host), host);
     b->port = (uint16_t)port;
