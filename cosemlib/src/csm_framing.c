@@ -111,6 +111,10 @@ int csm_tcp_wrapper_deframe(const uint8_t *data, uint32_t data_len,
     {
         return CSM_TRANSPORT_ERR_FRAMING;
     }
+    if (len == 0U)
+    {
+        return CSM_TRANSPORT_ERR_FRAMING;
+    }
     if ((uint32_t)len + CSM_TCP_WRAPPER_LEN > data_len)
     {
         return CSM_TRANSPORT_ERR_TIMEOUT;

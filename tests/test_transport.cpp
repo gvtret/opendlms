@@ -181,6 +181,10 @@ TEST_CASE("TCP wrapper: reject malformed frames", "[transport][wrapper]")
                                     NULL, NULL) == CSM_TRANSPORT_ERR_FRAMING);
 
     framed[1] = 0x01U;
+    framed[7] = 0x00U;
+    REQUIRE(csm_tcp_wrapper_deframe(framed, (uint32_t)flen, &out_apdu, &out_len,
+                                    NULL, NULL) == CSM_TRANSPORT_ERR_FRAMING);
+
     framed[7] = 0x10U;
     REQUIRE(csm_tcp_wrapper_deframe(framed, (uint32_t)flen, &out_apdu, &out_len,
                                     NULL, NULL) == CSM_TRANSPORT_ERR_TIMEOUT);

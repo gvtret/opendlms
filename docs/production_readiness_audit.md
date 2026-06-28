@@ -214,6 +214,7 @@ not currently form one consistently verified product:
 - Replaced `reader_lab` numeric option parsing with strict bounded decimal
   parsing so malformed ports, SAPs, class ids, attributes, SET values, and
   ACTION ids fail before network setup.
+- Hardened the shared COSEM-TCP wrapper deframer to reject zero-length APDUs.
 
 ## Verified
 
@@ -223,7 +224,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 171 test cases with 1487 assertions`.
+  reports `Passed all 171 test cases with 1488 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 79 test cases with 739 assertions`.
