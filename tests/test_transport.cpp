@@ -266,6 +266,35 @@ TEST_CASE("TCP transport: receive split wrapper frame", "[transport][tcp]")
     REQUIRE(memcmp(out, apdu, sizeof(apdu)) == 0);
 }
 
+TEST_CASE("TCP transport: server accept respects receive timeout", "[transport][tcp]")
+{
+    test_socket_runtime sockets;
+    csm_transport transport;
+
+    REQUIRE(csm_transport_tcp_server_init(&transport, 0U,
+                                          CSM_FRAMING_TCP_WRAPPER) == CSM_TRANSPORT_OK);
+    REQUIRE(CSM_TRANSPORT_OPEN(&transport, 0U) == CSM_TRANSPORT_OK);
+
+    uint8_t out[16];
+    REQUIRE(CSM_TRANSPORT_RECV(&transport, 0U, out, sizeof(out), 20U) ==
+            CSM_TRANSPORT_ERR_TIMEOUT);
+
+    csm_transport_tcp_destroy(&transport);
+}
+
+TEST_CASE("TCP transport: manual accept respects timeout", "[transport][tcp]")
+{
+    test_socket_runtime sockets;
+    csm_transport transport;
+
+    REQUIRE(csm_transport_tcp_server_init(&transport, 0U,
+                                          CSM_FRAMING_TCP_WRAPPER) == CSM_TRANSPORT_OK);
+    REQUIRE(CSM_TRANSPORT_OPEN(&transport, 0U) == CSM_TRANSPORT_OK);
+    REQUIRE(csm_transport_tcp_accept(&transport, 20U) == CSM_TRANSPORT_ERR_TIMEOUT);
+
+    csm_transport_tcp_destroy(&transport);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* Generic framing dispatch tests                                           */
 /* ══════════════════════════════════════════════════════════════════════════ */

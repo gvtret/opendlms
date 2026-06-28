@@ -178,6 +178,8 @@ not currently form one consistently verified product:
   multiple socket reads are accumulated until a complete APDU is available.
 - Implemented Studio Lua `delay(ms)` as a real non-negative sleep instead of a
   no-op and added native addon tests for wait and validation behavior.
+- Fixed TCP server accept paths so receive and manual accept honor configured
+  timeouts instead of blocking indefinitely when no client connects.
 
 ## Verified
 
@@ -187,7 +189,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 161 test cases with 1409 assertions`.
+  reports `Passed all 163 test cases with 1415 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -266,6 +268,8 @@ not currently form one consistently verified product:
   rejection in the default transport gate.
 - TCP transport tests now verify split WPDU receive reassembly across multiple
   socket reads.
+- TCP transport tests now verify server-side receive accept and manual accept
+  return timeout when no client connects.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.

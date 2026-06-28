@@ -326,6 +326,9 @@ static int tcp_recv(void *ctx, uint8_t channel, uint8_t *buf, uint32_t buf_size,
 #else
         socklen_t addr_len = sizeof(addr);
 #endif
+        int wait_rc = tcp_wait_readable(c->listen_fd, timeout_ms);
+        if (wait_rc != CSM_TRANSPORT_OK) return wait_rc;
+
         socket_t client_fd = accept(c->listen_fd, (struct sockaddr *)&addr, &addr_len);
         if (client_fd == SOCK_INVALID) return CSM_TRANSPORT_ERR_TIMEOUT;
 
@@ -505,6 +508,9 @@ int csm_transport_tcp_accept(csm_transport *transport, uint32_t timeout_ms)
 #else
     socklen_t addr_len = sizeof(addr);
 #endif
+    int wait_rc = tcp_wait_readable(c->listen_fd, timeout_ms);
+    if (wait_rc != CSM_TRANSPORT_OK) return wait_rc;
+
     socket_t client_fd = accept(c->listen_fd, (struct sockaddr *)&addr, &addr_len);
     if (client_fd == SOCK_INVALID) return CSM_TRANSPORT_ERR_TIMEOUT;
 
