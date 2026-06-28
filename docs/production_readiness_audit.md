@@ -219,6 +219,8 @@ not currently form one consistently verified product:
   keeping frame/deframe contracts consistent.
 - Replaced single global HAL invocation counters in simulator/test builds with
   per-SAP, per-direction counters.
+- Replaced the missing legacy Qt Studio `add_subdirectory(studio)` failure with
+  an explicit CMake diagnostic pointing users to `electron-studio`.
 
 ## Verified
 
