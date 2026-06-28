@@ -23,6 +23,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DOPEN_DLMS_BUILD_TESTS=ON \
             -DOPEN_DLMS_BUILD_SERVER=ON \
+            -DOPEN_DLMS_BUILD_CLIENT=ON \
+            -DOPEN_DLMS_BUILD_METER_SIM=ON \
+            -DOPEN_DLMS_BUILD_READER_LAB=ON \
             -DCOSEMLIB_SHARED=OFF
 
       - name: Build
@@ -34,12 +37,44 @@ jobs:
       - name: Install
         run: cmake --install build --prefix ${{ github.workspace }}/install
 
+      - name: Validate installed CMake package
+        run: |
+          mkdir -p consumer-cmake
+          cat > consumer-cmake/CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.10)
+          project(opendlms_consumer C)
+          find_package(OpenDLMS REQUIRED)
+          add_executable(consumer main.c)
+          target_link_libraries(consumer OpenDLMS::cosemlib OpenDLMS::opendlms_reader)
+          EOF
+          cat > consumer-cmake/main.c <<'EOF'
+          #include <cosemlib.h>
+          #include <csm_transport_tcp.h>
+          #include <opendlms_reader.h>
+          int main(void) { csm_transport transport; opendlms_reader_t reader; (void)transport; (void)reader; return 0; }
+          EOF
+          cmake -S consumer-cmake -B consumer-cmake/build -G Ninja \
+            -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install
+          cmake --build consumer-cmake/build
+
+      - name: Validate installed pkg-config package
+        run: |
+          cat > consumer-pkg.c <<'EOF'
+          #include <cosemlib.h>
+          #include <csm_transport_tcp.h>
+          int main(void) { csm_transport transport; (void)transport; return 0; }
+          EOF
+          PKG_CONFIG_PATH=${{ github.workspace }}/install/lib/pkgconfig \
+            cc consumer-pkg.c $(PKG_CONFIG_PATH=${{ github.workspace }}/install/lib/pkgconfig pkg-config --cflags --libs opendlms) \
+            -o consumer-pkg
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
           path: |
             build/cosemlib/libcosemlib.a
+            build/client/libopendlms_reader.a
             ${{ github.workspace }}/install/
 
   build-windows:
@@ -114,7 +149,7 @@ jobs:
 
       - name: Install npm dependencies
         working-directory: electron-studio
-        run: npm install
+        run: npm ci
 
       - name: Build native addon
         working-directory: electron-studio

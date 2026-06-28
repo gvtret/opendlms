@@ -226,6 +226,9 @@ not currently form one consistently verified product:
   security headers from the install prefix.
 - Added install/export rules for `opendlms_reader` so downstream projects can
   link `OpenDLMS::opendlms_reader` when `OPEN_DLMS_BUILD_CLIENT=ON`.
+- Expanded Linux CI coverage to build the restored reader API, meter simulator,
+  reader_lab live smoke, install tree, CMake package consumer, pkg-config
+  consumer, and deterministic Electron dependency install via `npm ci`.
 
 ## Verified
 
