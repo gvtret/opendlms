@@ -150,7 +150,7 @@ int svc_decode_request(csm_request *request, csm_array *array)
     return valid;
 }
 
-static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+static csm_db_code svc_get_request_decoder(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
     csm_db_code code = CSM_ERR_BAD_ENCODING;
 
@@ -193,7 +193,7 @@ static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state
         }
 
         /* Normal GET request */
-        if (database != NULL)
+        if (handler != NULL)
         {
             /* Try normal response first */
             array->wr_index = 0U;
@@ -206,7 +206,7 @@ static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state
 
             if (valid)
             {
-                code = database(ctx, array, array, request);
+                code = handler(ctx, array, array, request);
             }
 
             if (code != CSM_OK && code != CSM_OK_BLOCK)
@@ -238,7 +238,7 @@ static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state
                 temp.offset = 0U;
 
                 /* Get the data from the database */
-                code = database(ctx, &temp, &temp, request);
+                code = handler(ctx, &temp, &temp, request);
 
                 if ((code == CSM_OK) || (code == CSM_OK_BLOCK))
                 {
@@ -294,14 +294,14 @@ static csm_db_code svc_get_request_decoder(csm_db_context_t *ctx, csm_asso_state
 
 static const uint32_t gResponseNormalHeaderSize = 6U; // Offset where data can be returned for an Action
 
-static csm_db_code svc_set_or_action_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+static csm_db_code svc_set_or_action_execute(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
     csm_db_code code = CSM_ERR_BAD_ENCODING;
     (void) state;
 
     if (request->type == SVC_REQUEST_NORMAL)
     {
-        if (database != NULL)
+        if (handler != NULL)
         {
             CSM_LOG("[SVC] Encoding SET/ACTION.response");
 
@@ -316,7 +316,7 @@ static csm_db_code svc_set_or_action_execute(csm_db_context_t *ctx, csm_asso_sta
             csm_array *input = (request->db_request.additional_data.enable != 0U)
                 ? &request->db_request.additional_data.data
                 : array;
-            code = database(ctx, input, &output, request);
+            code = handler(ctx, input, &output, request);
 
             reply_size = output.wr_index;
 
@@ -380,17 +380,17 @@ static csm_db_code svc_set_or_action_execute(csm_db_context_t *ctx, csm_asso_sta
     return code;
 }
 
-static csm_db_code svc_set_or_action_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+static csm_db_code svc_set_or_action_decoder(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
     if (!svc_decode_request(request, array))
     {
         return CSM_ERR_BAD_ENCODING;
     }
 
-    return svc_set_or_action_execute(ctx, state, request, array);
+    return svc_set_or_action_execute(handler, ctx, state, request, array);
 }
 
-static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+static csm_db_code svc_set_request_decoder(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
     csm_db_code code = CSM_ERR_BAD_ENCODING;
 
@@ -436,7 +436,7 @@ static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state
                                 data_array.offset = 0U;
 
                                 /* Invoke database handler */
-                                if (database != NULL)
+                                if (handler != NULL)
                                 {
                                     csm_array output = *array;
                                     uint32_t reply_size = 0U;
@@ -444,7 +444,7 @@ static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state
                                     output.rd_index = 0U;
                                     output.wr_index = 0U;
 
-                                    code = database(ctx, &data_array, &output, request);
+                                    code = handler(ctx, &data_array, &output, request);
                                     reply_size = output.wr_index;
 
                                     /* Update array with response */
@@ -500,7 +500,7 @@ static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state
         }
 
         /* Normal SET request */
-        if (database != NULL)
+        if (handler != NULL)
         {
             /* Check if data needs block transfer */
             uint32_t data_size = csm_array_written(&request->db_request.additional_data.data);
@@ -545,7 +545,7 @@ static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state
             else
             {
                 /* Data fits in single block, use normal SET */
-                return svc_set_or_action_execute(ctx, state, request, array);
+                return svc_set_or_action_execute(handler, ctx, state, request, array);
             }
         }
         else
@@ -572,11 +572,11 @@ static csm_db_code svc_set_request_decoder(csm_db_context_t *ctx, csm_asso_state
 }
 
 
-static csm_db_code svc_action_request_decoder(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
+static csm_db_code svc_action_request_decoder(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
     request->db_request.service = SVC_ACTION;
     CSM_LOG("[SVC] Decoding ACTION.request");
-    return svc_set_or_action_decoder(ctx, state, request, array);
+    return svc_set_or_action_decoder(handler, ctx, state, request, array);
 }
 
 
@@ -689,7 +689,7 @@ int svc_request_encoder(csm_request *request, csm_array *array)
 }
 
 
-typedef csm_db_code (*svc_func)(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array);
+typedef csm_db_code (*svc_func)(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array);
 
 
 typedef struct
@@ -734,12 +734,6 @@ int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_co
 {
     int number_of_bytes = 0;
 
-    /* Temporarily set global for service decoders that use it directly.
-     * Future improvement: refactor service decoders to accept handler as parameter
-     * to eliminate this thread-safety workaround. */
-    csm_db_access_handler saved_db = database;
-    database = handler;
-
     if (handler != NULL)
     {
         uint8_t tag;
@@ -751,7 +745,7 @@ int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_co
                 if ((srv->tag == tag) && (srv->decoder != NULL))
                 {
                     CSM_LOG("[SVC] Found service");
-                    if (srv->decoder(ctx, state, request, array) == CSM_OK)
+                    if (srv->decoder(handler, ctx, state, request, array) == CSM_OK)
                     {
                         number_of_bytes = array->wr_index;
                     }
@@ -764,9 +758,6 @@ int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_co
             }
         }
     }
-
-    /* Restore global */
-    database = saved_db;
 
     return number_of_bytes;
 }

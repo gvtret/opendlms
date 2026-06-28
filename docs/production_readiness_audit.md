@@ -186,6 +186,9 @@ not currently form one consistently verified product:
   big-endian 64-bit utility helpers.
 - Added bounded casts for decoded ACSE authentication-value lengths after the
   existing challenge-size validation.
+- Removed the temporary global database-handler swap from explicit service
+  execution so independent channel/server contexts dispatch through their own
+  handlers without mutating shared state.
 
 ## Verified
 
@@ -195,10 +198,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 169 test cases with 1468 assertions`.
+  reports `Passed all 170 test cases with 1477 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 77 test cases with 720 assertions`.
+  reports `Passed all 78 test cases with 729 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 2`.

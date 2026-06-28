@@ -99,6 +99,31 @@ static csm_db_code test_db_access(csm_db_context_t *ctx, csm_array *in,
     return rc;
 }
 
+static int explicit_handler_calls = 0;
+static int global_handler_calls = 0;
+
+static csm_db_code explicit_test_db_access(csm_db_context_t *ctx, csm_array *in,
+                                           csm_array *out, csm_request *request)
+{
+    (void) ctx;
+    (void) in;
+    (void) request;
+    explicit_handler_calls++;
+    return (csm_array_write_u8(out, AXDR_TAG_UNSIGNED8) &&
+            csm_array_write_u8(out, 0x2AU)) ? CSM_OK : CSM_ERR_OBJECT_ERROR;
+}
+
+static csm_db_code poison_global_db_access(csm_db_context_t *ctx, csm_array *in,
+                                           csm_array *out, csm_request *request)
+{
+    (void) ctx;
+    (void) in;
+    (void) out;
+    (void) request;
+    global_handler_calls++;
+    return CSM_ERR_OBJECT_ERROR;
+}
+
 static void test_stack_setup(void)
 {
     csm_sys_init();
@@ -282,6 +307,38 @@ TEST_CASE("Integration_AarqHandshake", "[integration][basic]")
     int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0x61);
+}
+
+TEST_CASE("Services_ExplicitHandlerDoesNotUseGlobalDatabase", "[integration][services]")
+{
+    explicit_handler_calls = 0;
+    global_handler_calls = 0;
+    csm_services_init(poison_global_db_access);
+
+    csm_asso_state state;
+    csm_asso_init(&state);
+    csm_request request;
+    std::memset(&request, 0, sizeof(request));
+    csm_db_context_t db_ctx = { NULL, 0 };
+
+    uint8_t buf[64];
+    csm_array pkt;
+    csm_array_init(&pkt, buf, sizeof(buf), 0, 0);
+    test_build_get(&pkt, 0x33, 1, &obis_data, 2);
+
+    int ret = csm_server_services_execute_handler(explicit_test_db_access,
+                                                  &db_ctx, &state, &request, &pkt);
+    REQUIRE(ret > 0);
+    REQUIRE(explicit_handler_calls == 1);
+    REQUIRE(global_handler_calls == 0);
+    REQUIRE(buf[0] == AXDR_GET_RESPONSE);
+    REQUIRE(buf[1] == 0x01);
+    REQUIRE(buf[2] == 0x33);
+    REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == AXDR_TAG_UNSIGNED8);
+    REQUIRE(buf[5] == 0x2A);
+
+    csm_services_init(test_db_access);
 }
 
 TEST_CASE("Integration_GetClockTime", "[integration][basic]")
