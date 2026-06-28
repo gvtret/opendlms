@@ -156,6 +156,10 @@ jobs:
         working-directory: electron-studio
         run: npm run build:native
 
+      - name: Run native addon tests
+        working-directory: electron-studio
+        run: npm test
+
       - name: Package
         working-directory: electron-studio
         run: npx electron-builder --linux --dir
