@@ -195,7 +195,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 167 test cases with 1440 assertions`.
+  reports `Passed all 169 test cases with 1468 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -266,6 +266,8 @@ not currently form one consistently verified product:
 - Block-read AXDR tests now run in the default Catch2 gate and verify partial
   block detection, block-transfer payload reassembly, recursive nested AXDR
   traversal, and flat tag decoder success behavior.
+- Block transfer tests now verify SET and GET receive accumulation buffers are
+  stored per block state instead of sharing one global receive buffer.
 - HDLC tests now verify undersized frame rejection before parser reads beyond
   the provided buffer.
 - Reader auth tests now verify null-output safety and Public, Reader,

@@ -191,7 +191,8 @@ enum svc_response   { SVC_RESPONSE_NORMAL, SVC_RESPONSE_WITH_DATABLOCK };
 
 /* ── Block Transfer Types (minimal definitions for csm_response) ─────────── */
 
-#define CSM_MAX_BLOCK_SIZE      512U
+#define CSM_MAX_BLOCK_SIZE          512U
+#define CSM_BLOCK_MAX_RECEIVE_SIZE  4096U
 
 typedef enum
 {
@@ -210,6 +211,7 @@ typedef struct
     uint8_t invoke_id;
     uint8_t last_block;
     uint8_t active;
+    uint8_t receive_buf[CSM_BLOCK_MAX_RECEIVE_SIZE];
     const uint8_t *data;
 } csm_block_state;
 
@@ -299,4 +301,3 @@ int csm_sys_gcm_finish(uint8_t channel, uint8_t *tag);
 #endif
 
 #endif // CSM_DEFINITIONS_H
-

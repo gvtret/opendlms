@@ -512,6 +512,38 @@ TEST_CASE("Block receive - start and receive data", "[block_transfer]")
     REQUIRE(received_data[5] == 0x06U);
 }
 
+TEST_CASE("Block receive buffers are per state", "[block_transfer]")
+{
+    csm_block_state state_a;
+    csm_block_state state_b;
+    csm_block_init(&state_a);
+    csm_block_init(&state_b);
+
+    REQUIRE(csm_block_start_receive(&state_a, 0x01U, 0U) == 1);
+    REQUIRE(csm_block_start_receive(&state_b, 0x02U, 0U) == 1);
+
+    static const uint8_t block_a[] = {0xA1, 0xA2};
+    static const uint8_t block_b[] = {0xB1, 0xB2, 0xB3};
+    REQUIRE(csm_block_receive_data(&state_a, block_a, sizeof(block_a), 1) == 1);
+    REQUIRE(csm_block_receive_data(&state_b, block_b, sizeof(block_b), 1) == 1);
+
+    const uint8_t *data_a;
+    const uint8_t *data_b;
+    uint32_t size_a;
+    uint32_t size_b;
+    REQUIRE(csm_block_get_received(&state_a, &data_a, &size_a) == 1);
+    REQUIRE(csm_block_get_received(&state_b, &data_b, &size_b) == 1);
+
+    REQUIRE(data_a != data_b);
+    REQUIRE(size_a == sizeof(block_a));
+    REQUIRE(size_b == sizeof(block_b));
+    REQUIRE(data_a[0] == 0xA1U);
+    REQUIRE(data_a[1] == 0xA2U);
+    REQUIRE(data_b[0] == 0xB1U);
+    REQUIRE(data_b[1] == 0xB2U);
+    REQUIRE(data_b[2] == 0xB3U);
+}
+
 TEST_CASE("Block encode SET response", "[block_transfer]")
 {
     csm_block_state state;
@@ -723,6 +755,38 @@ TEST_CASE("Block GET receive data - multi-block", "[block_transfer]")
     REQUIRE(received_data[3] == 0x04U);
     REQUIRE(received_data[4] == 0x05U);
     REQUIRE(received_data[5] == 0x06U);
+}
+
+TEST_CASE("Block GET receive buffers are per state", "[block_transfer]")
+{
+    csm_block_state state_a;
+    csm_block_state state_b;
+    csm_block_init(&state_a);
+    csm_block_init(&state_b);
+
+    REQUIRE(csm_block_start_get_receive(&state_a, 0x01U, 0U) == 1);
+    REQUIRE(csm_block_start_get_receive(&state_b, 0x02U, 0U) == 1);
+
+    static const uint8_t block_a[] = {0x11, 0x12};
+    static const uint8_t block_b[] = {0x21, 0x22, 0x23};
+    REQUIRE(csm_block_get_receive_data(&state_a, block_a, sizeof(block_a), 1) == 1);
+    REQUIRE(csm_block_get_receive_data(&state_b, block_b, sizeof(block_b), 1) == 1);
+
+    const uint8_t *data_a;
+    const uint8_t *data_b;
+    uint32_t size_a;
+    uint32_t size_b;
+    REQUIRE(csm_block_get_received_data(&state_a, &data_a, &size_a) == 1);
+    REQUIRE(csm_block_get_received_data(&state_b, &data_b, &size_b) == 1);
+
+    REQUIRE(data_a != data_b);
+    REQUIRE(size_a == sizeof(block_a));
+    REQUIRE(size_b == sizeof(block_b));
+    REQUIRE(data_a[0] == 0x11U);
+    REQUIRE(data_a[1] == 0x12U);
+    REQUIRE(data_b[0] == 0x21U);
+    REQUIRE(data_b[1] == 0x22U);
+    REQUIRE(data_b[2] == 0x23U);
 }
 
 TEST_CASE("Block GET receive data - invalid params", "[block_transfer]")

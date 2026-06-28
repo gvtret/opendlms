@@ -19,10 +19,6 @@
 #define AXDR_SET_RESPONSE_WITH_BLOCK    0x02U
 #define AXDR_SET_REQUEST_NORMAL         0x01U
 
-/* ── Receive buffer for SET block transfer ──────────────────────────────── */
-
-#define CSM_BLOCK_MAX_RECEIVE_SIZE  4096U   ///< Max accumulated size for SET receive
-
 /* ── Public API ─────────────────────────────────────────────────────────── */
 
 void csm_block_init(csm_block_state *state)
@@ -311,15 +307,6 @@ int csm_block_encode_set_next(csm_block_state *state, csm_array *array, uint32_t
 
 /* ── Server-side SET receive ────────────────────────────────────────────── */
 
-/*
- * For SET block receive, we use a static buffer per association.
- * In production, this would be dynamically allocated or pool-based.
- * For now, we use a static buffer per block_state.
- */
-
-/* Static receive buffer for each block state (simplified approach) */
-static uint8_t g_block_receive_buf[CSM_BLOCK_MAX_RECEIVE_SIZE];
-
 int csm_block_start_receive(csm_block_state *state, uint8_t invoke_id,
                             uint32_t block_size)
 {
@@ -336,7 +323,7 @@ int csm_block_start_receive(csm_block_state *state, uint8_t invoke_id,
     state->invoke_id = invoke_id;
     state->last_block = 0U;
     state->active = 1U;
-    state->data = g_block_receive_buf;
+    state->data = state->receive_buf;
 
     return 1;
 }
@@ -358,7 +345,7 @@ int csm_block_receive_data(csm_block_state *state, const uint8_t *data,
     /* Copy data into receive buffer */
     if (data_size > 0U)
     {
-        memcpy((void *)&g_block_receive_buf[state->offset], data, data_size);
+        memcpy(&state->receive_buf[state->offset], data, data_size);
     }
 
     state->offset += data_size;
@@ -389,7 +376,7 @@ int csm_block_get_received(const csm_block_state *state, const uint8_t **data,
         return 0;
     }
 
-    *data = g_block_receive_buf;
+    *data = state->receive_buf;
     *data_size = state->total_size;
 
     return 1;
@@ -466,7 +453,7 @@ int csm_block_start_get_receive(csm_block_state *state, uint8_t invoke_id,
     state->invoke_id = invoke_id;
     state->last_block = 0U;
     state->active = 1U;
-    state->data = g_block_receive_buf;
+    state->data = state->receive_buf;
 
     return 1;
 }
@@ -488,7 +475,7 @@ int csm_block_get_receive_data(csm_block_state *state, const uint8_t *data,
     /* Copy data into receive buffer */
     if (data_size > 0U)
     {
-        memcpy((void *)&g_block_receive_buf[state->offset], data, data_size);
+        memcpy(&state->receive_buf[state->offset], data, data_size);
     }
 
     state->offset += data_size;
@@ -519,7 +506,7 @@ int csm_block_get_received_data(const csm_block_state *state, const uint8_t **da
         return 0;
     }
 
-    *data = g_block_receive_buf;
+    *data = state->receive_buf;
     *data_size = state->total_size;
 
     return 1;
