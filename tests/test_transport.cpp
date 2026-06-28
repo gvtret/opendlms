@@ -164,6 +164,8 @@ TEST_CASE("TCP wrapper: frame + deframe roundtrip", "[transport][wrapper]")
     REQUIRE(dest_wport == 0x0010U);
     REQUIRE(out_len == sizeof(apdu));
     REQUIRE(memcmp(out_apdu, apdu, sizeof(apdu)) == 0);
+    REQUIRE(csm_tcp_wrapper_frame(0x0001U, 0x0010U, apdu, 0U,
+                                  framed, sizeof(framed)) == CSM_TRANSPORT_ERR_OVERFLOW);
 }
 
 TEST_CASE("TCP wrapper: reject malformed frames", "[transport][wrapper]")

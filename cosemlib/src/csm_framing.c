@@ -81,7 +81,7 @@ int csm_tcp_wrapper_frame(uint16_t source_wport, uint16_t dest_wport,
                           const uint8_t *apdu, uint32_t apdu_len,
                           uint8_t *out, uint32_t out_size)
 {
-    if (!apdu || !out || apdu_len > CSM_FRAMING_MAX_PDU ||
+    if (!apdu || !out || apdu_len == 0U || apdu_len > CSM_FRAMING_MAX_PDU ||
         apdu_len > 0xFFFFU || out_size < (CSM_TCP_WRAPPER_LEN + apdu_len))
     {
         return CSM_TRANSPORT_ERR_OVERFLOW;
