@@ -31,6 +31,14 @@ extern "C" {
 #include "catch.hpp"
 
 extern "C" void csm_sys_init(void);
+extern "C" {
+typedef enum
+{
+    TEST_SEC_IC_CLIENT,
+    TEST_SEC_IC_SERVER,
+} test_sec_ic_t;
+uint32_t csm_sys_get_ic(uint8_t sap, test_sec_ic_t ic);
+}
 
 static csm_channel test_channels[NUMBER_OF_CHANNELS];
 static csm_asso_state test_asso_states[NUMBER_OF_CHANNELS];
@@ -339,6 +347,16 @@ TEST_CASE("Services_ExplicitHandlerDoesNotUseGlobalDatabase", "[integration][ser
     REQUIRE(buf[5] == 0x2A);
 
     csm_services_init(test_db_access);
+}
+
+TEST_CASE("HAL_InvocationCountersArePerSapAndDirection", "[integration][security]")
+{
+    csm_sys_init();
+
+    uint32_t sap1_client = csm_sys_get_ic(250U, TEST_SEC_IC_CLIENT);
+    REQUIRE(csm_sys_get_ic(250U, TEST_SEC_IC_CLIENT) == sap1_client + 1U);
+    REQUIRE(csm_sys_get_ic(251U, TEST_SEC_IC_CLIENT) == sap1_client);
+    REQUIRE(csm_sys_get_ic(250U, TEST_SEC_IC_SERVER) == sap1_client);
 }
 
 TEST_CASE("Integration_GetClockTime", "[integration][basic]")

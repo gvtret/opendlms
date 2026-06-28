@@ -53,14 +53,12 @@ typedef enum
 } csm_sec_ic;
 
 
-// FIXME: create one pair IC per SAP
-static uint32_t gIc = 0U;
+static uint32_t gIc[256][2];
 
 uint32_t csm_sys_get_ic(uint8_t sap, csm_sec_ic ic)
 {
-    (void) sap;
-    (void) ic;
-    return gIc++;
+    uint8_t dir = (ic == CSM_SEC_IC_SERVER) ? 1U : 0U;
+    return gIc[sap][dir]++;
 }
 
 const uint8_t *csm_sys_get_system_title()

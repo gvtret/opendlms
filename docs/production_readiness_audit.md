@@ -217,6 +217,8 @@ not currently form one consistently verified product:
 - Hardened the shared COSEM-TCP wrapper deframer to reject zero-length APDUs.
 - Hardened the shared COSEM-TCP wrapper framer to reject zero-length APDUs,
   keeping frame/deframe contracts consistent.
+- Replaced single global HAL invocation counters in simulator/test builds with
+  per-SAP, per-direction counters.
 
 ## Verified
 
@@ -226,10 +228,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 171 test cases with 1489 assertions`.
+  reports `Passed all 172 test cases with 1492 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 79 test cases with 739 assertions`.
+  reports `Passed all 80 test cases with 742 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 3`.
