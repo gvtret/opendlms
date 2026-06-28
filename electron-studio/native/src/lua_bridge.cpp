@@ -31,6 +31,56 @@ static void append_print(lua_bridge_t *b, const char *s, uint32_t len)
     b->print_len += len;
 }
 
+static void copy_cstr(char *dst, size_t dst_size, const char *src)
+{
+    if (!dst || dst_size == 0U) return;
+    if (!src) src = "";
+    size_t len = strlen(src);
+    if (len >= dst_size) len = dst_size - 1U;
+    memcpy(dst, src, len);
+    dst[len] = '\0';
+}
+
+static int parse_obis_string(const char *s, csm_obis_code *obis)
+{
+    if (!s || !obis) return 0;
+
+    uint32_t values[6] = {0U, 0U, 0U, 0U, 0U, 0U};
+    uint8_t part = 0U;
+    int have_digit = 0;
+
+    while (*s != '\0')
+    {
+        if (*s >= '0' && *s <= '9')
+        {
+            have_digit = 1;
+            values[part] = values[part] * 10U + (uint32_t)(*s - '0');
+            if (values[part] > 255U) return 0;
+        }
+        else if (*s == '.')
+        {
+            if (!have_digit || part >= 5U) return 0;
+            part++;
+            have_digit = 0;
+        }
+        else
+        {
+            return 0;
+        }
+        s++;
+    }
+
+    if (!have_digit || part != 5U) return 0;
+
+    obis->A = (uint8_t)values[0];
+    obis->B = (uint8_t)values[1];
+    obis->C = (uint8_t)values[2];
+    obis->D = (uint8_t)values[3];
+    obis->E = (uint8_t)values[4];
+    obis->F = (uint8_t)values[5];
+    return 1;
+}
+
 static void close_client(lua_bridge_t *b)
 {
     if (!b) return;
@@ -75,16 +125,9 @@ static int read_obis(lua_State *L, int index, csm_obis_code *obis)
 
     if (lua_isstring(L, index))
     {
-        unsigned int a, b, c, d, e, f;
         const char *s = lua_tostring(L, index);
-        if (sscanf(s, "%u.%u.%u.%u.%u.%u", &a, &b, &c, &d, &e, &f) == 6)
+        if (parse_obis_string(s, obis))
         {
-            obis->A = (uint8_t)a;
-            obis->B = (uint8_t)b;
-            obis->C = (uint8_t)c;
-            obis->D = (uint8_t)d;
-            obis->E = (uint8_t)e;
-            obis->F = (uint8_t)f;
             return 1;
         }
     }
@@ -138,11 +181,13 @@ static int lua_hex(lua_State *L)
     char *buf = (char *)malloc(len * 3 + 1);
     if (!buf) return luaL_error(L, "out of memory");
     char *p = buf;
+    static const char hex[] = "0123456789ABCDEF";
     for (size_t i = 0; i < len; i++)
     {
         if (i > 0) *p++ = ' ';
-        sprintf(p, "%02X", (unsigned char)data[i]);
-        p += 2;
+        unsigned char byte = (unsigned char)data[i];
+        *p++ = hex[(byte >> 4) & 0x0F];
+        *p++ = hex[byte & 0x0F];
     }
     *p = '\0';
     lua_pushstring(L, buf);
@@ -179,7 +224,7 @@ static int lua_connect(lua_State *L)
     const char *host = luaL_checkstring(L, 1);
     int port = (int)luaL_optinteger(L, 2, 4056);
 
-    strncpy(b->host, host, sizeof(b->host) - 1);
+    copy_cstr(b->host, sizeof(b->host), host);
     b->port = (uint16_t)port;
 
     close_client(b);
@@ -420,8 +465,8 @@ int lua_bridge_exec(lua_bridge_t *bridge, const char *script, char *result, uint
         const char *err = lua_tostring(bridge->L, -1);
         if (err)
         {
-            strncpy(bridge->last_error, err, sizeof(bridge->last_error) - 1);
-            if (result) strncpy(result, err, result_size - 1);
+            copy_cstr(bridge->last_error, sizeof(bridge->last_error), err);
+            if (result) copy_cstr(result, result_size, err);
         }
         lua_pop(bridge->L, 1);
         return -1;
@@ -444,8 +489,8 @@ int lua_bridge_exec_file(lua_bridge_t *bridge, const char *filename, char *resul
         const char *err = lua_tostring(bridge->L, -1);
         if (err)
         {
-            strncpy(bridge->last_error, err, sizeof(bridge->last_error) - 1);
-            if (result) strncpy(result, err, result_size - 1);
+            copy_cstr(bridge->last_error, sizeof(bridge->last_error), err);
+            if (result) copy_cstr(result, result_size, err);
         }
         lua_pop(bridge->L, 1);
         return -1;
@@ -480,8 +525,8 @@ int lua_bridge_exec_return(lua_bridge_t *bridge, const char *script, char *resul
             const char *err = lua_tostring(bridge->L, -1);
             if (err)
             {
-                strncpy(bridge->last_error, err, sizeof(bridge->last_error) - 1);
-                if (result) strncpy(result, err, result_size - 1);
+                copy_cstr(bridge->last_error, sizeof(bridge->last_error), err);
+                if (result) copy_cstr(result, result_size, err);
             }
             lua_pop(bridge->L, 1);
             return -1;

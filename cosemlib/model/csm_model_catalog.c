@@ -23,19 +23,83 @@
 static csm_object_t catalog_entries[CSM_MODEL_CATALOG_MAX_ENTRIES];
 static int catalog_count = 0;
 
-static int parse_obis_string(const char *str, csm_obis_code *obis)
+static const char *skip_whitespace(const char *p);
+
+static int parse_uint(const char *str, uint32_t max_value, uint32_t *out)
 {
-    unsigned int a = 0U, b = 0U, c = 0U, d = 0U, e = 0U, f = 0U;
-    if (sscanf(str, "%u.%u.%u.%u.%u.%u", &a, &b, &c, &d, &e, &f) != 6)
+    uint32_t value = 0U;
+    int have_digit = FALSE;
+
+    str = skip_whitespace(str);
+    while ((*str >= '0') && (*str <= '9'))
+    {
+        have_digit = TRUE;
+        value = (value * 10U) + (uint32_t)(*str - '0');
+        if (value > max_value)
+        {
+            return FALSE;
+        }
+        str++;
+    }
+
+    if (!have_digit)
     {
         return FALSE;
     }
-    obis->A = (uint8_t)a;
-    obis->B = (uint8_t)b;
-    obis->C = (uint8_t)c;
-    obis->D = (uint8_t)d;
-    obis->E = (uint8_t)e;
-    obis->F = (uint8_t)f;
+
+    *out = value;
+    return TRUE;
+}
+
+static int parse_obis_string(const char *str, csm_obis_code *obis)
+{
+    uint32_t values[6] = { 0U, 0U, 0U, 0U, 0U, 0U };
+    uint8_t part = 0U;
+    int have_digit = FALSE;
+
+    if ((str == NULL) || (obis == NULL))
+    {
+        return FALSE;
+    }
+
+    while (*str != '\0')
+    {
+        if ((*str >= '0') && (*str <= '9'))
+        {
+            have_digit = TRUE;
+            values[part] = (values[part] * 10U) + (uint32_t)(*str - '0');
+            if (values[part] > 255U)
+            {
+                return FALSE;
+            }
+        }
+        else if (*str == '.')
+        {
+            if (!have_digit || (part >= 5U))
+            {
+                return FALSE;
+            }
+            part++;
+            have_digit = FALSE;
+        }
+        else
+        {
+            return FALSE;
+        }
+        str++;
+    }
+
+    if (!have_digit || (part != 5U))
+    {
+        return FALSE;
+    }
+
+    obis->A = (uint8_t)values[0];
+    obis->B = (uint8_t)values[1];
+    obis->C = (uint8_t)values[2];
+    obis->D = (uint8_t)values[3];
+    obis->E = (uint8_t)values[4];
+    obis->F = (uint8_t)values[5];
     return TRUE;
 }
 
@@ -68,8 +132,8 @@ static int parse_line(const char *line)
         {
             return FALSE;
         }
-        unsigned int val = 0U;
-        if (sscanf(p + 9, "%u", &val) != 1)
+        uint32_t val = 0U;
+        if (parse_uint(p + 9, 0xFFFFU, &val) != TRUE)
         {
             return FALSE;
         }
@@ -111,8 +175,8 @@ static int parse_line(const char *line)
         {
             return FALSE;
         }
-        unsigned int val = 0U;
-        if (sscanf(p + 8, "%u", &val) != 1)
+        uint32_t val = 0U;
+        if (parse_uint(p + 8, 0xFFU, &val) != TRUE)
         {
             return FALSE;
         }
@@ -132,8 +196,8 @@ static int parse_line(const char *line)
         const char *rest = skip_whitespace(p + 1);
         if (starts_with(rest, "class_id:"))
         {
-            unsigned int val = 0U;
-            if (sscanf(rest + 9, "%u", &val) == 1)
+            uint32_t val = 0U;
+            if (parse_uint(rest + 9, 0xFFFFU, &val) == TRUE)
             {
                 catalog_entries[catalog_count - 1].class_id = (uint16_t)val;
             }
