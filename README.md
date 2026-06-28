@@ -2,7 +2,7 @@
 
 Open-source DLMS/COSEM protocol stack (IEC 62056) in pure C99, MIT-licensed.
 
-**Version 1.1.0** — Production-ready library for smart meters, head-end tools, and gateways.
+**Version 1.1.0** — DLMS/COSEM core, reader/server APIs, simulator examples, and Electron Studio tooling for smart meters, head-end tools, and gateways.
 
 ## Features
 
@@ -10,10 +10,10 @@ Open-source DLMS/COSEM protocol stack (IEC 62056) in pure C99, MIT-licensed.
 - **Full DLMS/COSEM** — BER/AXDR codec, associations, GET/SET/ACTION, block transfer
 - **Security** — LLS, HLS (GMAC, MD5, SHA-256), Kuznyechik, Streebog (GOST)
 - **Thread-safe** — context-based API, no global mutable state
-- **100 IC classes** — 98 IEC 62056-6-2 + 2 SPODUS extensions
+- **COSEM IC model** — built-in handlers for common IEC 62056-6-2 objects and SPODUS extensions
 - **Block Transfer (GBT)** — GET and SET with automatic block splitting/assembly
 - **Transport** — TCP/IP, HDLC framing, COSEM-TCP wrapper
-- **130+ unit tests** — Catch2 framework with integration tests
+- **170+ tests** — Catch2, CTest smoke tests, and live reader/simulator coverage
 
 ## Quick Start
 
@@ -123,13 +123,13 @@ opendlms/
 │   ├── ic/            # COSEM IC class implementations
 │   └── util/          # OS abstractions, clock, bitfield
 ├── server/            # Server-side COSEM objects
-├── client/            # Client command-line tool
+├── client/            # Restored C reader API and opt-in legacy JSON client
 ├── examples/          # Example applications
 │   ├── metersimulator/
-│   ├── cosemreader/
+│   ├── reader_lab/
 │   └── embeddedmeter/
 ├── tests/             # Unit tests (Catch2)
-└── studio/            # GUI tool (Qt, WIP)
+└── electron-studio/   # Electron Studio native bindings and Lua bridge
 ```
 
 ## Build Options
@@ -139,7 +139,9 @@ opendlms/
 | `OPEN_DLMS_BUILD_TESTS` | ON | Build unit tests |
 | `OPEN_DLMS_BUILD_SERVER` | ON | Build server library |
 | `OPEN_DLMS_BUILD_METER_SIM` | OFF | Build meter simulator |
-| `OPEN_DLMS_BUILD_CLIENT` | OFF | Build client tool |
+| `OPEN_DLMS_BUILD_CLIENT` | OFF | Build restored `opendlms_reader` C API |
+| `OPEN_DLMS_BUILD_LEGACY_JSON_CLIENT` | OFF | Build legacy JSON CLI; requires external Gurux headers |
+| `OPEN_DLMS_BUILD_READER_LAB` | OFF | Build TCP-wrapper reader example |
 | `OPEN_DLMS_BUILD_STUDIO` | OFF | Build Qt GUI |
 | `COSEMLIB_SHARED` | OFF | Build shared library |
 
