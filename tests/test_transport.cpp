@@ -295,6 +295,18 @@ TEST_CASE("TCP transport: manual accept respects timeout", "[transport][tcp]")
     csm_transport_tcp_destroy(&transport);
 }
 
+TEST_CASE("TCP transport: public connect and accept reject null contexts", "[transport][tcp]")
+{
+    csm_transport transport;
+    transport.ops = nullptr;
+    transport.ctx = nullptr;
+
+    REQUIRE(csm_transport_tcp_connect(nullptr, 0U) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_transport_tcp_connect(&transport, 0U) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_transport_tcp_accept(nullptr, 0U) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_transport_tcp_accept(&transport, 0U) == CSM_TRANSPORT_ERR);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* Generic framing dispatch tests                                           */
 /* ══════════════════════════════════════════════════════════════════════════ */

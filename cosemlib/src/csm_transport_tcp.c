@@ -491,7 +491,7 @@ void csm_transport_tcp_set_event_cb(csm_transport *transport,
 
 int csm_transport_tcp_accept(csm_transport *transport, uint32_t timeout_ms)
 {
-    if (!transport) return CSM_TRANSPORT_ERR;
+    if (!transport || !transport->ctx) return CSM_TRANSPORT_ERR;
     csm_tcp_context *c = (csm_tcp_context *)transport->ctx;
 
     if (!c->is_server || c->listen_fd == SOCK_INVALID)
@@ -526,7 +526,7 @@ int csm_transport_tcp_accept(csm_transport *transport, uint32_t timeout_ms)
 int csm_transport_tcp_connect(csm_transport *transport, uint32_t timeout_ms)
 {
     (void)timeout_ms;
-    if (!transport) return CSM_TRANSPORT_ERR;
+    if (!transport || !transport->ctx) return CSM_TRANSPORT_ERR;
     csm_tcp_context *c = (csm_tcp_context *)transport->ctx;
     if (c->channels[0].connected) return CSM_TRANSPORT_OK;
 

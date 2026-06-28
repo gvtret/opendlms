@@ -180,6 +180,8 @@ not currently form one consistently verified product:
   no-op and added native addon tests for wait and validation behavior.
 - Fixed TCP server accept paths so receive and manual accept honor configured
   timeouts instead of blocking indefinitely when no client connects.
+- Hardened public TCP transport connect/accept helpers against null transport
+  contexts.
 
 ## Verified
 
@@ -189,7 +191,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 163 test cases with 1415 assertions`.
+  reports `Passed all 164 test cases with 1419 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -270,6 +272,8 @@ not currently form one consistently verified product:
   socket reads.
 - TCP transport tests now verify server-side receive accept and manual accept
   return timeout when no client connects.
+- TCP transport tests now verify public connect/accept helpers reject null
+  transport contexts.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
   followed by `cmake --build build-audit-client -j2`.
