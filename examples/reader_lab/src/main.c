@@ -252,6 +252,36 @@ static int parse_obis(const char *str, csm_obis_code *obis, uint16_t *class_id)
     return 0;
 }
 
+static int parse_decimal_int(const char *str, int min_value, int max_value, int *out)
+{
+    int value = 0;
+
+    if ((str == NULL) || (out == NULL) || (min_value > max_value) ||
+        (*str < '0') || (*str > '9'))
+    {
+        return -1;
+    }
+
+    while ((*str >= '0') && (*str <= '9'))
+    {
+        int digit = *str - '0';
+        if (value > ((max_value - digit) / 10))
+        {
+            return -1;
+        }
+        value = (value * 10) + digit;
+        str++;
+    }
+
+    if ((*str != '\0') || (value < min_value))
+    {
+        return -1;
+    }
+
+    *out = value;
+    return 0;
+}
+
 static int hex_nibble(char c)
 {
     if (c >= '0' && c <= '9')
@@ -393,7 +423,11 @@ int main(int argc, char **argv)
     }
     if (argc >= 4)
     {
-        port = atoi(argv[3]);
+        if (parse_decimal_int(argv[3], 1, 65535, &port) != 0)
+        {
+            fprintf(stderr, "Bad port: %s\n", argv[3]);
+            return 1;
+        }
     }
 
     for (int i = 4; i < argc; i++)
@@ -408,23 +442,43 @@ int main(int argc, char **argv)
         }
         else if (strncmp(argv[i], "class=", 6) == 0)
         {
-            class_override = atoi(argv[i] + 6);
+            if (parse_decimal_int(argv[i] + 6, 0, 65535, &class_override) != 0)
+            {
+                fprintf(stderr, "Bad class id: %s\n", argv[i] + 6);
+                return 1;
+            }
         }
         else if (strncmp(argv[i], "attr=", 5) == 0)
         {
-            attr_override = atoi(argv[i] + 5);
+            if (parse_decimal_int(argv[i] + 5, 1, 255, &attr_override) != 0)
+            {
+                fprintf(stderr, "Bad attr id: %s\n", argv[i] + 5);
+                return 1;
+            }
         }
         else if (strncmp(argv[i], "sap=", 4) == 0)
         {
-            source_wport_override = atoi(argv[i] + 4);
+            if (parse_decimal_int(argv[i] + 4, 1, 65535, &source_wport_override) != 0)
+            {
+                fprintf(stderr, "Bad SAP: %s\n", argv[i] + 4);
+                return 1;
+            }
         }
         else if (strncmp(argv[i], "dest=", 5) == 0)
         {
-            dest_wport_override = atoi(argv[i] + 5);
+            if (parse_decimal_int(argv[i] + 5, 1, 65535, &dest_wport_override) != 0)
+            {
+                fprintf(stderr, "Bad destination SAP: %s\n", argv[i] + 5);
+                return 1;
+            }
         }
         else if (strncmp(argv[i], "set-u32=", 8) == 0)
         {
-            set_u32 = atoi(argv[i] + 8);
+            if (parse_decimal_int(argv[i] + 8, 0, 2147483647, &set_u32) != 0)
+            {
+                fprintf(stderr, "Bad set-u32 value: %s\n", argv[i] + 8);
+                return 1;
+            }
         }
         else if (strncmp(argv[i], "set-hex=", 8) == 0)
         {
@@ -432,7 +486,11 @@ int main(int argc, char **argv)
         }
         else if (strncmp(argv[i], "action=", 7) == 0)
         {
-            action_method = atoi(argv[i] + 7);
+            if (parse_decimal_int(argv[i] + 7, 1, 255, &action_method) != 0)
+            {
+                fprintf(stderr, "Bad action id: %s\n", argv[i] + 7);
+                return 1;
+            }
         }
         else
         {

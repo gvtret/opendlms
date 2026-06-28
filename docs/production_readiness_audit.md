@@ -211,6 +211,9 @@ not currently form one consistently verified product:
   partial socket writes.
 - Hardened the live meter simulator TCP wrapper handler against null buffers,
   invalid channel ids, and payload sizes outside the supplied memory buffer.
+- Replaced `reader_lab` numeric option parsing with strict bounded decimal
+  parsing so malformed ports, SAPs, class ids, attributes, SET values, and
+  ACTION ids fail before network setup.
 
 ## Verified
 
