@@ -221,6 +221,9 @@ not currently form one consistently verified product:
   per-SAP, per-direction counters.
 - Replaced the missing legacy Qt Studio `add_subdirectory(studio)` failure with
   an explicit CMake diagnostic pointing users to `electron-studio`.
+- Fixed installed `cosemlib` public headers so downstream projects using
+  `find_package(OpenDLMS)` can include `cosemlib.h`, transport, framing, and
+  security headers from the install prefix.
 
 ## Verified
 

@@ -93,10 +93,30 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:include/opendlms>
 )
 
+set(COSEMLIB_PUBLIC_HEADERS
+    src/cosemlib.h
+    src/csm_array.h
+    src/csm_association.h
+    src/csm_axdr_codec.h
+    src/csm_ber.h
+    src/csm_block_transfer.h
+    src/csm_channel.h
+    src/csm_config.h
+    src/csm_definitions.h
+    src/csm_framing.h
+    src/csm_keyring.h
+    src/csm_security.h
+    src/csm_security_suite.h
+    src/csm_server.h
+    src/csm_services.h
+    src/csm_transport.h
+    src/csm_transport_tcp.h
+)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-    PUBLIC_HEADER "src/cosemlib.h;src/csm_definitions.h;src/csm_array.h;src/csm_services.h;src/csm_server.h;src/csm_block_transfer.h;src/csm_channel.h"
+    PUBLIC_HEADER "${COSEMLIB_PUBLIC_HEADERS}"
     C_STANDARD 99
     C_STANDARD_REQUIRED ON
 )
