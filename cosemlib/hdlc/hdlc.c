@@ -658,7 +658,7 @@ int hdlc_decode(hdlc_t *hdlc, const uint8_t *buf, uint16_t size)
                 // Sanity check:
                 if (ret == HDLC_OK)
                 {
-                    uint16_t dummy; // stub temporary variable
+                    uint16_t unused_address;
 
                     const uint8_t* ptr = &buf[3];
 
@@ -675,7 +675,7 @@ int hdlc_decode(hdlc_t *hdlc, const uint8_t *buf, uint16_t size)
                         // client address is always transmitted on 1 byte
                         if (addr_size == 1)
                         {
-                            ret = hdlc_get_addr(ptr, addr_size, &hdlc->client_addr, &dummy);
+                            ret = hdlc_get_addr(ptr, addr_size, &hdlc->client_addr, &unused_address);
                         }
                         else
                         {
@@ -694,7 +694,7 @@ int hdlc_decode(hdlc_t *hdlc, const uint8_t *buf, uint16_t size)
                             // client address is always transmitted on 1 byte
                             if (addr_size == 1U)
                             {
-                                ret = hdlc_get_addr(ptr, addr_size, &hdlc->client_addr, &dummy);
+                                ret = hdlc_get_addr(ptr, addr_size, &hdlc->client_addr, &unused_address);
                             }
                             else
                             {
@@ -806,5 +806,3 @@ void hdlc_print_result(hdlc_t *hdlc, int code)
 		printf("Unknown error code: %d\r\n", code);
 	}
 }
-
-
