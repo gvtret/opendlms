@@ -189,6 +189,8 @@ not currently form one consistently verified product:
 - Removed the temporary global database-handler swap from explicit service
   execution so independent channel/server contexts dispatch through their own
   handlers without mutating shared state.
+- Replaced the reader HAL 16-byte hex-key parser with strict bounded parsing
+  and added a dedicated CTest smoke for valid, short, long, and non-hex inputs.
 
 ## Verified
 
@@ -204,7 +206,7 @@ not currently form one consistently verified product:
   reports `Passed all 78 test cases with 729 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
-  reports `100% tests passed, 0 tests failed out of 2`.
+  reports `100% tests passed, 0 tests failed out of 3`.
 - Integration tests now verify Clock time AXDR payload and SET/GET round-trip.
 - Integration tests now verify Clock action handling for quarter-hour adjustment
   and preset-time failure behavior.

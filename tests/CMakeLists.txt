@@ -37,3 +37,15 @@ endif()
 
 enable_testing()
 add_test(NAME cosemtest COMMAND ${PROJECT_NAME})
+
+if(OPEN_DLMS_BUILD_CLIENT)
+    add_executable(reader_hal_smoke
+        reader_hal_smoke.c
+        ../client/lib/reader_hal.c
+    )
+    target_include_directories(reader_hal_smoke PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../client/include
+    )
+    target_link_libraries(reader_hal_smoke PUBLIC cosemlib)
+    add_test(NAME reader_hal_smoke COMMAND reader_hal_smoke)
+endif()

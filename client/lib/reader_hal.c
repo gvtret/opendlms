@@ -38,30 +38,44 @@ static uint32_t reader_ic_store[16];
 
 static mbedtls_gcm_context reader_gcm_ctx[READER_HAL_MAX_CHANNELS];
 
+static int reader_hex_value(char ch)
+{
+    if ((ch >= '0') && (ch <= '9'))
+    {
+        return ch - '0';
+    }
+    if ((ch >= 'a') && (ch <= 'f'))
+    {
+        return 10 + (ch - 'a');
+    }
+    if ((ch >= 'A') && (ch <= 'F'))
+    {
+        return 10 + (ch - 'A');
+    }
+    return -1;
+}
+
 static int reader_parse_hex16(const char *hex, uint8_t *out)
 {
-    unsigned int b[16];
-    int          n;
-    uint32_t     i;
-
     if ((hex == NULL) || (out == NULL))
     {
         return -1;
     }
 
-    n = sscanf(hex,
-               "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-               &b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6], &b[7], &b[8], &b[9],
-               &b[10], &b[11], &b[12], &b[13], &b[14], &b[15]);
-
-    if (n != 16)
+    if (strlen(hex) != 32U)
     {
         return -1;
     }
 
-    for (i = 0U; i < 16U; i++)
+    for (uint32_t i = 0U; i < 16U; i++)
     {
-        out[i] = (uint8_t)b[i];
+        int hi = reader_hex_value(hex[i * 2U]);
+        int lo = reader_hex_value(hex[(i * 2U) + 1U]);
+        if ((hi < 0) || (lo < 0))
+        {
+            return -1;
+        }
+        out[i] = (uint8_t)((hi << 4) | lo);
     }
 
     return 0;
