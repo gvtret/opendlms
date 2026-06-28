@@ -84,7 +84,17 @@ int tcp_data_handler(uint8_t channel, memory_t *b, uint32_t payload_size)
     uint16_t version;
     uint16_t apdu_size;
     csm_array packet;
-    uint8_t *buffer = b->data + b->offset;
+    uint8_t *buffer;
+
+    if ((b == NULL) || (b->data == NULL) || (b->offset > b->max_size) ||
+        (payload_size > (b->max_size - b->offset)) ||
+        (payload_size <= COSEM_WRAPPER_SIZE) || (channel >= NUMBER_OF_CHANNELS))
+    {
+        CSM_ERR("[LLC] Bad Packet received");
+        return ret;
+    }
+
+    buffer = b->data + b->offset;
 
     // The TCP/IP Cosem packet is sent with a header. See GreenBook 8 7.3.3.2 The wrapper protocol data unit (WPDU)
 
@@ -96,44 +106,37 @@ int tcp_data_handler(uint8_t channel, memory_t *b, uint32_t payload_size)
 
     print_hex((uint8_t *)buffer, payload_size);
 
-    if ((payload_size > COSEM_WRAPPER_SIZE) && (channel < NUMBER_OF_CHANNELS))
+    version = GET_BE16(&buffer[0U]);
+    channels[channel].request.llc.ssap = GET_BE16(&buffer[2]);
+    channels[channel].request.llc.dsap = GET_BE16(&buffer[4]);
+    apdu_size = GET_BE16(&buffer[6]);
+
+    // Sanity check of the packet
+    if ((payload_size == ((uint32_t)apdu_size + COSEM_WRAPPER_SIZE)) && (version == COSEM_WRAPPER_VERSION))
     {
-        version = GET_BE16(&buffer[0U]);
-        channels[channel].request.llc.ssap = GET_BE16(&buffer[2]);
-        channels[channel].request.llc.dsap = GET_BE16(&buffer[4]);
-        apdu_size = GET_BE16(&buffer[6]);
+        print_hex((uint8_t *)&b->data[BUF_APDU_OFFSET], apdu_size);
 
-        // Sanity check of the packet
-        if ((payload_size == (apdu_size + COSEM_WRAPPER_SIZE)) &&(version == COSEM_WRAPPER_VERSION))
+        // Then decode the packet, the reply, if any is located in the buffer
+        // The reply is valid if the return code is > 0
+        csm_array_init(&packet, (uint8_t *)&b->data[0], b->max_size, apdu_size, BUF_APDU_OFFSET);
+        ret = csm_channel_execute(&gDbContext, channel, &packet);
+
+        if (ret > 0)
         {
-            print_hex((uint8_t *)&b->data[BUF_APDU_OFFSET], apdu_size);
+            print_hex((uint8_t *)&b->data[BUF_APDU_OFFSET], ret);
 
-            // Then decode the packet, the reply, if any is located in the buffer
-            // The reply is valid if the return code is > 0
-            csm_array_init(&packet, (uint8_t *)&b->data[0], b->max_size, apdu_size, BUF_APDU_OFFSET);
-            ret = csm_channel_execute(&gDbContext, channel, &packet);
+            // Set Version
+            PUT_BE16(&buffer[0], version);
 
-            if (ret > 0)
-            {
-                print_hex((uint8_t *)&b->data[BUF_APDU_OFFSET], ret);
+            // Swap SSAP and DSAP
+            PUT_BE16(&buffer[2], channels[channel].request.llc.dsap);
+            PUT_BE16(&buffer[4], channels[channel].request.llc.ssap);
 
-                // Set Version
-                PUT_BE16(&buffer[0], version);
+            // Update Cosem Wrapper length
+            PUT_BE16(&buffer[6], (uint16_t) ret);
 
-                // Swap SSAP and DSAP
-                PUT_BE16(&buffer[2], channels[channel].request.llc.dsap);
-                PUT_BE16(&buffer[4], channels[channel].request.llc.ssap);
-
-                // Update Cosem Wrapper length
-                PUT_BE16(&buffer[6], (uint16_t) ret);
-
-                // Add wrapper size to the data packet size
-                ret += COSEM_WRAPPER_SIZE;
-            }
-        }
-        else
-        {
-            CSM_ERR("[LLC] Bad Packet received");
+            // Add wrapper size to the data packet size
+            ret += COSEM_WRAPPER_SIZE;
         }
     }
     else

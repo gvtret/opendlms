@@ -209,6 +209,8 @@ not currently form one consistently verified product:
 - Hardened the restored C reader TCP-wrapper transport to reject malformed,
   zero-length, and wrong-wPort response frames, and made `reader_lab` drain
   partial socket writes.
+- Hardened the live meter simulator TCP wrapper handler against null buffers,
+  invalid channel ids, and payload sizes outside the supplied memory buffer.
 
 ## Verified
 
