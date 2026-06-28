@@ -13,10 +13,25 @@ add_library(opendlms_reader STATIC
 )
 
 target_include_directories(opendlms_reader PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include/opendlms>
 )
 
 target_link_libraries(opendlms_reader PUBLIC cosemlib)
+
+set_target_properties(opendlms_reader PROPERTIES
+    PUBLIC_HEADER "include/opendlms_reader.h;include/opendlms_reader_auth.h;include/reader_hal.h"
+)
+
+include(GNUInstallDirs)
+
+install(TARGETS opendlms_reader
+    EXPORT OpenDLMSConfig
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/opendlms
+)
 
 if(OPEN_DLMS_BUILD_LEGACY_JSON_CLIENT)
     find_path(OPEN_DLMS_GURUX_JSON_INCLUDE_DIR JsonReader.h)

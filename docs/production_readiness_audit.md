@@ -224,6 +224,8 @@ not currently form one consistently verified product:
 - Fixed installed `cosemlib` public headers so downstream projects using
   `find_package(OpenDLMS)` can include `cosemlib.h`, transport, framing, and
   security headers from the install prefix.
+- Added install/export rules for `opendlms_reader` so downstream projects can
+  link `OpenDLMS::opendlms_reader` when `OPEN_DLMS_BUILD_CLIENT=ON`.
 
 ## Verified
 

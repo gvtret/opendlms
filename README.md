@@ -40,6 +40,9 @@ find_package(OpenDLMS REQUIRED)
 target_link_libraries(myapp OpenDLMS::cosemlib)
 ```
 
+When `OPEN_DLMS_BUILD_CLIENT=ON` is enabled and installed, the restored reader
+API is exported as `OpenDLMS::opendlms_reader`.
+
 **pkg-config:**
 ```bash
 gcc -o myapp myapp.c $(pkg-config --cflags --libs opendlms)
