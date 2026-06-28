@@ -37,6 +37,7 @@ static uint8_t reader_ded_valid[READER_HAL_MAX_SAP];
 static uint32_t reader_ic_store[16];
 
 static mbedtls_gcm_context reader_gcm_ctx[READER_HAL_MAX_CHANNELS];
+static uint8_t reader_gcm_active[READER_HAL_MAX_CHANNELS];
 
 static int reader_hex_value(char ch)
 {
@@ -265,23 +266,36 @@ int csm_sys_gcm_init(uint8_t channel, uint8_t sap, csm_sec_key key_id, csm_sec_m
 
     int mbed_mode = (mode == CSM_SEC_ENCRYPT) ? MBEDTLS_GCM_ENCRYPT : MBEDTLS_GCM_DECRYPT;
 
+    if (reader_gcm_active[channel] != 0U)
+    {
+        mbedtls_gcm_free(&reader_gcm_ctx[channel]);
+        reader_gcm_active[channel] = 0U;
+    }
+
     mbedtls_gcm_init(&reader_gcm_ctx[channel]);
     {
         unsigned int key_bits = (csm_sys_get_key_len(sap, key_id) == 32U) ? 256U : 128U;
         if (mbedtls_gcm_setkey(&reader_gcm_ctx[channel], MBEDTLS_CIPHER_ID_AES,
                                key, key_bits) != 0)
         {
+            mbedtls_gcm_free(&reader_gcm_ctx[channel]);
             return 0;
         }
     }
-    return (mbedtls_gcm_starts(&reader_gcm_ctx[channel], mbed_mode, iv, 12, aad, aad_len) == 0)
-               ? 1
-               : 0;
+    if (mbedtls_gcm_starts(&reader_gcm_ctx[channel], mbed_mode, iv, 12, aad, aad_len) != 0)
+    {
+        mbedtls_gcm_free(&reader_gcm_ctx[channel]);
+        return 0;
+    }
+
+    reader_gcm_active[channel] = 1U;
+    return 1;
 }
 
 int csm_sys_gcm_update(uint8_t channel, const uint8_t *plain, uint32_t plain_len, uint8_t *crypt)
 {
-    if ((channel >= READER_HAL_MAX_CHANNELS) || ((plain_len > 0U) && ((plain == NULL) || (crypt == NULL))))
+    if ((channel >= READER_HAL_MAX_CHANNELS) || (reader_gcm_active[channel] == 0U) ||
+        ((plain_len > 0U) && ((plain == NULL) || (crypt == NULL))))
     {
         return 0;
     }
@@ -290,11 +304,14 @@ int csm_sys_gcm_update(uint8_t channel, const uint8_t *plain, uint32_t plain_len
 
 int csm_sys_gcm_finish(uint8_t channel, uint8_t *tag)
 {
-    if ((channel >= READER_HAL_MAX_CHANNELS) || (tag == NULL))
+    if ((channel >= READER_HAL_MAX_CHANNELS) || (reader_gcm_active[channel] == 0U) || (tag == NULL))
     {
         return 0;
     }
-    return (mbedtls_gcm_finish(&reader_gcm_ctx[channel], tag, 16) == 0) ? 1 : 0;
+    int rc = mbedtls_gcm_finish(&reader_gcm_ctx[channel], tag, 16);
+    mbedtls_gcm_free(&reader_gcm_ctx[channel]);
+    reader_gcm_active[channel] = 0U;
+    return (rc == 0) ? 1 : 0;
 }
 
 uint8_t csm_hal_get_random_u8(uint8_t min, uint8_t max)
