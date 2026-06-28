@@ -9,6 +9,8 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <chrono>
+#include <thread>
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -119,8 +121,11 @@ static int lua_print(lua_State *L)
 static int lua_delay(lua_State *L)
 {
     int ms = (int)luaL_checkinteger(L, 1);
-    (void)ms;
-    /* no-op for now */
+    if (ms < 0)
+    {
+        return luaL_error(L, "delay must be non-negative");
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
     return 0;
 }
 

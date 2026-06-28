@@ -176,6 +176,8 @@ not currently form one consistently verified product:
   ports, payload length, malformed version, and truncated frame detection.
 - Fixed `csm_transport_tcp` receive handling so TCP wrapper frames split across
   multiple socket reads are accumulated until a complete APDU is available.
+- Implemented Studio Lua `delay(ms)` as a real non-negative sleep instead of a
+  no-op and added native addon tests for wait and validation behavior.
 
 ## Verified
 
@@ -276,7 +278,7 @@ not currently form one consistently verified product:
   `JsonReader.h`, `JsonValue.h`, `JsonWriter.h`, and `Util.h` headers.
 - Electron native addon rebuilds successfully.
 - Electron native tests pass:
-  `npm test` reports `44 tests, 44 passed, 0 failed`.
+  `npm test` reports `46 tests, 46 passed, 0 failed`.
 - LuaBridge live smoke passes against a freshly built simulator on port 4165:
   `npm run test:live -- 4165` reports a non-empty object-list response.
 - `reader_lab` builds from a clean CMake directory with

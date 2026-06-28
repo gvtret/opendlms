@@ -100,6 +100,21 @@ test('execReturn: obis function', () => {
     assert.strictEqual(result, 'table');
 });
 
+test('execReturn: delay waits', () => {
+    const lb = new native.LuaBridge();
+    const start = Date.now();
+    const result = lb.execReturn('delay(30)');
+    const elapsed = Date.now() - start;
+    assert.strictEqual(result, '');
+    assert.ok(elapsed >= 20, `delay returned too early: ${elapsed}ms`);
+});
+
+test('execReturn: delay rejects negative values', () => {
+    const lb = new native.LuaBridge();
+    lb.execReturn('delay(-1)');
+    assert.ok(lb.getError().includes('delay must be non-negative'));
+});
+
 test('execReturn: print captures output', () => {
     const lb = new native.LuaBridge();
     lb.execReturn('print("test output")');
