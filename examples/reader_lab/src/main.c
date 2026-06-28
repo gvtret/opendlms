@@ -122,12 +122,23 @@ static void tcp_close(void)
 static int tcp_io_write(void *ctx, const uint8_t *buf, uint32_t len)
 {
     (void)ctx;
+    uint32_t total = 0U;
+
+    while (total < len)
+    {
 #if defined(_WIN32) || defined(WIN32)
-    int sent = send(g_sock, (const char *)buf, (int)len, 0);
+        int sent = send(g_sock, (const char *)buf + total, (int)(len - total), 0);
 #else
-    ssize_t sent = send(g_sock, buf, len, 0);
+        ssize_t sent = send(g_sock, buf + total, len - total, 0);
 #endif
-    return (sent == (int)len) ? (int)len : -1;
+        if (sent <= 0)
+        {
+            return -1;
+        }
+        total += (uint32_t)sent;
+    }
+
+    return (int)total;
 }
 
 static int tcp_io_read(void *ctx, uint8_t *buf, uint32_t len, uint32_t timeout_ms)

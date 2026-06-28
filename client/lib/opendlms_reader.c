@@ -44,6 +44,11 @@ static int reader_transport_recv(void *ctx, uint8_t channel, uint8_t *buf, uint3
     (void)channel;
     opendlms_reader_session_t *session = (opendlms_reader_session_t *)ctx;
     uint8_t header[CSM_TCP_WRAPPER_LEN];
+    uint8_t frame[CSM_WRAPPER_MAX_LEN];
+    const uint8_t *apdu = NULL;
+    uint32_t apdu_len = 0U;
+    uint16_t source_wport = 0U;
+    uint16_t dest_wport = 0U;
 
     if (!session || !session->io.read || !buf)
     {
@@ -56,18 +61,32 @@ static int reader_transport_recv(void *ctx, uint8_t channel, uint8_t *buf, uint3
         return (n == 0) ? CSM_TRANSPORT_ERR_TIMEOUT : CSM_TRANSPORT_ERR_IO;
     }
 
-    uint16_t apdu_len = (uint16_t)((header[6] << 8U) | header[7]);
-    if (apdu_len > buf_size)
+    uint16_t header_apdu_len = (uint16_t)((header[6] << 8U) | header[7]);
+    if ((header_apdu_len == 0U) || (header_apdu_len > buf_size) ||
+        ((uint32_t)header_apdu_len + CSM_TCP_WRAPPER_LEN > sizeof(frame)))
     {
         return CSM_TRANSPORT_ERR_OVERFLOW;
     }
 
-    n = session->io.read(session->io.ctx, buf, apdu_len, timeout_ms);
-    if (n != (int)apdu_len)
+    memcpy(frame, header, sizeof(header));
+    n = session->io.read(session->io.ctx, frame + CSM_TCP_WRAPPER_LEN, header_apdu_len, timeout_ms);
+    if (n != (int)header_apdu_len)
     {
         return (n == 0) ? CSM_TRANSPORT_ERR_TIMEOUT : CSM_TRANSPORT_ERR_IO;
     }
 
+    int rc = csm_tcp_wrapper_deframe(frame, (uint32_t)header_apdu_len + CSM_TCP_WRAPPER_LEN,
+                                     &apdu, &apdu_len, &source_wport, &dest_wport);
+    if (rc != CSM_TRANSPORT_OK)
+    {
+        return rc;
+    }
+    if ((source_wport != session->dest_wport) || (dest_wport != session->source_wport))
+    {
+        return CSM_TRANSPORT_ERR_FRAMING;
+    }
+
+    memcpy(buf, apdu, apdu_len);
     return (int)apdu_len;
 }
 
