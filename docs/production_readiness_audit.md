@@ -197,6 +197,9 @@ not currently form one consistently verified product:
 - Fixed the simulator HAL to use its SAP configuration for keys, LLS password,
   and mechanism lookup, added GCM bounds checks, and aligned `reader_lab reader`
   with a working 32-to-1 LLS association covered by live smoke.
+- Implemented HAL selective-access payload pass-through for simulator/test
+  builds so services no longer reject every selective-access request during
+  decoding.
 
 ## Verified
 
@@ -206,10 +209,10 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 170 test cases with 1477 assertions`.
+  reports `Passed all 171 test cases with 1487 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 78 test cases with 729 assertions`.
+  reports `Passed all 79 test cases with 739 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 3`.

@@ -167,11 +167,12 @@ void csm_hal_get_lls_password(uint8_t sap, uint8_t *buf, uint8_t max_size)
 
 int csm_hal_decode_selective_access(csm_request *request, csm_array *array)
 {
-    (void) request;
-    (void) array;
-
-    // FIXME: decode selective access for the server
-    return FALSE;
+    if ((request == NULL) || (array == NULL))
+    {
+        return FALSE;
+    }
+    request->db_request.sel_access.data = *array;
+    return TRUE;
 }
 
 
@@ -240,5 +241,4 @@ static const cfg_cosem cDefaultSap[] = {
 
 
 */
-
 

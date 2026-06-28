@@ -359,6 +359,29 @@ TEST_CASE("Integration_GetClockTime", "[integration][basic]")
     REQUIRE(buf[7] == 0xD2);
 }
 
+TEST_CASE("Integration_GetWithSelectiveAccessPayloadDecodes", "[integration][basic]")
+{
+    test_stack_setup();
+    test_establish_association();
+
+    uint8_t buf[1024];
+    csm_array pkt;
+    csm_array_init(&pkt, buf, sizeof(buf), 0, 0);
+    test_build_get(&pkt, 0x01, 8, &obis_clock, 2);
+    REQUIRE(pkt.wr_index > 0U);
+    buf[pkt.wr_index - 1U] = 0x01U;
+    REQUIRE(csm_array_write_u8(&pkt, AXDR_TAG_UNSIGNED8) == TRUE);
+    REQUIRE(csm_array_write_u8(&pkt, 0x01U) == TRUE);
+
+    int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC4);
+    REQUIRE(buf[1] == 0x01);
+    REQUIRE(buf[2] == 0x01);
+    REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == AXDR_TAG_OCTETSTRING);
+}
+
 TEST_CASE("Integration_SetClockTime", "[integration][basic]")
 {
     test_stack_setup();
