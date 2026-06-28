@@ -229,6 +229,8 @@ not currently form one consistently verified product:
 - Expanded Linux CI coverage to build the restored reader API, meter simulator,
   reader_lab live smoke, install tree, CMake package consumer, pkg-config
   consumer, and deterministic Electron dependency install via `npm ci`.
+- Added a `production` CMake preset that enables the full local production gate:
+  tests, server, restored reader API, meter simulator, and reader_lab live smoke.
 
 ## Verified
 

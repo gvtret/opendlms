@@ -26,6 +26,15 @@ cmake --build .
 ctest --output-on-failure
 ```
 
+For the full local production gate, including reader API, simulator, and live
+reader_lab smoke, use:
+
+```bash
+cmake --preset production
+cmake --build --preset production
+ctest --test-dir build-production --output-on-failure
+```
+
 ### Install
 
 ```bash

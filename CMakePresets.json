@@ -24,6 +24,20 @@
             }
         },
         {
+            "name": "production",
+            "displayName": "Production Gate",
+            "binaryDir": "${sourceDir}/build-production",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "OPEN_DLMS_BUILD_TESTS": "ON",
+                "OPEN_DLMS_BUILD_SERVER": "ON",
+                "OPEN_DLMS_BUILD_CLIENT": "ON",
+                "OPEN_DLMS_BUILD_METER_SIM": "ON",
+                "OPEN_DLMS_BUILD_READER_LAB": "ON",
+                "COSEMLIB_SHARED": "OFF"
+            }
+        },
+        {
             "name": "debug-mingw",
             "displayName": "Debug (MinGW cross-compile)",
             "binaryDir": "${sourceDir}/build-mingw",
@@ -42,6 +56,10 @@
         {
             "name": "debug",
             "configurePreset": "debug"
+        },
+        {
+            "name": "production",
+            "configurePreset": "production"
         },
         {
             "name": "debug-mingw",
