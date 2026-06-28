@@ -97,6 +97,56 @@ TEST_CASE("Wrapper: frame + deframe roundtrip", "[transport][wrapper]")
     REQUIRE(memcmp(out_apdu, apdu, sizeof(apdu)) == 0);
 }
 
+TEST_CASE("TCP wrapper: frame + deframe roundtrip", "[transport][wrapper]")
+{
+    uint8_t apdu[] = { 0xC0, 0x01, 0x02, 0x03 };
+    uint8_t framed[64];
+
+    int flen = csm_tcp_wrapper_frame(0x0001U, 0x0010U, apdu, sizeof(apdu),
+                                     framed, sizeof(framed));
+    REQUIRE(flen == (int)(CSM_TCP_WRAPPER_LEN + sizeof(apdu)));
+    REQUIRE(framed[0] == 0x00U);
+    REQUIRE(framed[1] == 0x01U);
+    REQUIRE(framed[2] == 0x00U);
+    REQUIRE(framed[3] == 0x01U);
+    REQUIRE(framed[4] == 0x00U);
+    REQUIRE(framed[5] == 0x10U);
+    REQUIRE(framed[6] == 0x00U);
+    REQUIRE(framed[7] == sizeof(apdu));
+
+    const uint8_t *out_apdu;
+    uint32_t out_len;
+    uint16_t source_wport = 0U;
+    uint16_t dest_wport = 0U;
+    int rc = csm_tcp_wrapper_deframe(framed, (uint32_t)flen, &out_apdu, &out_len,
+                                     &source_wport, &dest_wport);
+    REQUIRE(rc == CSM_TRANSPORT_OK);
+    REQUIRE(source_wport == 0x0001U);
+    REQUIRE(dest_wport == 0x0010U);
+    REQUIRE(out_len == sizeof(apdu));
+    REQUIRE(memcmp(out_apdu, apdu, sizeof(apdu)) == 0);
+}
+
+TEST_CASE("TCP wrapper: reject malformed frames", "[transport][wrapper]")
+{
+    uint8_t apdu[] = { 0xC0, 0x01 };
+    uint8_t framed[64];
+    const uint8_t *out_apdu;
+    uint32_t out_len;
+
+    int flen = csm_tcp_wrapper_frame(1U, 16U, apdu, sizeof(apdu), framed, sizeof(framed));
+    REQUIRE(flen > 0);
+
+    framed[1] = 0x02U;
+    REQUIRE(csm_tcp_wrapper_deframe(framed, (uint32_t)flen, &out_apdu, &out_len,
+                                    NULL, NULL) == CSM_TRANSPORT_ERR_FRAMING);
+
+    framed[1] = 0x01U;
+    framed[7] = 0x10U;
+    REQUIRE(csm_tcp_wrapper_deframe(framed, (uint32_t)flen, &out_apdu, &out_len,
+                                    NULL, NULL) == CSM_TRANSPORT_ERR_TIMEOUT);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* Generic framing dispatch tests                                           */
 /* ══════════════════════════════════════════════════════════════════════════ */
