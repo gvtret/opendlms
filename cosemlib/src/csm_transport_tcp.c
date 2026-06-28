@@ -36,6 +36,8 @@
     #define SOCK_ERR errno
 #endif
 
+#define CSM_TCP_CONTEXT_POOL_SIZE 16U
+
 /* ── Internal channel state ─────────────────────────────────────────────── */
 
 typedef struct {
@@ -58,6 +60,9 @@ struct csm_tcp_context {
     csm_transport_event_fn event_cb; /*!< Event callback */
     void             *event_ctx;    /*!< Event callback context */
 };
+
+static csm_tcp_context tcp_context_pool[CSM_TCP_CONTEXT_POOL_SIZE];
+static uint8_t tcp_context_used[CSM_TCP_CONTEXT_POOL_SIZE];
 
 /* ── Platform helpers ───────────────────────────────────────────────────── */
 
@@ -110,6 +115,31 @@ static int tcp_find_free_channel(csm_tcp_context *ctx)
         }
     }
     return -1;
+}
+
+static csm_tcp_context *tcp_alloc_context(void)
+{
+    for (uint8_t i = 0; i < CSM_TCP_CONTEXT_POOL_SIZE; i++)
+    {
+        if (!tcp_context_used[i])
+        {
+            tcp_context_used[i] = 1U;
+            return &tcp_context_pool[i];
+        }
+    }
+    return NULL;
+}
+
+static void tcp_release_context(csm_tcp_context *ctx)
+{
+    for (uint8_t i = 0; i < CSM_TCP_CONTEXT_POOL_SIZE; i++)
+    {
+        if (ctx == &tcp_context_pool[i])
+        {
+            tcp_context_used[i] = 0U;
+            return;
+        }
+    }
 }
 
 /* ── Internal: close a channel ──────────────────────────────────────────── */
@@ -471,6 +501,7 @@ static void tcp_destroy(void *ctx)
     }
 
     memset(c, 0, sizeof(*c));
+    tcp_release_context(c);
 }
 
 static const csm_transport_ops tcp_ops = {
@@ -505,14 +536,15 @@ int csm_transport_tcp_server_init(csm_transport *transport, uint16_t port,
 {
     if (!transport) return CSM_TRANSPORT_ERR;
 
-    /* Allocate context (static, no malloc) */
-    static csm_tcp_context server_ctx;
-    tcp_init_context(&server_ctx, framing);
-    server_ctx.is_server = 1;
-    server_ctx.port = port;
+    csm_tcp_context *server_ctx = tcp_alloc_context();
+    if (!server_ctx) return CSM_TRANSPORT_ERR_OVERFLOW;
+
+    tcp_init_context(server_ctx, framing);
+    server_ctx->is_server = 1;
+    server_ctx->port = port;
 
     transport->ops = &tcp_ops;
-    transport->ctx = &server_ctx;
+    transport->ctx = server_ctx;
 
     return CSM_TRANSPORT_OK;
 }
@@ -522,18 +554,20 @@ int csm_transport_tcp_client_init(csm_transport *transport, const char *host,
 {
     if (!transport || !host) return CSM_TRANSPORT_ERR;
 
-    static csm_tcp_context client_ctx;
-    tcp_init_context(&client_ctx, framing);
-    client_ctx.is_server = 0;
-    client_ctx.port = port;
+    csm_tcp_context *client_ctx = tcp_alloc_context();
+    if (!client_ctx) return CSM_TRANSPORT_ERR_OVERFLOW;
+
+    tcp_init_context(client_ctx, framing);
+    client_ctx->is_server = 0;
+    client_ctx->port = port;
 
     size_t host_len = strlen(host);
-    if (host_len >= sizeof(client_ctx.host)) host_len = sizeof(client_ctx.host) - 1;
-    memcpy(client_ctx.host, host, host_len);
-    client_ctx.host[host_len] = '\0';
+    if (host_len >= sizeof(client_ctx->host)) host_len = sizeof(client_ctx->host) - 1;
+    memcpy(client_ctx->host, host, host_len);
+    client_ctx->host[host_len] = '\0';
 
     transport->ops = &tcp_ops;
-    transport->ctx = &client_ctx;
+    transport->ctx = client_ctx;
 
     return CSM_TRANSPORT_OK;
 }

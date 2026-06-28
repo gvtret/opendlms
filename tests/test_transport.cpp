@@ -317,6 +317,43 @@ TEST_CASE("TCP transport: manual connect succeeds with timeout", "[transport][tc
     csm_transport_tcp_destroy(&transport);
 }
 
+TEST_CASE("TCP transport: multiple clients keep independent contexts", "[transport][tcp]")
+{
+    test_socket_runtime sockets;
+    uint16_t port_a = 0U;
+    uint16_t port_b = 0U;
+    test_socket_t listen_a = create_loopback_listener(&port_a);
+    test_socket_t listen_b = create_loopback_listener(&port_b);
+    REQUIRE(listen_a != TEST_SOCKET_INVALID);
+    REQUIRE(listen_b != TEST_SOCKET_INVALID);
+
+    csm_transport client_a;
+    csm_transport client_b;
+    REQUIRE(csm_transport_tcp_client_init(&client_a, "127.0.0.1", port_a,
+                                          CSM_FRAMING_TCP_WRAPPER) == CSM_TRANSPORT_OK);
+    REQUIRE(csm_transport_tcp_client_init(&client_b, "127.0.0.1", port_b,
+                                          CSM_FRAMING_TCP_WRAPPER) == CSM_TRANSPORT_OK);
+
+    REQUIRE(csm_transport_tcp_connect(&client_a, 1000U) == CSM_TRANSPORT_OK);
+    sockaddr_in peer_a;
+    socklen_t peer_a_len = sizeof(peer_a);
+    test_socket_t server_a = accept(listen_a, (sockaddr *)&peer_a, &peer_a_len);
+    REQUIRE(server_a != TEST_SOCKET_INVALID);
+
+    REQUIRE(csm_transport_tcp_connect(&client_b, 1000U) == CSM_TRANSPORT_OK);
+    sockaddr_in peer_b;
+    socklen_t peer_b_len = sizeof(peer_b);
+    test_socket_t server_b = accept(listen_b, (sockaddr *)&peer_b, &peer_b_len);
+    REQUIRE(server_b != TEST_SOCKET_INVALID);
+
+    test_close_socket(server_a);
+    test_close_socket(server_b);
+    test_close_socket(listen_a);
+    test_close_socket(listen_b);
+    csm_transport_tcp_destroy(&client_a);
+    csm_transport_tcp_destroy(&client_b);
+}
+
 TEST_CASE("TCP transport: public connect and accept reject null contexts", "[transport][tcp]")
 {
     csm_transport transport;
