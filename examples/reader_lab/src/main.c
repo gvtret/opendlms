@@ -161,14 +161,57 @@ static int tcp_io_read(void *ctx, uint8_t *buf, uint32_t len, uint32_t timeout_m
     return (int)total;
 }
 
+static int parse_obis_part(const char **cursor, unsigned int *value, char delimiter)
+{
+    unsigned int parsed = 0U;
+    const char *p = *cursor;
+
+    if ((p == NULL) || (*p < '0') || (*p > '9'))
+    {
+        return -1;
+    }
+
+    while ((*p >= '0') && (*p <= '9'))
+    {
+        parsed = (parsed * 10U) + (unsigned int)(*p - '0');
+        if (parsed > 255U)
+        {
+            return -1;
+        }
+        p++;
+    }
+
+    if ((delimiter != '\0') && (*p != delimiter))
+    {
+        return -1;
+    }
+    if ((delimiter == '\0') && (*p != '\0'))
+    {
+        return -1;
+    }
+
+    *value = parsed;
+    *cursor = (delimiter != '\0') ? p + 1 : p;
+    return 0;
+}
+
 static int parse_obis(const char *str, csm_obis_code *obis, uint16_t *class_id)
 {
     unsigned int vals[6];
+    const char *cursor = str;
 
-    if (sscanf(str, "%u.%u.%u.%u.%u.%u", &vals[0], &vals[1], &vals[2], &vals[3], &vals[4],
-               &vals[5]) != 6)
+    if ((str == NULL) || (obis == NULL) || (class_id == NULL))
     {
         return -1;
+    }
+
+    for (uint32_t i = 0U; i < 6U; i++)
+    {
+        char delimiter = (i == 5U) ? '\0' : '.';
+        if (parse_obis_part(&cursor, &vals[i], delimiter) != 0)
+        {
+            return -1;
+        }
     }
 
     obis->A = (uint8_t)vals[0];
@@ -386,6 +429,40 @@ int main(int argc, char **argv)
         }
     }
 
+    if (obis_arg < 0)
+    {
+        obis.A = 0U;
+        obis.B = 0U;
+        obis.C = 1U;
+        obis.D = 0U;
+        obis.E = 0U;
+        obis.F = 255U;
+        class_id = 8U;
+    }
+    else if (parse_obis(argv[obis_arg], &obis, &class_id) < 0)
+    {
+        fprintf(stderr, "Bad OBIS: %s\n", argv[obis_arg]);
+        return 1;
+    }
+    if (class_override >= 0)
+    {
+        class_id = (uint16_t)class_override;
+    }
+    if (attr_override <= 0 || attr_override > 255)
+    {
+        fprintf(stderr, "Bad attr id: %d\n", attr_override);
+        return 1;
+    }
+    if (set_hex != NULL)
+    {
+        if (parse_hex(set_hex, set_hex_buf, sizeof(set_hex_buf), &set_hex_len) < 0 ||
+            set_hex_len == 0U)
+        {
+            fprintf(stderr, "Bad set-hex payload\n");
+            return 1;
+        }
+    }
+
     if (platform_init() < 0)
     {
         return 1;
@@ -457,49 +534,8 @@ int main(int argc, char **argv)
 
     printf("Association OK\n");
 
-    if (obis_arg < 0)
-    {
-        obis.A = 0U;
-        obis.B = 0U;
-        obis.C = 1U;
-        obis.D = 0U;
-        obis.E = 0U;
-        obis.F = 255U;
-        class_id = 8U;
-    }
-    else if (parse_obis(argv[obis_arg], &obis, &class_id) < 0)
-    {
-        fprintf(stderr, "Bad OBIS: %s\n", argv[obis_arg]);
-        opendlms_reader_disconnect(&session);
-        tcp_close();
-        platform_cleanup();
-        return 1;
-    }
-    if (class_override >= 0)
-    {
-        class_id = (uint16_t)class_override;
-    }
-    if (attr_override <= 0 || attr_override > 255)
-    {
-        fprintf(stderr, "Bad attr id: %d\n", attr_override);
-        opendlms_reader_disconnect(&session);
-        tcp_close();
-        platform_cleanup();
-        return 1;
-    }
-
     if (set_hex != NULL)
     {
-        if (parse_hex(set_hex, set_hex_buf, sizeof(set_hex_buf), &set_hex_len) < 0 ||
-            set_hex_len == 0U)
-        {
-            fprintf(stderr, "Bad set-hex payload\n");
-            opendlms_reader_disconnect(&session);
-            tcp_close();
-            platform_cleanup();
-            return 1;
-        }
-
         printf("SET %u.%u.%u.%u.%u.%u class=%u attr=%d hex_len=%lu\n",
                obis.A, obis.B, obis.C, obis.D, obis.E, obis.F,
                (unsigned)class_id, attr_override, (unsigned long)set_hex_len);

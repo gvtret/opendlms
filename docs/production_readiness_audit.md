@@ -191,6 +191,9 @@ not currently form one consistently verified product:
   handlers without mutating shared state.
 - Replaced the reader HAL 16-byte hex-key parser with strict bounded parsing
   and added a dedicated CTest smoke for valid, short, long, and non-hex inputs.
+- Replaced `reader_lab` OBIS parsing with strict bounded component parsing and
+  moved CLI validation ahead of platform/TCP setup so malformed input fails
+  before opening a network connection.
 
 ## Verified
 
