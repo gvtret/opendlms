@@ -9,6 +9,7 @@
 #include "catch.hpp"
 #include "cosemlib.h"
 #include "csm_ber.h"
+#include "os_util.h"
 #include <cstring>
 
 extern "C" void csm_sys_init();
@@ -76,6 +77,22 @@ TEST_CASE("csm_array basic operations", "[cosemlib][array]")
     REQUIRE(u8 == 0x01);
     REQUIRE(csm_array_read_u16(&arr, &u16) == 1);
     REQUIRE(u16 == 0x1234);
+}
+
+TEST_CASE("os_util big-endian 64-bit helpers round-trip", "[cosemlib][os_util]")
+{
+    uint8_t buf[8];
+    PUT_BE64(buf, 0x0102030405060708ULL);
+
+    REQUIRE(buf[0] == 0x01U);
+    REQUIRE(buf[1] == 0x02U);
+    REQUIRE(buf[2] == 0x03U);
+    REQUIRE(buf[3] == 0x04U);
+    REQUIRE(buf[4] == 0x05U);
+    REQUIRE(buf[5] == 0x06U);
+    REQUIRE(buf[6] == 0x07U);
+    REQUIRE(buf[7] == 0x08U);
+    REQUIRE(GET_BE64(buf) == 0x0102030405060708ULL);
 }
 
 TEST_CASE("BER length encoding uses standard short and long forms", "[cosemlib][ber]")

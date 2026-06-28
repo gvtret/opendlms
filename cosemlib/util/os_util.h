@@ -67,14 +67,14 @@ static inline void PUT_BE32(uint8_t *a, uint32_t val)
 
 static inline void PUT_BE64(uint8_t *a, uint64_t val)
 {
-	a[0] = val >> 56;
-	a[1] = val >> 48;
-	a[2] = val >> 40;
-	a[3] = val >> 32;
-	a[4] = val >> 24;
-	a[5] = val >> 16;
-	a[6] = val >> 8;
-	a[7] = val & 0xff;
+    a[0] = (uint8_t)((val >> 56U) & 0xFFU);
+    a[1] = (uint8_t)((val >> 48U) & 0xFFU);
+    a[2] = (uint8_t)((val >> 40U) & 0xFFU);
+    a[3] = (uint8_t)((val >> 32U) & 0xFFU);
+    a[4] = (uint8_t)((val >> 24U) & 0xFFU);
+    a[5] = (uint8_t)((val >> 16U) & 0xFFU);
+    a[6] = (uint8_t)((val >> 8U) & 0xFFU);
+    a[7] = (uint8_t)(val & 0xFFU);
 }
 
 static inline uint32_t div_round_up(uint32_t x, uint32_t y)
