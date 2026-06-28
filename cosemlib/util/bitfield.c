@@ -8,6 +8,7 @@
 
 #include "os_util.h"
 #include "bitfield.h"
+#include <limits.h>
 
 void bitfield_init(struct bitfield *bf, uint8_t init_level)
 {
@@ -82,5 +83,9 @@ int bitfield_get_first_zero(struct bitfield *bf)
 	{
 		return -1;
 	}
-	return i;
+	if (i > (size_t)INT_MAX)
+	{
+		return -1;
+	}
+	return (int)i;
 }

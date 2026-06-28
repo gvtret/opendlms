@@ -13,6 +13,16 @@
 #include "os_util.h"
 #include <string.h>
 
+static int csm_sec_get_sap_u8(const csm_request *request, uint8_t *sap)
+{
+    if ((request == NULL) || (sap == NULL) || (request->llc.dsap > 0xFFU))
+    {
+        return FALSE;
+    }
+    *sap = (uint8_t)request->llc.dsap;
+    return TRUE;
+}
+
 csm_sec_result csm_sec_auth_decrypt(csm_array *array, csm_request *request, const uint8_t *system_title)
 {
     csm_sec_result retcode = CSM_SEC_OK;
@@ -22,9 +32,15 @@ csm_sec_result csm_sec_auth_decrypt(csm_array *array, csm_request *request, cons
     uint32_t data_size = 0U;
     uint32_t aad_size = 0U;
     uint8_t IV[12];
+    uint8_t sap;
 
     csm_array_read_u8(array, &sc.sh_byte);
     csm_array_read_u32(array, &ic);
+
+    if (!csm_sec_get_sap_u8(request, &sap))
+    {
+        return CSM_SEC_ERROR;
+    }
 
     // Prepare IV
     memcpy(&IV[0], &system_title[0], CSM_DEF_APP_TITLE_SIZE);
@@ -39,7 +55,12 @@ csm_sec_result csm_sec_auth_decrypt(csm_array *array, csm_request *request, cons
 
     uint8_t *aad = (data - 17U); // pointer to the begining of AAD
     aad[0] = sc.sh_byte;
-    memcpy(&aad[1], csm_sys_get_key(request->llc.dsap, CSM_SEC_GAK), 16U);
+    uint8_t *auth_key = csm_sys_get_key(sap, CSM_SEC_GAK);
+    if (auth_key == NULL)
+    {
+        return CSM_SEC_ERROR;
+    }
+    memcpy(&aad[1], auth_key, 16U);
 
 
     if (sc.sh_bit_field.encryption)
@@ -57,6 +78,7 @@ csm_sec_result csm_sec_auth_decrypt(csm_array *array, csm_request *request, cons
             {
                 data_size -= 12U;
                 aad_size += 17U;
+                tag_read = data + data_size;
             }
             else
             {
@@ -90,13 +112,28 @@ csm_sec_result csm_sec_auth_decrypt(csm_array *array, csm_request *request, cons
         aad_size = 0U;
     }
 
-    csm_sys_gcm_init(request->channel_id, request->llc.dsap, CSM_SEC_GUEK, CSM_SEC_DECRYPT, IV, aad, aad_size);
+    if (retcode != CSM_SEC_OK)
+    {
+        return retcode;
+    }
+
+    if (csm_sys_gcm_init(request->channel_id, sap, CSM_SEC_GUEK,
+                         CSM_SEC_DECRYPT, IV, aad, aad_size) == 0)
+    {
+        return CSM_SEC_ERROR;
+    }
 
     // Decrypt in place
-    csm_sys_gcm_update(request->channel_id, data, data_size, data);
+    if (csm_sys_gcm_update(request->channel_id, data, data_size, data) == 0)
+    {
+        return CSM_SEC_ERROR;
+    }
 
     uint8_t tag[16U];
-    csm_sys_gcm_finish(request->channel_id, tag);
+    if (csm_sys_gcm_finish(request->channel_id, tag) == 0)
+    {
+        return CSM_SEC_ERROR;
+    }
 
     if ((tag_read != NULL) && (retcode == CSM_SEC_OK))
     {
@@ -117,6 +154,12 @@ csm_sec_result csm_sec_auth_encrypt(csm_array *array, csm_request *request, cons
     uint32_t data_size = 0U;
     uint32_t aad_size = 0U;
     uint8_t IV[12];
+    uint8_t sap;
+
+    if (!csm_sec_get_sap_u8(request, &sap))
+    {
+        return CSM_SEC_ERROR;
+    }
 
     // Prepare IV
     memcpy(&IV[0], &system_title[0], CSM_DEF_APP_TITLE_SIZE);
@@ -130,7 +173,12 @@ csm_sec_result csm_sec_auth_encrypt(csm_array *array, csm_request *request, cons
 
     uint8_t *aad = (data - 17U); // pointer to the begining of AAD
     aad[0] = sc.sh_byte;
-    memcpy(&aad[1], csm_sys_get_key(request->llc.dsap, CSM_SEC_GAK), 16U);
+    uint8_t *auth_key = csm_sys_get_key(sap, CSM_SEC_GAK);
+    if (auth_key == NULL)
+    {
+        return CSM_SEC_ERROR;
+    }
+    memcpy(&aad[1], auth_key, 16U);
 
     if (sc.sh_bit_field.encryption)
     {
@@ -180,13 +228,28 @@ csm_sec_result csm_sec_auth_encrypt(csm_array *array, csm_request *request, cons
         aad_size = 0U;
     }
 
-    csm_sys_gcm_init(request->channel_id, request->llc.dsap, CSM_SEC_GUEK, CSM_SEC_ENCRYPT, IV, aad, aad_size);
+    if (retcode != CSM_SEC_OK)
+    {
+        return retcode;
+    }
+
+    if (csm_sys_gcm_init(request->channel_id, sap, CSM_SEC_GUEK,
+                         CSM_SEC_ENCRYPT, IV, aad, aad_size) == 0)
+    {
+        return CSM_SEC_ERROR;
+    }
 
     // Encrypt in place
-    csm_sys_gcm_update(request->channel_id, data, data_size, data);
+    if (csm_sys_gcm_update(request->channel_id, data, data_size, data) == 0)
+    {
+        return CSM_SEC_ERROR;
+    }
 
     uint8_t tag[16U];
-    csm_sys_gcm_finish(request->channel_id, tag);
+    if (csm_sys_gcm_finish(request->channel_id, tag) == 0)
+    {
+        return CSM_SEC_ERROR;
+    }
 
     csm_array_writer_jump(array, data_size); // Jump over crypted data
 

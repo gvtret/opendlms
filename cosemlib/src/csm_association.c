@@ -1050,7 +1050,13 @@ int csm_asso_is_granted(csm_asso_state *state)
         else if (state->auth_level == CSM_AUTH_LOW_LEVEL)
         {
             // Use unused StoC buffer to store our temporary password
-            csm_hal_get_lls_password(state->config->llc.dsap, &state->handshake.stoc.value[0], 8U);
+            if (state->config->llc.dsap > 0xFFU)
+            {
+                state->handshake.result = CSM_ASSO_ERR_AUTH_FAILURE;
+                return FALSE;
+            }
+            csm_hal_get_lls_password((uint8_t)state->config->llc.dsap,
+                                     &state->handshake.stoc.value[0], 8U);
             if (memcmp(&state->handshake.stoc.value[0], &state->handshake.ctos.value[0], state->handshake.ctos.size) == 0)
             {
                 state->state_cf = CF_ASSOCIATED;
