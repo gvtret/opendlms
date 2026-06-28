@@ -295,6 +295,28 @@ TEST_CASE("TCP transport: manual accept respects timeout", "[transport][tcp]")
     csm_transport_tcp_destroy(&transport);
 }
 
+TEST_CASE("TCP transport: manual connect succeeds with timeout", "[transport][tcp]")
+{
+    test_socket_runtime sockets;
+    uint16_t port = 0U;
+    test_socket_t listen_fd = create_loopback_listener(&port);
+    REQUIRE(listen_fd != TEST_SOCKET_INVALID);
+
+    csm_transport transport;
+    REQUIRE(csm_transport_tcp_client_init(&transport, "127.0.0.1", port,
+                                          CSM_FRAMING_TCP_WRAPPER) == CSM_TRANSPORT_OK);
+    REQUIRE(csm_transport_tcp_connect(&transport, 1000U) == CSM_TRANSPORT_OK);
+
+    sockaddr_in peer;
+    socklen_t peer_len = sizeof(peer);
+    test_socket_t server_fd = accept(listen_fd, (sockaddr *)&peer, &peer_len);
+    REQUIRE(server_fd != TEST_SOCKET_INVALID);
+
+    test_close_socket(server_fd);
+    test_close_socket(listen_fd);
+    csm_transport_tcp_destroy(&transport);
+}
+
 TEST_CASE("TCP transport: public connect and accept reject null contexts", "[transport][tcp]")
 {
     csm_transport transport;

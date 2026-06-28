@@ -72,6 +72,20 @@ static void socket_set_nonblocking(socket_t fd)
 #endif
 }
 
+static void socket_set_blocking(socket_t fd)
+{
+#ifdef _WIN32
+    u_long mode = 0;
+    ioctlsocket(fd, FIONBIO, &mode);
+#else
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags >= 0)
+    {
+        fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+    }
+#endif
+}
+
 static int socket_set_nodelay(socket_t fd)
 {
     int flag = 1;
@@ -161,6 +175,51 @@ static int tcp_wait_readable(socket_t fd, uint32_t timeout_ms)
     if (rc == 0) return CSM_TRANSPORT_ERR_TIMEOUT;
     if (rc < 0) return CSM_TRANSPORT_ERR_IO;
     return CSM_TRANSPORT_OK;
+}
+
+static int tcp_wait_writable(socket_t fd, uint32_t timeout_ms)
+{
+    fd_set write_set;
+    FD_ZERO(&write_set);
+    FD_SET(fd, &write_set);
+
+    struct timeval tv;
+    struct timeval *tv_ptr = NULL;
+    if (timeout_ms != UINT32_MAX)
+    {
+        tv.tv_sec = (long)(timeout_ms / 1000U);
+        tv.tv_usec = (long)((timeout_ms % 1000U) * 1000U);
+        tv_ptr = &tv;
+    }
+
+    int rc = select((int)fd + 1, NULL, &write_set, NULL, tv_ptr);
+    if (rc == 0) return CSM_TRANSPORT_ERR_TIMEOUT;
+    if (rc < 0) return CSM_TRANSPORT_ERR_IO;
+    return CSM_TRANSPORT_OK;
+}
+
+static int tcp_connect_in_progress(int err)
+{
+#ifdef _WIN32
+    return err == WSAEWOULDBLOCK || err == WSAEINPROGRESS || err == WSAEINVAL;
+#else
+    return err == EINPROGRESS || err == EWOULDBLOCK;
+#endif
+}
+
+static int tcp_socket_connect_error(socket_t fd)
+{
+    int err = 0;
+#ifdef _WIN32
+    int len = sizeof(err);
+#else
+    socklen_t len = sizeof(err);
+#endif
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&err, &len) < 0)
+    {
+        return CSM_TRANSPORT_ERR_IO;
+    }
+    return err == 0 ? CSM_TRANSPORT_OK : CSM_TRANSPORT_ERR_IO;
 }
 
 /* ── Internal: extract one framed PDU from recv buffer ──────────────────── */
@@ -284,7 +343,7 @@ static int tcp_open(void *ctx, uint8_t channel)
     else
     {
         csm_transport transport = { NULL, c };
-        return csm_transport_tcp_connect(&transport, 0U);
+        return csm_transport_tcp_connect(&transport, UINT32_MAX);
     }
 }
 
@@ -525,7 +584,6 @@ int csm_transport_tcp_accept(csm_transport *transport, uint32_t timeout_ms)
 
 int csm_transport_tcp_connect(csm_transport *transport, uint32_t timeout_ms)
 {
-    (void)timeout_ms;
     if (!transport || !transport->ctx) return CSM_TRANSPORT_ERR;
     csm_tcp_context *c = (csm_tcp_context *)transport->ctx;
     if (c->channels[0].connected) return CSM_TRANSPORT_OK;
@@ -538,20 +596,37 @@ int csm_transport_tcp_connect(csm_transport *transport, uint32_t timeout_ms)
     addr.sin_family = AF_INET;
     addr.sin_port = htons(c->port);
 
-    /* Simple numeric IP only for now */
-    addr.sin_addr.s_addr = inet_addr(c->host);
-    if (addr.sin_addr.s_addr == INADDR_NONE)
+    if (inet_pton(AF_INET, c->host, &addr.sin_addr) != 1)
     {
         SOCK_CLOSE(fd);
         return CSM_TRANSPORT_ERR;
     }
 
+    socket_set_nonblocking(fd);
     if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-        SOCK_CLOSE(fd);
-        return CSM_TRANSPORT_ERR_IO;
+        if (!tcp_connect_in_progress(SOCK_ERR))
+        {
+            SOCK_CLOSE(fd);
+            return CSM_TRANSPORT_ERR_IO;
+        }
+
+        int wait_rc = tcp_wait_writable(fd, timeout_ms);
+        if (wait_rc != CSM_TRANSPORT_OK)
+        {
+            SOCK_CLOSE(fd);
+            return wait_rc;
+        }
+
+        int socket_rc = tcp_socket_connect_error(fd);
+        if (socket_rc != CSM_TRANSPORT_OK)
+        {
+            SOCK_CLOSE(fd);
+            return socket_rc;
+        }
     }
 
+    socket_set_blocking(fd);
     socket_set_nodelay(fd);
 
     c->channels[0].fd = fd;

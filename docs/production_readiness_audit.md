@@ -195,7 +195,7 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 165 test cases with 1428 assertions`.
+  reports `Passed all 166 test cases with 1432 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
   reports `Passed all 77 test cases with 720 assertions`.
@@ -278,6 +278,8 @@ not currently form one consistently verified product:
   return timeout when no client connects.
 - TCP transport tests now verify public connect/accept helpers reject null
   transport contexts.
+- TCP transport tests now verify manual client connect succeeds through the
+  timeout-aware public connect path.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
