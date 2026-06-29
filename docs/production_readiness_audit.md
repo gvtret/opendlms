@@ -255,6 +255,8 @@ not currently form one consistently verified product:
 - Strengthened CI so the installed CMake consumer links
   `OpenDLMS::opendlms_reader` directly and the Windows build covers the reader
   API, meter simulator, and `reader_lab` targets.
+- Classified the checked-in Streebog research/debug probes in `tests/README.md`;
+  maintained crypto coverage remains in the default Catch2 gate.
 
 ## Verified
 
@@ -381,9 +383,9 @@ not currently form one consistently verified product:
 
 ## Still open
 
-- Some checked-in experimental/debug crypto probes under `tests/` and `tmp/`
-  remain outside the default Catch2/CTest gate; keep or remove them before a
-  release depending on whether they are still useful for implementation work.
+- Checked-in Streebog research/debug probes are now explicitly documented as
+  outside the default Catch2/CTest gate; remove them before release if the
+  project does not want to ship implementation research artifacts.
 - TCP-wrapper live coverage currently proves AARQ/AARE, public GET clock,
   reader LLS GET clock, Configurator plain-HLS GET clock, SET clock, ACTION
   clock, GET error response, client disconnect, and LuaBridge `getObjectList()`.
@@ -396,8 +398,8 @@ not currently form one consistently verified product:
 
 ## Required before calling this production-ready
 
-1. Make CMake build every intended test file, or explicitly mark remaining
-   experimental/debug probes as disabled with a reason.
+1. Decide whether to keep or remove documented research/debug probes before
+   release packaging.
 2. Extend end-to-end TCP WPDU tests with ciphered security-profile live
    coverage and gateway/proxy scenarios.
 3. Complete remaining partial IC handlers or document unsupported operations
