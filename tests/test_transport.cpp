@@ -634,6 +634,29 @@ TEST_CASE("Client: request APIs reject invalid input before transport send", "[t
     csm_client_delete(client);
 }
 
+TEST_CASE("Server: send rejects invalid APDUs before transport send", "[transport][server]")
+{
+    static const csm_transport_ops timeout_ops = {
+        timeout_transport_open,
+        timeout_transport_send,
+        timeout_transport_recv,
+        NULL,
+        NULL,
+        NULL
+    };
+    timeout_transport_ctx_t ctx = {};
+    csm_transport transport = { &timeout_ops, &ctx };
+    csm_server *server = csm_server_create(&transport, 0, CSM_FRAMING_NONE);
+    uint8_t apdu[] = { 0xC4, 0x01 };
+
+    REQUIRE(server != nullptr);
+    REQUIRE(csm_server_send(server, 0U, nullptr, sizeof(apdu)) == -1);
+    REQUIRE(csm_server_send(server, 0U, apdu, 0U) == -1);
+    REQUIRE(ctx.send_calls == 0);
+
+    csm_server_delete(server);
+}
+
 TEST_CASE("Client: connect uses configured receive timeout", "[transport][client]")
 {
     static const csm_transport_ops timeout_ops = {

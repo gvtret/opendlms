@@ -106,7 +106,8 @@ int csm_server_poll(csm_server *server, uint32_t timeout_ms)
         if (framed_len > 0)
         {
             /* Send response back */
-            CSM_TRANSPORT_SEND(server->transport, ch, framed, framed_len);
+            int sent = CSM_TRANSPORT_SEND(server->transport, ch, framed, framed_len);
+            if (sent < 0) return sent;
         }
     }
 
@@ -116,7 +117,7 @@ int csm_server_poll(csm_server *server, uint32_t timeout_ms)
 int csm_server_send(csm_server *server, uint8_t channel,
                     const uint8_t *apdu, uint32_t apdu_len)
 {
-    if (!server || !server->transport) return -1;
+    if (!server || !server->transport || !apdu || apdu_len == 0U) return -1;
 
     uint8_t framed[CSM_WRAPPER_MAX_LEN];
     int framed_len = csm_framing_frame(server->framing, 1,
