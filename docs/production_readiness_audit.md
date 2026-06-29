@@ -240,6 +240,8 @@ not currently form one consistently verified product:
 - Added a live `reader_lab config plain` smoke path by exposing the simulator
   SAP 48 HLS5 association, aligning reader/simulator demo keys, and routing
   TCP wrapper traffic to the selected association destination wPort.
+- Hardened `reader_lab` profile parsing so unknown profile names fail early
+  instead of silently using the public association.
 
 ## Verified
 

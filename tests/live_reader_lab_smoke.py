@@ -22,6 +22,16 @@ def run_reader(reader, port, *args, profile="public"):
     return proc.stdout
 
 
+def run_reader_fail(reader, port, *args, profile="public"):
+    cmd = [reader, profile, "127.0.0.1", str(port), *args]
+    proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT, timeout=10)
+    if proc.returncode == 0:
+        raise AssertionError("reader_lab unexpectedly succeeded:\n{}\n{}".format(
+            " ".join(cmd), proc.stdout))
+    return proc.stdout
+
+
 def expect(text, needle):
     if needle not in text:
         raise AssertionError("missing {!r} in output:\n{}".format(needle, text))
@@ -48,6 +58,9 @@ def main():
             meter_log.seek(0)
             out = meter_log.read()
             raise AssertionError("metersimulator exited before smoke test:\n{}".format(out))
+
+        out = run_reader_fail(reader, port, profile="bogus")
+        expect(out, "Bad profile: bogus")
 
         clock = "0.0.1.0.0.255"
         out = run_reader(reader, port, clock, "class=8", "attr=2")

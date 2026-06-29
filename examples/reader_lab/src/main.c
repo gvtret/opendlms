@@ -381,6 +381,14 @@ static void setup_profile(const char *profile,
     asso_cfg->is_auto_connected = 0U;
 }
 
+static int is_known_profile(const char *profile)
+{
+    return (strcmp(profile, "public") == 0) ||
+           (strcmp(profile, "reader") == 0) ||
+           (strcmp(profile, "config") == 0) ||
+           (strcmp(profile, "configurator") == 0);
+}
+
 int main(int argc, char **argv)
 {
     const char *profile = "public";
@@ -416,6 +424,11 @@ int main(int argc, char **argv)
     }
 
     profile = argv[1];
+    if (!is_known_profile(profile))
+    {
+        fprintf(stderr, "Bad profile: %s\n", profile);
+        return 1;
+    }
 
     if (argc >= 3)
     {
