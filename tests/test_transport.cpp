@@ -372,6 +372,24 @@ TEST_CASE("TCP transport: public connect and accept reject null contexts", "[tra
     REQUIRE(csm_transport_tcp_accept(&transport, 0U) == CSM_TRANSPORT_ERR);
 }
 
+TEST_CASE("TCP transport: receive rejects null and empty buffers", "[transport][tcp]")
+{
+    test_socket_runtime sockets;
+    csm_transport transport;
+    uint8_t out[1];
+
+    REQUIRE(csm_transport_tcp_server_init(&transport, 0U,
+                                          CSM_FRAMING_TCP_WRAPPER) == CSM_TRANSPORT_OK);
+    REQUIRE(CSM_TRANSPORT_OPEN(&transport, 0U) == CSM_TRANSPORT_OK);
+
+    REQUIRE(CSM_TRANSPORT_RECV(&transport, 0U, nullptr, sizeof(out), 1000U) ==
+            CSM_TRANSPORT_ERR);
+    REQUIRE(CSM_TRANSPORT_RECV(&transport, 0U, out, 0U, 1000U) ==
+            CSM_TRANSPORT_ERR);
+
+    csm_transport_tcp_destroy(&transport);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* Generic framing dispatch tests                                           */
 /* ══════════════════════════════════════════════════════════════════════════ */

@@ -259,6 +259,7 @@ static int tcp_extract_pdu(csm_tcp_context *ctx, uint8_t channel,
                             uint32_t *consumed)
 {
     csm_tcp_channel *ch = &ctx->channels[channel];
+    if (!out || out_size == 0U || !consumed) return CSM_TRANSPORT_ERR;
     if (ch->recv_len == 0) return 0;
 
     if (ctx->framing == CSM_FRAMING_WRAPPER)
@@ -405,6 +406,7 @@ static int tcp_recv(void *ctx, uint8_t channel, uint8_t *buf, uint32_t buf_size,
 {
     csm_tcp_context *c = (csm_tcp_context *)ctx;
     if (channel >= CSM_TCP_MAX_CLIENTS) return CSM_TRANSPORT_ERR;
+    if (!buf || buf_size == 0U) return CSM_TRANSPORT_ERR;
 
     /* Server: accept new connection if this channel is not connected */
     if (c->is_server && !c->channels[channel].connected)
