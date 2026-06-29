@@ -206,8 +206,9 @@ not currently form one consistently verified product:
 - Added active-state tracking and cleanup for HAL GCM contexts so update/finish
   calls fail before init, repeated init frees the prior context, and finish
   releases the active context.
-- Rejected normal service traffic while HLS association is pending, preventing
-  pre-HLS GET/SET execution on Configurator sessions before pass 3/4 completes.
+- Rejected all service traffic while HLS association is pending, preventing
+  pre-HLS GET/SET/ACTION execution on Configurator sessions before pass 3/4
+  completes.
 - Hardened the restored C reader TCP-wrapper transport to reject malformed,
   zero-length, and wrong-wPort response frames, and made `reader_lab` drain
   partial socket writes.

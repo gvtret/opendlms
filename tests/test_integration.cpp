@@ -2588,6 +2588,22 @@ TEST_CASE("Integration_HlsPendingRejectsGet", "[integration][security]")
     REQUIRE(global_handler_calls == calls_before);
 }
 
+TEST_CASE("Integration_HlsPendingRejectsAction", "[integration][security]")
+{
+    test_stack_setup();
+    REQUIRE(test_do_aarq(CSM_AUTH_HIGH_LEVEL_GMAC, LN_REF_WITH_CYPHERING) > 0);
+
+    uint8_t hls_reply[] = { AXDR_TAG_OCTETSTRING, 1U, 0x00U };
+    uint8_t buf[1024];
+    int calls_before = global_handler_calls;
+    csm_services_init(poison_global_db_access);
+
+    int ret = test_do_action(0x01, 15, &obis_asso, 1, hls_reply, sizeof(hls_reply),
+                             buf, sizeof(buf));
+    REQUIRE(ret == 0);
+    REQUIRE(global_handler_calls == calls_before);
+}
+
 TEST_CASE("Integration_GeneralGloGetClockTime", "[integration][security]")
 {
     test_stack_setup();

@@ -713,26 +713,15 @@ void csm_services_init(const csm_db_access_handler db_access)
     database = db_access;
 }
 
-static int svc_hls_can_execute(csm_array *array)
-{
-    uint8_t tag = 0U;
-    if ((array == NULL) || !csm_array_get(array, 0U, &tag))
-    {
-        return FALSE;
-    }
-
-    return (tag == AXDR_ACTION_REQUEST);
-}
-
 int csm_services_hls_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
+    (void)ctx;
+    (void)state;
+    (void)request;
+    (void)array;
     CSM_LOG("[SVC] Received HLS Pass 3");
-    if (!svc_hls_can_execute(array))
-    {
-        CSM_ERR("[SVC] Reject service while HLS association is pending");
-        return 0;
-    }
-    return csm_server_services_execute(ctx, state, request, array);
+    CSM_ERR("[SVC] Reject service while HLS association is pending");
+    return 0;
 }
 
 int csm_server_services_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
@@ -742,13 +731,14 @@ int csm_server_services_execute(csm_db_context_t *ctx, csm_asso_state *state, cs
 
 int csm_services_hls_execute_handler(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
+    (void)handler;
+    (void)ctx;
+    (void)state;
+    (void)request;
+    (void)array;
     CSM_LOG("[SVC] Received HLS Pass 3 (handler)");
-    if (!svc_hls_can_execute(array))
-    {
-        CSM_ERR("[SVC] Reject service while HLS association is pending");
-        return 0;
-    }
-    return csm_server_services_execute_handler(handler, ctx, state, request, array);
+    CSM_ERR("[SVC] Reject service while HLS association is pending");
+    return 0;
 }
 
 int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
