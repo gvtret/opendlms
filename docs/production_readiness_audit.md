@@ -249,6 +249,9 @@ not currently form one consistently verified product:
 - Made `opendlms_reader_init()` initialize the bundled reader HAL so installed
   static `OpenDLMS::opendlms_reader` consumers pull the HAL symbols needed by
   `cosemlib`.
+- Classified `examples/metersimulator/tests` as manual/legacy coverage with an
+  in-directory README, pointing production live coverage at
+  `tests/live_reader_lab_smoke.py`.
 
 ## Verified
 
@@ -375,10 +378,9 @@ not currently form one consistently verified product:
 
 ## Still open
 
-- Some checked-in tests are not part of the default Catch2/CTest gate:
-  `examples/metersimulator/tests/test_fs.cpp` uses embUnit and exercises a
-  legacy simulator filesystem subsystem that is not part of the active DLMS
-  stack gate.
+- Some checked-in experimental/debug crypto probes under `tests/` and `tmp/`
+  remain outside the default Catch2/CTest gate; keep or remove them before a
+  release depending on whether they are still useful for implementation work.
 - TCP-wrapper live coverage currently proves AARQ/AARE, public GET clock,
   reader LLS GET clock, Configurator plain-HLS GET clock, SET clock, ACTION
   clock, GET error response, client disconnect, and LuaBridge `getObjectList()`.
@@ -391,8 +393,8 @@ not currently form one consistently verified product:
 
 ## Required before calling this production-ready
 
-1. Make CMake build every intended test file, or explicitly mark tests as
-   experimental/disabled with a reason.
+1. Make CMake build every intended test file, or explicitly mark remaining
+   experimental/debug probes as disabled with a reason.
 2. Extend end-to-end TCP WPDU tests with ciphered security-profile live
    coverage and gateway/proxy scenarios.
 3. Complete remaining partial IC handlers or document unsupported operations
