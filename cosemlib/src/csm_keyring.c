@@ -21,6 +21,10 @@ int csm_keyring_add(csm_keyring *kr, uint8_t id, const uint8_t *key, uint8_t len
     {
         return -1;
     }
+    if (kr->count > CSM_KEYRING_MAX_KEYS)
+    {
+        return -1;
+    }
 
     for (uint8_t i = 0U; i < kr->count; i++)
     {
@@ -51,7 +55,13 @@ const uint8_t *csm_keyring_find(const csm_keyring *kr, uint8_t id)
         return NULL;
     }
 
-    for (uint8_t i = 0U; i < kr->count; i++)
+    uint8_t count = kr->count;
+    if (count > CSM_KEYRING_MAX_KEYS)
+    {
+        count = CSM_KEYRING_MAX_KEYS;
+    }
+
+    for (uint8_t i = 0U; i < count; i++)
     {
         if (kr->entries[i].id == id)
         {

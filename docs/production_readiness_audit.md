@@ -202,6 +202,8 @@ not currently form one consistently verified product:
   identifier buffers.
 - Hardened AXDR decode/encode helpers against null inputs and truncated BER
   length fields before reading or writing output state.
+- Hardened keyring add/find helpers against corrupted entry counts before
+  indexing fixed-size key storage.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -442,6 +444,8 @@ not currently form one consistently verified product:
   identifier handling.
 - AXDR read-by-block tests now verify null input rejection and truncated BER
   length handling.
+- Cosemlib keyring tests now verify corrupted counts cannot drive out-of-range
+  fixed-array access.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:

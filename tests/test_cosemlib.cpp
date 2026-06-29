@@ -9,6 +9,7 @@
 #include "catch.hpp"
 #include "cosemlib.h"
 #include "csm_ber.h"
+#include "csm_keyring.h"
 #include "os_util.h"
 #include <cstring>
 
@@ -159,6 +160,20 @@ TEST_CASE("BER helpers reject null and truncated inputs", "[cosemlib][ber]")
     REQUIRE(csm_ber_decode_object_identifier(NULL, &arr) == 0);
     REQUIRE(csm_ber_decode_object_identifier(&oid, NULL) == 0);
     REQUIRE(csm_ber_decode_object_identifier(&oid, &arr) == 0);
+}
+
+TEST_CASE("keyring rejects invalid counts", "[cosemlib][keyring]")
+{
+    csm_keyring kr;
+    csm_keyring_init(&kr);
+    uint8_t key[16] = {};
+
+    REQUIRE(csm_keyring_add(&kr, 1U, key, sizeof(key)) == 0);
+    REQUIRE(csm_keyring_find(&kr, 1U) != nullptr);
+
+    kr.count = CSM_KEYRING_MAX_KEYS + 1U;
+    REQUIRE(csm_keyring_add(&kr, 2U, key, sizeof(key)) == -1);
+    REQUIRE(csm_keyring_find(&kr, 2U) == nullptr);
 }
 
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")
