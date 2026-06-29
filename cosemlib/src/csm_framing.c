@@ -20,7 +20,7 @@ static const uint8_t wrapper_rsp_prefix[3] = { 0xE6, 0xE7, 0x00 };
 int csm_wrapper_frame_command(const uint8_t *apdu, uint32_t apdu_len,
                               uint8_t *out, uint32_t out_size)
 {
-    if (!apdu || !out || apdu_len > CSM_FRAMING_MAX_PDU)
+    if (!apdu || !out || apdu_len == 0U || apdu_len > CSM_FRAMING_MAX_PDU)
     {
         return CSM_TRANSPORT_ERR;
     }
@@ -40,7 +40,7 @@ int csm_wrapper_frame_command(const uint8_t *apdu, uint32_t apdu_len,
 int csm_wrapper_frame_response(const uint8_t *apdu, uint32_t apdu_len,
                                 uint8_t *out, uint32_t out_size)
 {
-    if (!apdu || !out || apdu_len > CSM_FRAMING_MAX_PDU)
+    if (!apdu || !out || apdu_len == 0U || apdu_len > CSM_FRAMING_MAX_PDU)
     {
         return CSM_TRANSPORT_ERR;
     }
@@ -67,6 +67,10 @@ int csm_wrapper_deframe(const uint8_t *data, uint32_t data_len,
 
     /* Check LLC prefix: E6 E6 00 (command) or E6 E7 00 (response) */
     if (data[0] != 0xE6 || (data[1] != 0xE6 && data[1] != 0xE7) || data[2] != 0x00)
+    {
+        return CSM_TRANSPORT_ERR_FRAMING;
+    }
+    if (data_len == 3U)
     {
         return CSM_TRANSPORT_ERR_FRAMING;
     }

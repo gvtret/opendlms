@@ -85,6 +85,22 @@ TEST_CASE("Wrapper: frame response", "[transport][wrapper]")
     REQUIRE(memcmp(out + 3, apdu, sizeof(apdu)) == 0);
 }
 
+TEST_CASE("Wrapper: reject zero-length APDUs", "[transport][wrapper]")
+{
+    uint8_t apdu[] = { 0xC0 };
+    uint8_t out[64];
+    uint8_t frame[] = { 0xE6, 0xE6, 0x00 };
+    const uint8_t *out_apdu;
+    uint32_t out_len;
+
+    REQUIRE(csm_wrapper_frame_command(apdu, 0U, out, sizeof(out)) ==
+            CSM_TRANSPORT_ERR);
+    REQUIRE(csm_wrapper_frame_response(apdu, 0U, out, sizeof(out)) ==
+            CSM_TRANSPORT_ERR);
+    REQUIRE(csm_wrapper_deframe(frame, sizeof(frame), &out_apdu, &out_len) ==
+            CSM_TRANSPORT_ERR_FRAMING);
+}
+
 TEST_CASE("Wrapper: deframe command", "[transport][wrapper]")
 {
     uint8_t data[] = { 0xE6, 0xE6, 0x00, 0xC0, 0x01, 0x01, 0x02 };

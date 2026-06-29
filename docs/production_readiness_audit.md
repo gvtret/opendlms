@@ -179,6 +179,8 @@ not currently form one consistently verified product:
   output buffers before calling the legacy HDLC encoder.
 - Hardened TCP transport receive entry points against null or zero-length
   output buffers before accept/read/extract work.
+- Hardened shared LLC wrapper frame/deframe helpers to reject zero-length
+  APDUs consistently with TCP wrapper framing.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -400,6 +402,7 @@ not currently form one consistently verified product:
   undersized output buffers before invoking the encoder.
 - TCP transport tests now verify receive rejects null and zero-length output
   buffers without waiting for socket activity.
+- Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`
