@@ -142,6 +142,25 @@ TEST_CASE("BER length encoding uses standard short and long forms", "[cosemlib][
     REQUIRE(len.length == 256U);
 }
 
+TEST_CASE("BER helpers reject null and truncated inputs", "[cosemlib][ber]")
+{
+    uint8_t buf[] = {0x60, 0x85, 0x74, 0x05, 0x08, 0x01};
+    csm_array arr;
+    csm_array_init(&arr, buf, sizeof(buf), sizeof(buf), 0);
+    ber_length len;
+    csm_ber ber;
+    static const uint8_t oid_header[] = {0x60, 0x85, 0x74, 0x05, 0x08};
+    ber_object_identifier oid = { oid_header, sizeof(oid_header), 0U, 0U };
+
+    REQUIRE(csm_ber_read_len(NULL, &len) == 0);
+    REQUIRE(csm_ber_read_len(&arr, NULL) == 0);
+    REQUIRE(csm_ber_decode(NULL, &arr) == 0);
+    REQUIRE(csm_ber_decode(&ber, NULL) == 0);
+    REQUIRE(csm_ber_decode_object_identifier(NULL, &arr) == 0);
+    REQUIRE(csm_ber_decode_object_identifier(&oid, NULL) == 0);
+    REQUIRE(csm_ber_decode_object_identifier(&oid, &arr) == 0);
+}
+
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")
 {
     csm_block_state state;

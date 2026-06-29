@@ -53,6 +53,11 @@ static int csm_ber_read_tag(csm_array *i_array, ber_tag *o_tag)
     int ret = FALSE;
     uint8_t b;
 
+    if ((i_array == NULL) || (o_tag == NULL))
+    {
+        return FALSE;
+    }
+
     memset(o_tag, 0, sizeof(ber_tag));
 
     if (csm_array_read_u8(i_array, &b))
@@ -107,6 +112,11 @@ int csm_ber_read_len(csm_array *array, ber_length *o_len)
 {
     int ret = FALSE;
     uint8_t b;
+
+    if ((array == NULL) || (o_len == NULL))
+    {
+        return FALSE;
+    }
 
     memset(o_len, 0, sizeof(ber_length));
 
@@ -173,7 +183,11 @@ int csm_ber_read_len(csm_array *array, ber_length *o_len)
 int csm_ber_decode_object_identifier(ber_object_identifier *oid, csm_array *array)
 {
     int ret = FALSE;
-    if (array->size >= 7U)
+    if ((oid == NULL) || (array == NULL) || (oid->header == NULL))
+    {
+        return FALSE;
+    }
+    if (csm_array_unread(array) >= (uint32_t)(oid->size + 2U))
     {
         if (memcmp(csm_array_rd_data(array), oid->header, oid->size) == 0)
         {
@@ -187,6 +201,11 @@ int csm_ber_decode_object_identifier(ber_object_identifier *oid, csm_array *arra
 
 void csm_ber_dump(csm_ber *i_ber)
 {
+    if (i_ber == NULL)
+    {
+        return;
+    }
+
     CSM_TRACE("-------------- BER FIELD --------------\r\n");
     CSM_TRACE("Tag: ");
 
@@ -236,6 +255,11 @@ void csm_ber_dump(csm_ber *i_ber)
 int csm_ber_decode(csm_ber *ber, csm_array *array)
 {
     int loop = TRUE;
+    if ((ber == NULL) || (array == NULL))
+    {
+        return FALSE;
+    }
+
     if (csm_ber_read_tag(array, &ber->tag))
     {
         if (csm_ber_read_len(array, &ber->length))
