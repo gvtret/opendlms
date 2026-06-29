@@ -269,6 +269,8 @@ not currently form one consistently verified product:
 - Made `opendlms_reader_init()` initialize the bundled reader HAL so installed
   static `OpenDLMS::opendlms_reader` consumers pull the HAL symbols needed by
   `cosemlib`.
+- Removed duplicate Windows `advapi32` linkage from the `opendlms_reader`
+  CMake target.
 - Classified `examples/metersimulator/tests` as manual/legacy coverage with an
   in-directory README, pointing production live coverage at
   `tests/live_reader_lab_smoke.py`.
