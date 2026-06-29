@@ -41,6 +41,21 @@ TEST_CASE("cosemlib.h provides all core types", "[cosemlib]")
     REQUIRE(resp.type == 0U);
 }
 
+TEST_CASE("client service helpers reject null inputs", "[cosemlib][services]")
+{
+    uint8_t buf[] = { AXDR_GET_RESPONSE, 0x01U, 0x01U, 0x00U };
+    csm_array arr;
+    csm_array_init(&arr, buf, sizeof(buf), sizeof(buf), 0);
+
+    csm_response resp;
+    csm_client_init(NULL, &resp);
+
+    REQUIRE(csm_client_decode(NULL, &arr) == 0);
+    REQUIRE(csm_client_decode(&resp, NULL) == 0);
+    csm_client_init(NULL, NULL);
+    REQUIRE(csm_client_has_more_data(NULL) == 0);
+}
+
 TEST_CASE("cosemlib.h provides server/client API", "[cosemlib]")
 {
     /* Verify server/client types are forward-declared (opaque, pointer-only) */

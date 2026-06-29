@@ -196,6 +196,8 @@ not currently form one consistently verified product:
   receive-buffer capacity checks.
 - Hardened block encode paths against zero-sized chunks and corrupted offsets
   before calculating remaining transfer sizes.
+- Hardened public service helper entry points against null response/array inputs
+  and made HLS rejection helpers fail closed on null output arrays.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -431,6 +433,7 @@ not currently form one consistently verified product:
   offsets for both SET and GET receive paths.
 - Block-transfer tests now verify GET and SET encode paths reject zero max
   sizes and overflowed offsets.
+- Cosemlib umbrella tests now verify client service helpers reject null inputs.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:

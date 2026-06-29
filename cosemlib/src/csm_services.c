@@ -715,6 +715,11 @@ void csm_services_init(const csm_db_access_handler db_access)
 
 int csm_services_hls_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
+    if (array == NULL)
+    {
+        return 0;
+    }
+
     (void)ctx;
     (void)state;
     (void)request;
@@ -731,6 +736,11 @@ int csm_server_services_execute(csm_db_context_t *ctx, csm_asso_state *state, cs
 
 int csm_services_hls_execute_handler(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
 {
+    if (array == NULL)
+    {
+        return 0;
+    }
+
     (void)handler;
     (void)ctx;
     (void)state;
@@ -745,7 +755,7 @@ int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_co
 {
     int number_of_bytes = 0;
 
-    if (handler != NULL)
+    if ((handler != NULL) && (array != NULL))
     {
         uint8_t tag;
         if (csm_array_read_u8(array, &tag))
@@ -1162,6 +1172,11 @@ int csm_client_decode(csm_response *response, csm_array *array)
     int valid = FALSE;
     uint8_t tag;
 
+    if ((response == NULL) || (array == NULL))
+    {
+        return FALSE;
+    }
+
     response->service = SVC_UNKOWN;
     if (csm_array_read_u8(array, &tag))
     {
@@ -1183,6 +1198,11 @@ void csm_client_init(csm_request *request, csm_response *response)
 {
     (void) request;
 
+    if (response == NULL)
+    {
+        return;
+    }
+
     memset(response, 0, sizeof(*response));
     response->service = SVC_UNKOWN;
     response->type = 0U;
@@ -1197,7 +1217,8 @@ void csm_client_init(csm_request *request, csm_response *response)
 int csm_client_has_more_data(csm_response *response)
 {
     int more_data = 0;
-    if ((response->type == SVC_RESPONSE_WITH_DATABLOCK) &&
+    if ((response != NULL) &&
+        (response->type == SVC_RESPONSE_WITH_DATABLOCK) &&
         (!response->last_block))
     {
         more_data = 1;
