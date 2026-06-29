@@ -45,13 +45,11 @@ jobs:
           project(opendlms_consumer C)
           find_package(OpenDLMS REQUIRED)
           add_executable(consumer main.c)
-          target_link_libraries(consumer OpenDLMS::cosemlib OpenDLMS::opendlms_reader)
+          target_link_libraries(consumer OpenDLMS::opendlms_reader)
           EOF
           cat > consumer-cmake/main.c <<'EOF'
-          #include <cosemlib.h>
-          #include <csm_transport_tcp.h>
           #include <opendlms_reader.h>
-          int main(void) { csm_transport transport; opendlms_reader_t reader; (void)transport; (void)reader; return 0; }
+          int main(void) { opendlms_reader_t reader; csm_asso_config asso; return opendlms_reader_init(&reader, &asso, 1) == 0 ? 0 : 1; }
           EOF
           cmake -S consumer-cmake -B consumer-cmake/build -G Ninja \
             -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install
@@ -90,6 +88,9 @@ jobs:
           cmake -B build -G "Visual Studio 17 2022" -A x64 `
             -DOPEN_DLMS_BUILD_TESTS=ON `
             -DOPEN_DLMS_BUILD_SERVER=ON `
+            -DOPEN_DLMS_BUILD_CLIENT=ON `
+            -DOPEN_DLMS_BUILD_METER_SIM=ON `
+            -DOPEN_DLMS_BUILD_READER_LAB=ON `
             -DCOSEMLIB_SHARED=OFF
 
       - name: Build
@@ -106,6 +107,9 @@ jobs:
           name: windows-x64
           path: |
             build/**/Release/cosemlib.lib
+            build/**/Release/opendlms_reader.lib
+            build/**/Release/metersimulator.exe
+            build/**/Release/reader_lab.exe
 
   build-macos:
     runs-on: macos-latest

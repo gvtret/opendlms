@@ -252,6 +252,9 @@ not currently form one consistently verified product:
 - Classified `examples/metersimulator/tests` as manual/legacy coverage with an
   in-directory README, pointing production live coverage at
   `tests/live_reader_lab_smoke.py`.
+- Strengthened CI so the installed CMake consumer links
+  `OpenDLMS::opendlms_reader` directly and the Windows build covers the reader
+  API, meter simulator, and `reader_lab` targets.
 
 ## Verified
 
@@ -399,4 +402,5 @@ not currently form one consistently verified product:
    coverage and gateway/proxy scenarios.
 3. Complete remaining partial IC handlers or document unsupported operations
    with standard COSEM errors.
-4. Add CI gates for clean MinGW, live simulator smoke, and native addon builds.
+4. Add a clean MinGW CI gate in addition to the existing Linux/Windows/macOS
+   and Electron gates.
