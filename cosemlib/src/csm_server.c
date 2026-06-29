@@ -11,6 +11,7 @@
 #include "csm_services.h"
 #include "csm_definitions.h"
 #include "csm_association.h"
+#include "csm_axdr_codec.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -599,9 +600,10 @@ int csm_client_set_block(csm_client *client, uint8_t invoke_id,
         }
 
         /* Data chunk */
-        csm_array_write_u8(&req, 0x09U);  /* Octet-string tag */
-        csm_array_write_u8(&req, (uint8_t)chunk);
-        csm_array_write_buff(&req, data + offset, chunk);
+        if (!csm_axdr_wr_octetstring(&req, data + offset, chunk))
+        {
+            return -1;
+        }
 
         /* Send and receive acknowledgment */
         uint8_t rx_buf[CSM_CLIENT_MAX_PDU];

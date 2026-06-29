@@ -563,6 +563,14 @@ typedef struct
     int recv_calls;
 } timeout_transport_ctx_t;
 
+typedef struct
+{
+    int send_calls;
+    int recv_calls;
+    uint8_t first_send[640];
+    uint32_t first_send_len;
+} capture_transport_ctx_t;
+
 static int timeout_transport_open(void *ctx, uint8_t channel)
 {
     (void)ctx;
@@ -590,6 +598,47 @@ static int timeout_transport_recv(void *ctx, uint8_t channel, uint8_t *buf,
     tctx->recv_calls++;
     tctx->last_timeout_ms = timeout_ms;
     return CSM_TRANSPORT_ERR_TIMEOUT;
+}
+
+static int capture_transport_open(void *ctx, uint8_t channel)
+{
+    (void)ctx;
+    (void)channel;
+    return CSM_TRANSPORT_OK;
+}
+
+static int capture_transport_send(void *ctx, uint8_t channel, const uint8_t *data, uint32_t len)
+{
+    capture_transport_ctx_t *tctx = (capture_transport_ctx_t *)ctx;
+    (void)channel;
+    if (tctx->send_calls == 0)
+    {
+        REQUIRE(len <= sizeof(tctx->first_send));
+        memcpy(tctx->first_send, data, len);
+        tctx->first_send_len = len;
+    }
+    tctx->send_calls++;
+    return (int)len;
+}
+
+static int capture_transport_recv(void *ctx, uint8_t channel, uint8_t *buf,
+                                  uint32_t buf_size, uint32_t timeout_ms)
+{
+    capture_transport_ctx_t *tctx = (capture_transport_ctx_t *)ctx;
+    (void)channel;
+    (void)timeout_ms;
+    REQUIRE(buf_size >= 9U);
+    buf[0] = 0xC5U;
+    buf[1] = 0x02U;
+    buf[2] = 0x01U;
+    buf[3] = 0x00U;
+    buf[4] = 0x00U;
+    buf[5] = 0x00U;
+    buf[6] = 0x00U;
+    buf[7] = (uint8_t)tctx->recv_calls;
+    buf[8] = 0x00U;
+    tctx->recv_calls++;
+    return 9;
 }
 
 TEST_CASE("Client: request APIs reject invalid input before transport send", "[transport][client]")
@@ -655,6 +704,40 @@ TEST_CASE("Server: send rejects invalid APDUs before transport send", "[transpor
     REQUIRE(ctx.send_calls == 0);
 
     csm_server_delete(server);
+}
+
+TEST_CASE("Client: set block encodes long octet-string chunk lengths", "[transport][client]")
+{
+    static const csm_transport_ops capture_ops = {
+        capture_transport_open,
+        capture_transport_send,
+        capture_transport_recv,
+        NULL,
+        NULL,
+        NULL
+    };
+    capture_transport_ctx_t ctx = {};
+    csm_transport transport = { &capture_ops, &ctx };
+    csm_client *client = csm_client_create(&transport, 0, CSM_FRAMING_NONE);
+    csm_obis_code obis = { 1, 0, 1, 8, 0, 255 };
+    uint8_t data[500];
+    uint8_t resp[8];
+
+    memset(data, 0x5AU, sizeof(data));
+
+    REQUIRE(client != nullptr);
+    REQUIRE(csm_client_set_block(client, 1U, 3U, &obis, 2U,
+                                 data, sizeof(data), resp, sizeof(resp)) == 4);
+    REQUIRE(ctx.send_calls == 2);
+    REQUIRE(ctx.recv_calls == 2);
+    REQUIRE(ctx.first_send_len > 22U);
+    REQUIRE(ctx.first_send[18] == 0x09U);
+    REQUIRE(ctx.first_send[19] == 0x82U);
+    REQUIRE(ctx.first_send[20] == 0x01U);
+    REQUIRE(ctx.first_send[21] == 0xEEU);
+    REQUIRE(ctx.first_send[22] == 0x5AU);
+
+    csm_client_delete(client);
 }
 
 TEST_CASE("Client: connect uses configured receive timeout", "[transport][client]")
