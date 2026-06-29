@@ -195,6 +195,8 @@ int csm_framing_frame(csm_framing_type type, uint8_t direction,
         return csm_tcp_wrapper_frame(1U, 1U, apdu, apdu_len, out, out_size);
 
     case CSM_FRAMING_NONE:
+        if (!out || !apdu)
+            return CSM_TRANSPORT_ERR;
         if (apdu_len > out_size)
             return CSM_TRANSPORT_ERR_OVERFLOW;
         memcpy(out, apdu, apdu_len);
@@ -235,6 +237,8 @@ int csm_framing_deframe(csm_framing_type type,
         return csm_tcp_wrapper_deframe(data, data_len, apdu, apdu_len, NULL, NULL);
 
     case CSM_FRAMING_NONE:
+        if (!data || !apdu || !apdu_len)
+            return CSM_TRANSPORT_ERR;
         *apdu = data;
         *apdu_len = data_len;
         return CSM_TRANSPORT_OK;

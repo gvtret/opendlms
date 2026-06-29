@@ -408,6 +408,17 @@ TEST_CASE("Framing: raw passthrough", "[transport][framing]")
     REQUIRE(memcmp(out, apdu, 3) == 0);
 }
 
+TEST_CASE("Framing: raw passthrough rejects null inputs", "[transport][framing]")
+{
+    uint8_t apdu[] = { 0xC0, 0x01, 0x02 };
+    uint8_t out[64];
+
+    REQUIRE(csm_framing_frame(CSM_FRAMING_NONE, 0, nullptr, sizeof(apdu),
+                              out, sizeof(out)) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_framing_frame(CSM_FRAMING_NONE, 0, apdu, sizeof(apdu),
+                              nullptr, sizeof(out)) == CSM_TRANSPORT_ERR);
+}
+
 TEST_CASE("Framing: deframe raw", "[transport][framing]")
 {
     uint8_t data[] = { 0xC0, 0x01, 0x02, 0x03 };
@@ -418,6 +429,20 @@ TEST_CASE("Framing: deframe raw", "[transport][framing]")
     REQUIRE(rc == CSM_TRANSPORT_OK);
     REQUIRE(apdu_len == 4);
     REQUIRE(apdu == data);  /* No copy for raw framing */
+}
+
+TEST_CASE("Framing: raw deframe rejects null inputs", "[transport][framing]")
+{
+    uint8_t data[] = { 0xC0, 0x01, 0x02, 0x03 };
+    const uint8_t *apdu;
+    uint32_t apdu_len;
+
+    REQUIRE(csm_framing_deframe(CSM_FRAMING_NONE, nullptr, sizeof(data),
+                                &apdu, &apdu_len) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_framing_deframe(CSM_FRAMING_NONE, data, sizeof(data),
+                                nullptr, &apdu_len) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_framing_deframe(CSM_FRAMING_NONE, data, sizeof(data),
+                                &apdu, nullptr) == CSM_TRANSPORT_ERR);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════ */
