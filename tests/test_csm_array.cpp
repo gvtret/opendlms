@@ -90,6 +90,12 @@ void null_safety(void)
     REQUIRE(FALSE == csm_array_set(&array, sizeof(buffer), 0x11U));
     REQUIRE(TRUE == csm_array_set(&array, 1U, 0x11U));
     REQUIRE(0x11U == buffer[1]);
+
+    REQUIRE(FALSE == csm_array_read_buff(NULL, buffer, 1U));
+    REQUIRE(FALSE == csm_array_read_buff(&array, NULL, 1U));
+    REQUIRE(FALSE == csm_array_write_buff(NULL, buffer, 1U));
+    REQUIRE(FALSE == csm_array_write_buff(&array, NULL, 1U));
+    REQUIRE(TRUE == csm_array_write_buff(&array, NULL, 0U));
 }
 
 
