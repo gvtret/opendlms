@@ -212,6 +212,9 @@ not currently form one consistently verified product:
 - Returned a standard DLMS exception response for rejected pending-HLS service
   traffic and made the restored reader API surface decoded exceptions as
   failed operations.
+- Made the restored reader API return operation failure for decoded DLMS
+  GET/SET/ACTION error results instead of treating every decoded response as
+  success.
 - Hardened the restored C reader TCP-wrapper transport to reject malformed,
   zero-length, and wrong-wPort response frames, and made `reader_lab` drain
   partial socket writes.

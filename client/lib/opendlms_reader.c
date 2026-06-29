@@ -118,6 +118,29 @@ static const csm_transport_ops reader_transport_ops = {
     reader_transport_destroy
 };
 
+static int reader_response_is_success(const csm_response *response)
+{
+    if (response->service == SVC_EXCEPTION)
+    {
+        return 0;
+    }
+    if ((response->service == SVC_GET) || (response->service == SVC_SET))
+    {
+        return response->access_result == CSM_ACCESS_RESULT_SUCCESS;
+    }
+    if (response->service == SVC_ACTION)
+    {
+        if (response->action_result != CSM_ACTION_RESULT_SUCCESS)
+        {
+            return 0;
+        }
+        return (response->access_result == CSM_ACCESS_RESULT_SUCCESS) ||
+               (response->access_result == CSM_ACCESS_RESULT_NOT_SET);
+    }
+
+    return 0;
+}
+
 static int reader_decode_response(csm_response *response, uint8_t *resp_buf, int resp_len)
 {
     csm_client_init(NULL, response);
@@ -128,7 +151,7 @@ static int reader_decode_response(csm_response *response, uint8_t *resp_buf, int
         return -1;
     }
 
-    return (response->service == SVC_EXCEPTION) ? -1 : 0;
+    return reader_response_is_success(response) ? 0 : -1;
 }
 
 int opendlms_reader_init(opendlms_reader_t *reader,

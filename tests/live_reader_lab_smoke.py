@@ -94,9 +94,8 @@ def main():
         expect(out, "result=0")
 
         missing = "0.0.99.9.9.255"
-        out = run_reader(reader, port, missing, "class=999", "attr=2")
-        expect(out, "GET OK:")
-        expect(out, "access=4")
+        out = run_reader_fail(reader, port, missing, "class=999", "attr=2")
+        expect(out, "GET failed")
 
         meter_proc.terminate()
         meter_proc.wait(timeout=3)
