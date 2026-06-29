@@ -167,6 +167,7 @@ not currently form one consistently verified product:
   jumps that land exactly at the logical end of the buffer.
 - Hardened `csm_array_get()` against null array/output pointers while
   preserving out-of-range zeroing for valid output pointers.
+- Hardened `csm_array_set()` against null array pointers.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.

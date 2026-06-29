@@ -53,6 +53,11 @@ int csm_array_get(const csm_array *array, uint32_t index, uint8_t *byte)
 int csm_array_set(csm_array *array, uint32_t index, uint8_t byte)
 {
     int ret = FALSE;
+    if (array == NULL)
+    {
+        return ret;
+    }
+
     if (TEST_INDEX(array, index))
     {
         array->buff[INDEX(array, index)] = byte;
