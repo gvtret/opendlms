@@ -320,6 +320,24 @@ TEST_CASE("Block encode first - inactive state", "[block_transfer]")
     REQUIRE(result == 0);
 }
 
+TEST_CASE("Block encode first rejects zero max size and overflowed offsets", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    static const uint8_t test_data[] = {0x01, 0x02};
+    REQUIRE(csm_block_start_server(&state, 0x01U, test_data, sizeof(test_data), 0U) == 1);
+
+    uint8_t buf[64];
+    csm_array array;
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    REQUIRE(csm_block_encode_first(&state, &array, 0U) == 0);
+
+    state.offset = UINT32_MAX;
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    REQUIRE(csm_block_encode_first(&state, &array, sizeof(buf)) == 0);
+}
+
 /* ── SET Block Transfer Tests ───────────────────────────────────────────── */
 
 TEST_CASE("Block start client - valid", "[block_transfer]")
@@ -670,6 +688,31 @@ TEST_CASE("Block encode SET next - inactive", "[block_transfer]")
 
     int result = csm_block_encode_set_next(&state, &array, sizeof(buf));
     REQUIRE(result == 0);
+}
+
+TEST_CASE("Block encode SET rejects zero max size and overflowed offsets", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    static const uint8_t test_data[] = {0x01, 0x02};
+    REQUIRE(csm_block_start_client(&state, 0x01U, test_data, sizeof(test_data), 0U) == 1);
+
+    csm_request request;
+    memset(&request, 0, sizeof(request));
+    request.db_request.logical_name.class_id = 3U;
+    request.db_request.logical_name.obis.A = 1U;
+    request.db_request.logical_name.id = 2U;
+
+    uint8_t buf[64];
+    csm_array array;
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    REQUIRE(csm_block_encode_set_request(&state, &array, &request, 0U) == 0);
+
+    state.offset = UINT32_MAX;
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    REQUIRE(csm_block_encode_set_request(&state, &array, &request, sizeof(buf)) == 0);
+    REQUIRE(csm_block_encode_set_next(&state, &array, sizeof(buf)) == 0);
 }
 
 TEST_CASE("Block start client - invalid params", "[block_transfer]")

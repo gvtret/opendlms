@@ -194,6 +194,8 @@ not currently form one consistently verified product:
   BER length encoding instead of truncating chunks above 255 bytes.
 - Hardened SET/GET block receive accumulation against integer wraparound in
   receive-buffer capacity checks.
+- Hardened block encode paths against zero-sized chunks and corrupted offsets
+  before calculating remaining transfer sizes.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -427,6 +429,8 @@ not currently form one consistently verified product:
   long-form BER octet-string length encoding.
 - Block-transfer tests now verify receive accumulation rejects overflowed
   offsets for both SET and GET receive paths.
+- Block-transfer tests now verify GET and SET encode paths reject zero max
+  sizes and overflowed offsets.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:

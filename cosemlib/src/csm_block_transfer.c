@@ -63,7 +63,8 @@ int csm_block_start_server(csm_block_state *state, uint8_t invoke_id,
 
 int csm_block_encode_first(csm_block_state *state, csm_array *array, uint32_t max_size)
 {
-    if ((state == NULL) || (array == NULL) || (!state->active))
+    if ((state == NULL) || (array == NULL) || (!state->active) ||
+        (max_size == 0U) || (state->offset > state->total_size))
     {
         return 0;
     }
@@ -110,7 +111,8 @@ int csm_block_encode_first(csm_block_state *state, csm_array *array, uint32_t ma
 
 int csm_block_encode_next(csm_block_state *state, csm_array *array, uint32_t max_size)
 {
-    if ((state == NULL) || (array == NULL) || (!state->active))
+    if ((state == NULL) || (array == NULL) || (!state->active) ||
+        (max_size == 0U) || (state->offset > state->total_size))
     {
         return 0;
     }
@@ -197,7 +199,8 @@ int csm_block_start_client(csm_block_state *state, uint8_t invoke_id,
 int csm_block_encode_set_request(csm_block_state *state, csm_array *array,
                                  const csm_request *request, uint32_t max_size)
 {
-    if ((state == NULL) || (array == NULL) || (request == NULL) || (!state->active))
+    if ((state == NULL) || (array == NULL) || (request == NULL) || (!state->active) ||
+        (max_size == 0U) || (state->offset > state->total_size))
     {
         return 0;
     }
@@ -256,7 +259,8 @@ int csm_block_encode_set_request(csm_block_state *state, csm_array *array,
 
 int csm_block_encode_set_next(csm_block_state *state, csm_array *array, uint32_t max_size)
 {
-    if ((state == NULL) || (array == NULL) || (!state->active))
+    if ((state == NULL) || (array == NULL) || (!state->active) ||
+        (max_size == 0U) || (state->offset > state->total_size))
     {
         return 0;
     }
