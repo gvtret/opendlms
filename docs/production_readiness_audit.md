@@ -206,6 +206,8 @@ not currently form one consistently verified product:
 - Added active-state tracking and cleanup for HAL GCM contexts so update/finish
   calls fail before init, repeated init frees the prior context, and finish
   releases the active context.
+- Rejected normal service traffic while HLS association is pending, preventing
+  pre-HLS GET/SET execution on Configurator sessions before pass 3/4 completes.
 - Hardened the restored C reader TCP-wrapper transport to reject malformed,
   zero-length, and wrong-wPort response frames, and made `reader_lab` drain
   partial socket writes.
@@ -237,9 +239,8 @@ not currently form one consistently verified product:
   before transport setup.
 - Added a `production` CMake preset that enables the full local production gate:
   tests, server, restored reader API, meter simulator, and reader_lab live smoke.
-- Added a live `reader_lab config plain` smoke path by exposing the simulator
-  SAP 48 HLS5 association, aligning reader/simulator demo keys, and routing
-  TCP wrapper traffic to the selected association destination wPort.
+- Added live `reader_lab config` smoke coverage that proves Configurator
+  associations no longer execute GET before HLS pass 3/4 completes.
 - Hardened `reader_lab` profile parsing so unknown profile names fail early
   instead of silently using the public association.
 - Replaced `rand()`-based ACSE/HLS challenge bytes in the active reader and
@@ -387,9 +388,10 @@ not currently form one consistently verified product:
   outside the default Catch2/CTest gate; remove them before release if the
   project does not want to ship implementation research artifacts.
 - TCP-wrapper live coverage currently proves AARQ/AARE, public GET clock,
-  reader LLS GET clock, Configurator plain-HLS GET clock, SET clock, ACTION
+  reader LLS GET clock, Configurator pre-HLS GET rejection, SET clock, ACTION
   clock, GET error response, client disconnect, and LuaBridge `getObjectList()`.
-  It still needs ciphered security-profile live coverage.
+  It still needs full ciphered security-profile live coverage for HLS pass 3/4
+  and protected GET/SET/ACTION after HLS completion.
 - Configurator invocation-counter discovery/synchronization is deliberately
   gated off in the restored C reader API until the full security-client
   handshake path is implemented; callers must seed the counter explicitly.

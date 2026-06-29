@@ -407,6 +407,7 @@ int main(int argc, char **argv)
     uint32_t      set_hex_len = 0U;
     uint8_t       sync_ic = 0U;
     uint8_t       plain_hls = 0U;
+    int           operation_failed = 0;
 
     opendlms_reader_t            reader;
     opendlms_reader_session_t    session;
@@ -627,6 +628,7 @@ int main(int argc, char **argv)
                                 set_hex_buf, set_hex_len, &response) < 0)
         {
             fprintf(stderr, "SET failed\n");
+            operation_failed = 1;
         }
         else
         {
@@ -652,6 +654,7 @@ int main(int argc, char **argv)
                                 set_data, sizeof(set_data), &response) < 0)
         {
             fprintf(stderr, "SET failed\n");
+            operation_failed = 1;
         }
         else
         {
@@ -669,6 +672,7 @@ int main(int argc, char **argv)
                                    NULL, 0U, &response) < 0)
         {
             fprintf(stderr, "ACTION failed\n");
+            operation_failed = 1;
         }
         else
         {
@@ -686,6 +690,7 @@ int main(int argc, char **argv)
                                 &response) < 0)
         {
             fprintf(stderr, "GET failed\n");
+            operation_failed = 1;
         }
         else
         {
@@ -697,5 +702,5 @@ int main(int argc, char **argv)
     opendlms_reader_disconnect(&session);
     tcp_close();
     platform_cleanup();
-    return 0;
+    return operation_failed ? 1 : 0;
 }
