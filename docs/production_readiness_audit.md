@@ -286,12 +286,15 @@ not currently form one consistently verified product:
   `./build-audit-tests/tests/cosemtest.exe "csm_channel_ctx API"`.
 - Full in-process test suite passes:
   `./build-audit-tests/tests/cosemtest.exe -r compact`
-  reports `Passed all 172 test cases with 1492 assertions`.
+  reports `Passed all 176 test cases with 1557 assertions`.
 - Full integration suite passes:
   `./build-audit-tests/tests/cosemtest.exe "[integration]" -r compact`
-  reports `Passed all 80 test cases with 742 assertions`.
+  reports `Passed all 83 test cases with 775 assertions`.
 - CTest passes:
   `ctest --test-dir build-audit-client --output-on-failure`
+  reports `100% tests passed, 0 tests failed out of 3`.
+- Full production preset passes:
+  `cmake --preset production && cmake --build --preset production && ctest --test-dir build-production --output-on-failure`
   reports `100% tests passed, 0 tests failed out of 3`.
 - Integration tests now verify Clock time AXDR payload and SET/GET round-trip.
 - Integration tests now verify Clock action handling for quarter-hour adjustment
