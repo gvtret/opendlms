@@ -118,6 +118,19 @@ static const csm_transport_ops reader_transport_ops = {
     reader_transport_destroy
 };
 
+static int reader_decode_response(csm_response *response, uint8_t *resp_buf, int resp_len)
+{
+    csm_client_init(NULL, response);
+    csm_array array;
+    csm_array_init(&array, resp_buf, CSM_SERVER_MAX_PDU, (uint32_t)resp_len, 0);
+    if (!csm_client_decode(response, &array))
+    {
+        return -1;
+    }
+
+    return (response->service == SVC_EXCEPTION) ? -1 : 0;
+}
+
 int opendlms_reader_init(opendlms_reader_t *reader,
                          csm_asso_config *associations,
                          uint8_t association_count)
@@ -248,10 +261,7 @@ int opendlms_reader_get(opendlms_reader_session_t *session,
         return -1;
     }
 
-    csm_client_init(NULL, response);
-    csm_array array;
-    csm_array_init(&array, resp_buf, sizeof(resp_buf), (uint32_t)rc, 0);
-    return csm_client_decode(response, &array) ? 0 : -1;
+    return reader_decode_response(response, resp_buf, rc);
 }
 
 int opendlms_reader_set(opendlms_reader_session_t *session,
@@ -276,10 +286,7 @@ int opendlms_reader_set(opendlms_reader_session_t *session,
         return -1;
     }
 
-    csm_client_init(NULL, response);
-    csm_array array;
-    csm_array_init(&array, resp_buf, sizeof(resp_buf), (uint32_t)rc, 0);
-    return csm_client_decode(response, &array) ? 0 : -1;
+    return reader_decode_response(response, resp_buf, rc);
 }
 
 int opendlms_reader_action(opendlms_reader_session_t *session,
@@ -304,10 +311,7 @@ int opendlms_reader_action(opendlms_reader_session_t *session,
         return -1;
     }
 
-    csm_client_init(NULL, response);
-    csm_array array;
-    csm_array_init(&array, resp_buf, sizeof(resp_buf), (uint32_t)rc, 0);
-    return csm_client_decode(response, &array) ? 0 : -1;
+    return reader_decode_response(response, resp_buf, rc);
 }
 
 void opendlms_reader_disconnect(opendlms_reader_session_t *session)

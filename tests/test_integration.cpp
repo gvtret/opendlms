@@ -1952,7 +1952,8 @@ TEST_CASE("Integration_CipheredTamperedTag", "[integration][ciphered]")
     test_channels[0].request.channel_id = 1;
 
     int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-    REQUIRE(ret == 0);
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == AXDR_EXCEPTION_RESPONSE);
 }
 
 TEST_CASE("Integration_CipheredReplayProtection", "[integration][ciphered]")
@@ -2631,7 +2632,8 @@ TEST_CASE("Integration_HlsPendingRejectsGet", "[integration][security]")
     csm_services_init(poison_global_db_access);
 
     int ret = test_do_get(0x01, 8, &obis_clock, 2, buf, sizeof(buf));
-    REQUIRE(ret == 0);
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == AXDR_EXCEPTION_RESPONSE);
     REQUIRE(global_handler_calls == calls_before);
 }
 
@@ -2647,7 +2649,8 @@ TEST_CASE("Integration_HlsPendingRejectsAction", "[integration][security]")
 
     int ret = test_do_action(0x01, 15, &obis_asso, 1, hls_reply, sizeof(hls_reply),
                              buf, sizeof(buf));
-    REQUIRE(ret == 0);
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == AXDR_EXCEPTION_RESPONSE);
     REQUIRE(global_handler_calls == calls_before);
 }
 

@@ -718,10 +718,10 @@ int csm_services_hls_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_r
     (void)ctx;
     (void)state;
     (void)request;
-    (void)array;
     CSM_LOG("[SVC] Received HLS Pass 3");
     CSM_ERR("[SVC] Reject service while HLS association is pending");
-    return 0;
+    array->wr_index = 0U;
+    return svc_exception_response_encoder(array) ? (int)array->wr_index : 0;
 }
 
 int csm_server_services_execute(csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
@@ -735,10 +735,10 @@ int csm_services_hls_execute_handler(csm_db_access_handler handler, csm_db_conte
     (void)ctx;
     (void)state;
     (void)request;
-    (void)array;
     CSM_LOG("[SVC] Received HLS Pass 3 (handler)");
     CSM_ERR("[SVC] Reject service while HLS association is pending");
-    return 0;
+    array->wr_index = 0U;
+    return svc_exception_response_encoder(array) ? (int)array->wr_index : 0;
 }
 
 int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_context_t *ctx, csm_asso_state *state, csm_request *request, csm_array *array)
