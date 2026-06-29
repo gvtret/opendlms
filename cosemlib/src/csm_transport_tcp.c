@@ -382,6 +382,7 @@ static int tcp_send(void *ctx, uint8_t channel, const uint8_t *data, uint32_t le
 {
     csm_tcp_context *c = (csm_tcp_context *)ctx;
     if (channel >= CSM_TCP_MAX_CLIENTS) return CSM_TRANSPORT_ERR;
+    if (!data || len == 0U) return CSM_TRANSPORT_ERR;
     if (!c->channels[channel].connected) return CSM_TRANSPORT_ERR_CONN;
 
     /* Frame the data */

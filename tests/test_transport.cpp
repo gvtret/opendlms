@@ -406,6 +406,35 @@ TEST_CASE("TCP transport: receive rejects null and empty buffers", "[transport][
     csm_transport_tcp_destroy(&transport);
 }
 
+TEST_CASE("TCP transport: send rejects null and empty payloads", "[transport][tcp]")
+{
+    test_socket_runtime sockets;
+    uint16_t port = 0U;
+    test_socket_t listen_fd = create_loopback_listener(&port);
+    REQUIRE(listen_fd != TEST_SOCKET_INVALID);
+
+    csm_transport transport;
+    uint8_t apdu[] = { 0xC0, 0x01 };
+
+    REQUIRE(csm_transport_tcp_client_init(&transport, "127.0.0.1", port,
+                                          CSM_FRAMING_TCP_WRAPPER) == CSM_TRANSPORT_OK);
+    REQUIRE(csm_transport_tcp_connect(&transport, 1000U) == CSM_TRANSPORT_OK);
+
+    sockaddr_in peer;
+    socklen_t peer_len = sizeof(peer);
+    test_socket_t server_fd = accept(listen_fd, (sockaddr *)&peer, &peer_len);
+    REQUIRE(server_fd != TEST_SOCKET_INVALID);
+
+    REQUIRE(CSM_TRANSPORT_SEND(&transport, 0U, nullptr, sizeof(apdu)) ==
+            CSM_TRANSPORT_ERR);
+    REQUIRE(CSM_TRANSPORT_SEND(&transport, 0U, apdu, 0U) ==
+            CSM_TRANSPORT_ERR);
+
+    test_close_socket(server_fd);
+    test_close_socket(listen_fd);
+    csm_transport_tcp_destroy(&transport);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* Generic framing dispatch tests                                           */
 /* ══════════════════════════════════════════════════════════════════════════ */
