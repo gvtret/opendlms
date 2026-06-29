@@ -9,7 +9,7 @@ Open-source DLMS/COSEM protocol stack (IEC 62056) in pure C99, MIT-licensed.
 - **Pure C99** — portable, no dynamic allocation, zero-copy
 - **DLMS/COSEM core** — BER/AXDR codec, associations, GET/SET/ACTION, block transfer
 - **Security primitives** — LLS, HLS/GMAC building blocks, AES-GCM, Kuznyechik, Streebog (GOST)
-- **Thread-safe** — context-based API, no global mutable state
+- **Context-based APIs** — isolated client/server contexts for production use, with legacy global helpers kept for compatibility
 - **COSEM IC model** — built-in handlers for common IEC 62056-6-2 objects and SPODUS extensions
 - **Block Transfer (GBT)** — GET and SET with automatic block splitting/assembly
 - **Transport** — TCP/IP, HDLC framing, COSEM-TCP wrapper

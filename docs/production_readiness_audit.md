@@ -227,6 +227,9 @@ not currently form one consistently verified product:
 - Corrected public README/example documentation to describe the current
   production-gated reader profiles and fail-closed Configurator/HLS status
   instead of implying a completed secure-client path.
+- Corrected public README wording around thread safety to point users at
+  context-based production APIs while acknowledging legacy compatibility
+  helpers.
 - Hardened the restored C reader TCP-wrapper transport to reject malformed,
   zero-length, and wrong-wPort response frames, and made `reader_lab` drain
   partial socket writes.
