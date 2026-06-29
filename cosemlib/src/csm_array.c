@@ -133,6 +133,10 @@ void csm_array_dump(csm_array *array)
 int csm_array_writer_jump(csm_array *array, uint32_t nb_bytes)
 {
     int ret = TRUE;
+    if (array == NULL)
+    {
+        return FALSE;
+    }
 
     array->wr_index += nb_bytes;
     if (WR_INDEX(array) > array->size)
@@ -148,8 +152,11 @@ int csm_array_writer_jump(csm_array *array, uint32_t nb_bytes)
 int csm_array_reader_jump(csm_array *array, uint32_t nb_bytes)
 {
     int ret = TRUE;
+    if (array == NULL)
+    {
+        return FALSE;
+    }
 
-    CSM_ASSERT(array != NULL);
     array->rd_index += nb_bytes;
     if (RD_INDEX(array) > array->size)
     {
@@ -204,7 +211,7 @@ int csm_array_write_buff(csm_array *array, const uint8_t *buff, uint32_t size)
 uint32_t csm_array_unread(csm_array *array)
 {
     uint32_t unread = 0U;
-    if (array->wr_index > array->rd_index)
+    if ((array != NULL) && (array->wr_index > array->rd_index))
     {
         unread = (array->wr_index - array->rd_index);
     }
@@ -213,27 +220,48 @@ uint32_t csm_array_unread(csm_array *array)
 
 uint32_t csm_array_free_size(csm_array *array)
 {
+    if (array == NULL)
+    {
+        return 0U;
+    }
     return (array->size - WR_INDEX(array));
 }
 
 uint32_t csm_array_written(csm_array *array)
 {
+    if (array == NULL)
+    {
+        return 0U;
+    }
     return (WR_INDEX(array));
 }
 
 uint8_t *csm_array_rd_data(csm_array *array)
 {
+    if (array == NULL)
+    {
+        return NULL;
+    }
     return (array->buff + RD_INDEX(array));
 }
 
 uint8_t *csm_array_wr_data(csm_array *array)
 {
+    if (array == NULL)
+    {
+        return NULL;
+    }
     return (array->buff + WR_INDEX(array));
 }
 
 int csm_array_read_u8(csm_array *array, uint8_t *byte)
 {
     int ret = FALSE;
+    if ((array == NULL) || (byte == NULL))
+    {
+        return ret;
+    }
+
     if (csm_array_unread(array) >= 1U)
     {
         *byte = array->buff[RD_INDEX(array)];
@@ -250,6 +278,11 @@ int csm_array_read_u8(csm_array *array, uint8_t *byte)
 int csm_array_read_u32(csm_array *array, uint32_t *value)
 {
     int ret = FALSE;
+    if ((array == NULL) || (value == NULL))
+    {
+        return ret;
+    }
+
     if (csm_array_unread(array) >= 4U)
     {
         uint8_t *start = csm_array_rd_data(array);
@@ -262,6 +295,11 @@ int csm_array_read_u32(csm_array *array, uint32_t *value)
 int csm_array_read_u16(csm_array *array, uint16_t *value)
 {
     int ret = FALSE;
+    if ((array == NULL) || (value == NULL))
+    {
+        return ret;
+    }
+
     if (csm_array_unread(array) >= 2U)
     {
         uint8_t *start = csm_array_rd_data(array);
