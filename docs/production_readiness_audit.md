@@ -175,6 +175,8 @@ not currently form one consistently verified product:
 - Hardened `csm_array_dump()` against null input.
 - Hardened generic `CSM_FRAMING_NONE` frame/deframe helpers against null
   inputs before memory copies or output pointer writes.
+- Hardened generic `CSM_FRAMING_HDLC` dispatch against null inputs and short
+  output buffers before calling the legacy HDLC encoder.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -392,6 +394,8 @@ not currently form one consistently verified product:
   contexts instead of sharing one overwritten static client state.
 - Generic framing tests now verify raw passthrough frame/deframe null-input
   rejection.
+- Generic framing tests now verify HDLC dispatch rejects null pointers and
+  undersized output buffers before invoking the encoder.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:
   `cmake -S . -B build-audit-client -G Ninja -DOPEN_DLMS_BUILD_CLIENT=ON -DOPEN_DLMS_BUILD_TESTS=ON -DOPEN_DLMS_BUILD_READER_LAB=ON -DOPEN_DLMS_BUILD_METER_SIM=ON`

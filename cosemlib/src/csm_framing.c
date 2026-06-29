@@ -205,6 +205,17 @@ int csm_framing_frame(csm_framing_type type, uint8_t direction,
     case CSM_FRAMING_HDLC:
     {
         /* HDLC framing — use hdlc module */
+        const uint32_t hdlc_max_overhead = 16U;
+        if (!out || !apdu || apdu_len > CSM_FRAMING_MAX_PDU ||
+            apdu_len > 0xFFFFU || out_size > 0xFFFFU)
+        {
+            return CSM_TRANSPORT_ERR;
+        }
+        if (out_size < (apdu_len + hdlc_max_overhead))
+        {
+            return CSM_TRANSPORT_ERR_OVERFLOW;
+        }
+
         hdlc_t hdlc;
         hdlc_init(&hdlc);
         hdlc.sender = HDLC_SERVER;
@@ -246,6 +257,11 @@ int csm_framing_deframe(csm_framing_type type,
     case CSM_FRAMING_HDLC:
     {
         /* HDLC deframing — use hdlc module */
+        if (!data || !apdu || !apdu_len || data_len > 0xFFFFU)
+        {
+            return CSM_TRANSPORT_ERR;
+        }
+
         hdlc_t hdlc;
         hdlc_init(&hdlc);
 

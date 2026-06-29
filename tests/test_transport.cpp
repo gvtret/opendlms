@@ -568,3 +568,26 @@ TEST_CASE("HDLC: empty stream", "[transport][hdlc]")
     int rc = csm_hdlc_find_frame(NULL, 0, &frame, &frame_len, &consumed);
     REQUIRE(rc == CSM_TRANSPORT_ERR);
 }
+
+TEST_CASE("Framing: HDLC dispatch rejects unsafe inputs", "[transport][framing][hdlc]")
+{
+    uint8_t apdu[] = { 0xC0, 0x01, 0x02 };
+    uint8_t out[8];
+    uint8_t frame[] = { 0x7E, 0xA0, 0x03, 0x7E };
+    const uint8_t *out_apdu;
+    uint32_t out_len;
+
+    REQUIRE(csm_framing_frame(CSM_FRAMING_HDLC, 0, nullptr, sizeof(apdu),
+                              out, sizeof(out)) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_framing_frame(CSM_FRAMING_HDLC, 0, apdu, sizeof(apdu),
+                              nullptr, sizeof(out)) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_framing_frame(CSM_FRAMING_HDLC, 0, apdu, sizeof(apdu),
+                              out, sizeof(out)) == CSM_TRANSPORT_ERR_OVERFLOW);
+
+    REQUIRE(csm_framing_deframe(CSM_FRAMING_HDLC, nullptr, sizeof(frame),
+                                &out_apdu, &out_len) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_framing_deframe(CSM_FRAMING_HDLC, frame, sizeof(frame),
+                                nullptr, &out_len) == CSM_TRANSPORT_ERR);
+    REQUIRE(csm_framing_deframe(CSM_FRAMING_HDLC, frame, sizeof(frame),
+                                &out_apdu, nullptr) == CSM_TRANSPORT_ERR);
+}
