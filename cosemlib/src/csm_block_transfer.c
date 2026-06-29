@@ -337,7 +337,8 @@ int csm_block_receive_data(csm_block_state *state, const uint8_t *data,
     }
 
     /* Check if we have enough space */
-    if ((state->offset + data_size) > CSM_BLOCK_MAX_RECEIVE_SIZE)
+    if ((state->offset > CSM_BLOCK_MAX_RECEIVE_SIZE) ||
+        (data_size > (CSM_BLOCK_MAX_RECEIVE_SIZE - state->offset)))
     {
         return 0; /* Buffer overflow */
     }
@@ -467,7 +468,8 @@ int csm_block_get_receive_data(csm_block_state *state, const uint8_t *data,
     }
 
     /* Check if we have enough space */
-    if ((state->offset + data_size) > CSM_BLOCK_MAX_RECEIVE_SIZE)
+    if ((state->offset > CSM_BLOCK_MAX_RECEIVE_SIZE) ||
+        (data_size > (CSM_BLOCK_MAX_RECEIVE_SIZE - state->offset)))
     {
         return 0; /* Buffer overflow */
     }

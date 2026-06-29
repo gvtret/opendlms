@@ -192,6 +192,8 @@ not currently form one consistently verified product:
   propagate response send failures from `csm_server_poll()`.
 - Fixed high-level SET block transfer to encode octet-string chunk lengths via
   BER length encoding instead of truncating chunks above 255 bytes.
+- Hardened SET/GET block receive accumulation against integer wraparound in
+  receive-buffer capacity checks.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -423,6 +425,8 @@ not currently form one consistently verified product:
   invoking the transport send callback.
 - Client transport tests now verify multi-block SET chunks above 255 bytes use
   long-form BER octet-string length encoding.
+- Block-transfer tests now verify receive accumulation rejects overflowed
+  offsets for both SET and GET receive paths.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:

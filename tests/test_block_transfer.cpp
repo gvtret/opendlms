@@ -10,6 +10,7 @@
 #include "csm_block_transfer.h"
 #include "csm_array.h"
 #include <cstring>
+#include <cstdint>
 
 extern "C" void csm_sys_init();
 
@@ -544,6 +545,18 @@ TEST_CASE("Block receive buffers are per state", "[block_transfer]")
     REQUIRE(data_b[2] == 0xB3U);
 }
 
+TEST_CASE("Block receive rejects overflowed offsets", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    REQUIRE(csm_block_start_receive(&state, 0x01U, 0U) == 1);
+    state.offset = UINT32_MAX;
+
+    static const uint8_t data[] = {0x01};
+    REQUIRE(csm_block_receive_data(&state, data, sizeof(data), 0) == 0);
+}
+
 TEST_CASE("Block encode SET response", "[block_transfer]")
 {
     csm_block_state state;
@@ -799,6 +812,18 @@ TEST_CASE("Block GET receive data - invalid params", "[block_transfer]")
     REQUIRE(csm_block_get_receive_data(NULL, data, 1U, 0) == 0);
     REQUIRE(csm_block_get_receive_data(&state, NULL, 1U, 0) == 0);
     REQUIRE(csm_block_get_receive_data(&state, data, 1U, 0) == 0); /* not active */
+}
+
+TEST_CASE("Block GET receive rejects overflowed offsets", "[block_transfer]")
+{
+    csm_block_state state;
+    csm_block_init(&state);
+
+    REQUIRE(csm_block_start_get_receive(&state, 0x01U, 0U) == 1);
+    state.offset = UINT32_MAX;
+
+    static const uint8_t data[] = {0x01};
+    REQUIRE(csm_block_get_receive_data(&state, data, sizeof(data), 0) == 0);
 }
 
 TEST_CASE("Block GET received data - not complete", "[block_transfer]")
