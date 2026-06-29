@@ -333,6 +333,33 @@ TEST_CASE( "AARE3-HLS", "[AARE3-Decoder]" )
     AAREDecoder(aare_hls_ok, sizeof(aare_hls_ok));
 }
 
+TEST_CASE("AARE-HLS-long-BER-length", "[AARE-Encoder]")
+{
+    csm_asso_state state;
+    csm_asso_config config = {};
+    uint8_t packet[256];
+    csm_array array;
+
+    csm_asso_init(&state);
+    config.conformance = 0xFFFFFFFFU;
+    state.config = &config;
+    state.auth_level = CSM_AUTH_HIGH_LEVEL_GMAC;
+    state.ref = LN_REF;
+    state.handshake.result = CSM_ASSO_AUTH_REQUIRED;
+    state.handshake.ctos.size = 64U;
+    for (uint8_t i = 0U; i < state.handshake.ctos.size; i++)
+    {
+        state.handshake.ctos.value[i] = i;
+    }
+
+    csm_array_init(&array, packet, sizeof(packet), 0U, 0U);
+    REQUIRE(csm_asso_encoder(&state, &array, CSM_ASSO_AARE) == TRUE);
+    REQUIRE(csm_array_written(&array) > 127U);
+    REQUIRE(packet[0] == CSM_ASSO_AARE);
+    REQUIRE(packet[1] == 0x81U);
+    REQUIRE(packet[2] == csm_array_written(&array) - 3U);
+}
+
 TEST_CASE( "AARE4-HLS", "[AARE4-Decoder]" )
 {
     puts("\r\n--------------------------  COSEM AARE 4  --------------------------\r\n");
@@ -381,4 +408,3 @@ TEST_CASE("AARQ-ICube-EZReader", "[AARQ-Decoder]" )
     puts("\r\n--------------------------  COSEM AARQ ICube EZReader  --------------------------\r\n");
     AARQDecoder(aarq_icube_ezreader, sizeof(aarq_icube_ezreader));
 }
-
