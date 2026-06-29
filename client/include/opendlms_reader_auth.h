@@ -33,10 +33,16 @@ void opendlms_reader_auth_public(opendlms_reader_auth_t *auth);
 /** SAP 32 — LLS password via csm_hal_get_lls_password (reader_hal_set_lls_password). */
 void opendlms_reader_auth_reader(opendlms_reader_auth_t *auth);
 
-/** SAP 48 — HLS5 GMAC + glo-ciphering (AARQ context 3); keys via reader_hal_keyring_set_hex. */
+/**
+ * SAP 48 — HLS5 GMAC + glo-ciphering AARQ (context 3).
+ * Service traffic remains fail-closed until HLS pass 3/4 support is complete.
+ */
 void opendlms_reader_auth_configurator(opendlms_reader_auth_t *auth);
 
-/** Same keys/HLS5; AARQ context 1, plain HLS and GET (lab meters without glo on association). */
+/**
+ * SAP 48 — HLS5 GMAC AARQ without glo-ciphering (context 1).
+ * Service traffic remains fail-closed until HLS pass 3/4 support is complete.
+ */
 void opendlms_reader_auth_configurator_plain(opendlms_reader_auth_t *auth);
 
 #ifdef __cplusplus

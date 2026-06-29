@@ -230,6 +230,8 @@ not currently form one consistently verified product:
 - Corrected public README wording around thread safety to point users at
   context-based production APIs while acknowledging legacy compatibility
   helpers.
+- Corrected reader auth profile header comments so Configurator helpers no
+  longer imply completed HLS service access.
 - Hardened the restored C reader TCP-wrapper transport to reject malformed,
   zero-length, and wrong-wPort response frames, and made `reader_lab` drain
   partial socket writes.
