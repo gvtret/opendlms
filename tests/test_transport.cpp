@@ -592,6 +592,48 @@ static int timeout_transport_recv(void *ctx, uint8_t channel, uint8_t *buf,
     return CSM_TRANSPORT_ERR_TIMEOUT;
 }
 
+TEST_CASE("Client: request APIs reject invalid input before transport send", "[transport][client]")
+{
+    static const csm_transport_ops timeout_ops = {
+        timeout_transport_open,
+        timeout_transport_send,
+        timeout_transport_recv,
+        NULL,
+        NULL,
+        NULL
+    };
+    timeout_transport_ctx_t ctx = {};
+    csm_transport transport = { &timeout_ops, &ctx };
+    csm_client *client = csm_client_create(&transport, 0, CSM_FRAMING_NONE);
+    csm_obis_code obis = { 1, 0, 1, 8, 0, 255 };
+    uint8_t resp[16];
+    uint8_t data[] = { 0x09, 0x01, 0x00 };
+
+    REQUIRE(client != nullptr);
+    REQUIRE(csm_client_get(client, 1U, 3U, nullptr, 2U,
+                           resp, sizeof(resp)) == -1);
+    REQUIRE(csm_client_get(client, 1U, 3U, &obis, 2U,
+                           nullptr, sizeof(resp)) == -1);
+    REQUIRE(csm_client_get(client, 1U, 3U, &obis, 2U,
+                           resp, 0U) == -1);
+    REQUIRE(csm_client_set(client, 1U, 3U, nullptr, 2U,
+                           data, sizeof(data), resp, sizeof(resp)) == -1);
+    REQUIRE(csm_client_set(client, 1U, 3U, &obis, 2U,
+                           nullptr, 1U, resp, sizeof(resp)) == -1);
+    REQUIRE(csm_client_action(client, 1U, 70U, nullptr, 1U,
+                              data, sizeof(data), resp, sizeof(resp)) == -1);
+    REQUIRE(csm_client_action(client, 1U, 70U, &obis, 1U,
+                              nullptr, 1U, resp, sizeof(resp)) == -1);
+    REQUIRE(csm_client_get_block(client, 1U, 3U, nullptr, 2U,
+                                 resp, sizeof(resp)) == -1);
+    REQUIRE(csm_client_set_block(client, 1U, 3U, &obis, 2U,
+                                 nullptr, 1U, resp, sizeof(resp)) == -1);
+    REQUIRE(ctx.send_calls == 0);
+    REQUIRE(ctx.recv_calls == 0);
+
+    csm_client_delete(client);
+}
+
 TEST_CASE("Client: connect uses configured receive timeout", "[transport][client]")
 {
     static const csm_transport_ops timeout_ops = {

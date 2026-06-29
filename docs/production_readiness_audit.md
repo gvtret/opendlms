@@ -185,6 +185,9 @@ not currently form one consistently verified product:
   payloads before framing or socket writes.
 - Hardened TCP client initialization to reject null or empty hosts before
   allocating transport context state.
+- Hardened high-level client GET/SET/ACTION and block-transfer entry points
+  against null OBIS, response buffers, and inconsistent payload pointers before
+  encoding or transport send.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -410,6 +413,8 @@ not currently form one consistently verified product:
   a connected client path.
 - TCP transport tests now verify client initialization rejects null or empty
   hosts without mutating the transport instance.
+- Client transport tests now verify request APIs reject invalid inputs before
+  any transport send/receive callbacks are invoked.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:

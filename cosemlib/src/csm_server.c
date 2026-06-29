@@ -236,6 +236,12 @@ int csm_client_connect(csm_client *client, uint32_t timeout_ms)
 static int client_send_recv(csm_client *client, uint8_t *apdu, uint32_t apdu_len,
                             uint8_t *resp_buf, uint32_t resp_size)
 {
+    if (!client || !client->transport || !apdu || apdu_len == 0U ||
+        !resp_buf || resp_size == 0U)
+    {
+        return -1;
+    }
+
     uint8_t ch = client->channel;
 
     /* Frame and send */
@@ -271,7 +277,7 @@ int csm_client_get(csm_client *client, uint8_t invoke_id,
                    uint16_t class_id, const csm_obis_code *obis,
                    uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size)
 {
-    if (!client) return -1;
+    if (!client || !obis || !resp_buf || resp_size == 0U) return -1;
 
     /* Build GET request */
     csm_array req;
@@ -299,7 +305,11 @@ int csm_client_set(csm_client *client, uint8_t invoke_id,
                    uint8_t attr_id, const uint8_t *data, uint32_t data_len,
                    uint8_t *resp_buf, uint32_t resp_size)
 {
-    if (!client) return -1;
+    if (!client || !obis || !resp_buf || resp_size == 0U ||
+        (!data && data_len > 0U))
+    {
+        return -1;
+    }
 
     csm_array req;
     csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
@@ -328,7 +338,11 @@ int csm_client_action(csm_client *client, uint8_t invoke_id,
                       uint8_t method_id, const uint8_t *data, uint32_t data_len,
                       uint8_t *resp_buf, uint32_t resp_size)
 {
-    if (!client) return -1;
+    if (!client || !obis || !resp_buf || resp_size == 0U ||
+        (!data && data_len > 0U))
+    {
+        return -1;
+    }
 
     csm_array req;
     csm_array_init(&req, client->tx_buf, sizeof(client->tx_buf), 0, 0);
@@ -452,7 +466,7 @@ int csm_client_get_block(csm_client *client, uint8_t invoke_id,
                          uint16_t class_id, const csm_obis_code *obis,
                          uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size)
 {
-    if (!client || !resp_buf || resp_size == 0U) return -1;
+    if (!client || !obis || !resp_buf || resp_size == 0U) return -1;
 
     /* Build and send initial GET request */
     int resp_len = csm_client_get(client, invoke_id, class_id, obis, attr_id,
@@ -525,7 +539,11 @@ int csm_client_set_block(csm_client *client, uint8_t invoke_id,
                          uint8_t attr_id, const uint8_t *data, uint32_t data_len,
                          uint8_t *resp_buf, uint32_t resp_size)
 {
-    if (!client) return -1;
+    if (!client || !obis || !resp_buf || resp_size == 0U ||
+        (!data && data_len > 0U))
+    {
+        return -1;
+    }
 
     /* Calculate overhead: tag(1) + type(1) + invoke_id(1) + last_block(1) +
      * block_number(4) + class_id(2) + obis(6) + id(1) + sel_access(1) = 18 bytes */
