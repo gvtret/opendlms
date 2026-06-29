@@ -113,6 +113,7 @@ void null_safety(void)
     REQUIRE(FALSE == csm_array_read_u16(&array, NULL));
     REQUIRE(FALSE == csm_array_read_u32(NULL, &value32));
     REQUIRE(FALSE == csm_array_read_u32(&array, NULL));
+    csm_array_dump(NULL);
 }
 
 

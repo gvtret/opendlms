@@ -119,6 +119,11 @@ int csm_array_write_u32(csm_array *array, uint32_t value)
 
 void csm_array_dump(csm_array *array)
 {
+    if (array == NULL)
+    {
+        return;
+    }
+
     for (uint32_t i = 0U; i < array->size; i++)
     {
         if (i > 0U)

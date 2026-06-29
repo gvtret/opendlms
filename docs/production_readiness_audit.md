@@ -172,6 +172,7 @@ not currently form one consistently verified product:
   array/buffer inputs.
 - Hardened scalar `csm_array` jump, read, size, and data-pointer helpers
   against null inputs.
+- Hardened `csm_array_dump()` against null input.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
