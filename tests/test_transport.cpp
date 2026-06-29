@@ -388,6 +388,25 @@ TEST_CASE("TCP transport: public connect and accept reject null contexts", "[tra
     REQUIRE(csm_transport_tcp_accept(&transport, 0U) == CSM_TRANSPORT_ERR);
 }
 
+TEST_CASE("TCP transport: client init rejects invalid hosts", "[transport][tcp]")
+{
+    csm_transport transport;
+    transport.ops = nullptr;
+    transport.ctx = nullptr;
+
+    REQUIRE(csm_transport_tcp_client_init(&transport, nullptr, 4060U,
+                                          CSM_FRAMING_TCP_WRAPPER) ==
+            CSM_TRANSPORT_ERR);
+    REQUIRE(transport.ops == nullptr);
+    REQUIRE(transport.ctx == nullptr);
+
+    REQUIRE(csm_transport_tcp_client_init(&transport, "", 4060U,
+                                          CSM_FRAMING_TCP_WRAPPER) ==
+            CSM_TRANSPORT_ERR);
+    REQUIRE(transport.ops == nullptr);
+    REQUIRE(transport.ctx == nullptr);
+}
+
 TEST_CASE("TCP transport: receive rejects null and empty buffers", "[transport][tcp]")
 {
     test_socket_runtime sockets;

@@ -555,7 +555,7 @@ int csm_transport_tcp_server_init(csm_transport *transport, uint16_t port,
 int csm_transport_tcp_client_init(csm_transport *transport, const char *host,
                                    uint16_t port, csm_framing_type framing)
 {
-    if (!transport || !host) return CSM_TRANSPORT_ERR;
+    if (!transport || !host || host[0] == '\0') return CSM_TRANSPORT_ERR;
 
     csm_tcp_context *client_ctx = tcp_alloc_context();
     if (!client_ctx) return CSM_TRANSPORT_ERR_OVERFLOW;

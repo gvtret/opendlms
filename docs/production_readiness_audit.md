@@ -183,6 +183,8 @@ not currently form one consistently verified product:
   APDUs consistently with TCP wrapper framing.
 - Hardened TCP transport send entry points against null or zero-length
   payloads before framing or socket writes.
+- Hardened TCP client initialization to reject null or empty hosts before
+  allocating transport context state.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -406,6 +408,8 @@ not currently form one consistently verified product:
   buffers without waiting for socket activity.
 - TCP transport tests now verify send rejects null and zero-length payloads on
   a connected client path.
+- TCP transport tests now verify client initialization rejects null or empty
+  hosts without mutating the transport instance.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:
