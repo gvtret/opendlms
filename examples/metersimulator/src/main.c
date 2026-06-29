@@ -39,6 +39,14 @@ const csm_asso_config assos_config[] =
     { {32U, 1U},
       CSM_CBLOCK_GET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ,
       0U, // No auto-connected
+    },
+
+    // Client configurator association (HLS5 GMAC)
+    { {48U, 48U},
+      CSM_CBLOCK_GET | CSM_CBLOCK_ACTION | CSM_CBLOCK_SET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ | CSM_CBLOCK_SELECTIVE_ACCESS,
+      0U, // No auto-connected
+      (uint8_t)LN_REF,
+      (uint8_t)CSM_AUTH_HIGH_LEVEL_GMAC,
     }
 };
 

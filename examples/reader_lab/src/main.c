@@ -363,17 +363,17 @@ static void setup_profile(const char *profile,
         asso_cfg->llc.dsap            = 48U;
         asso_cfg->application_context = plain_hls ? (uint8_t)LN_REF : (uint8_t)LN_REF_WITH_CYPHERING;
         reader_hal_set_system_title(lab_client_title);
-        reader_hal_keyring_set_hex(48U, "303132333435363738393A3B3C3D3E3F",
-                                   "404142434445464748494A4B4C4D4E4F",
-                                   "31313131313131313131313131313131");
-        reader_hal_set_dedicated_key_hex(48U, "31313131313131313131313131313131");
+        reader_hal_keyring_set_hex(48U, "000102030405060708090A0B0C0D0E0F",
+                                   "D0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF",
+                                   "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+        reader_hal_set_dedicated_key_hex(48U, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
         reader_hal_set_invocation_counter(48U, plain_hls ? 1U : 2U);
     }
     else
     {
         opendlms_reader_auth_public(auth);
         asso_cfg->llc.ssap            = 16U;
-        asso_cfg->llc.dsap            = 16U;
+        asso_cfg->llc.dsap            = 1U;
         asso_cfg->application_context = (uint8_t)LN_REF;
     }
 
@@ -544,6 +544,7 @@ int main(int argc, char **argv)
     {
         asso_cfg.llc.ssap = (uint16_t)source_wport_override;
     }
+    dest_wport = asso_cfg.llc.dsap;
     if (dest_wport_override > 0)
     {
         dest_wport = (uint16_t)dest_wport_override;

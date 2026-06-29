@@ -60,6 +60,12 @@ def main():
         expect(out, "GET OK:")
         expect(out, "access=0")
 
+        out = run_reader(reader, port, clock, "class=8", "attr=2", "plain", profile="config")
+        expect(out, "Configurator: plain HLS")
+        expect(out, "Association OK")
+        expect(out, "GET OK:")
+        expect(out, "access=0")
+
         new_time = "090c07ea061b0c000000ff800000"
         out = run_reader(reader, port, clock, "class=8", "sap=1", "attr=2",
                          "set-hex={}".format(new_time))

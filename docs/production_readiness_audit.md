@@ -237,6 +237,9 @@ not currently form one consistently verified product:
   before transport setup.
 - Added a `production` CMake preset that enables the full local production gate:
   tests, server, restored reader API, meter simulator, and reader_lab live smoke.
+- Added a live `reader_lab config plain` smoke path by exposing the simulator
+  SAP 48 HLS5 association, aligning reader/simulator demo keys, and routing
+  TCP wrapper traffic to the selected association destination wPort.
 
 ## Verified
 
@@ -367,9 +370,10 @@ not currently form one consistently verified product:
   `examples/metersimulator/tests/test_fs.cpp` uses embUnit and exercises a
   legacy simulator filesystem subsystem that is not part of the active DLMS
   stack gate.
-- TCP-wrapper live coverage currently proves AARQ/AARE, GET clock, SET clock,
-  ACTION clock, GET error response, client disconnect, and LuaBridge
-  `getObjectList()`. It still needs security-profile live coverage.
+- TCP-wrapper live coverage currently proves AARQ/AARE, public GET clock,
+  reader LLS GET clock, Configurator plain-HLS GET clock, SET clock, ACTION
+  clock, GET error response, client disconnect, and LuaBridge `getObjectList()`.
+  It still needs ciphered security-profile live coverage.
 - Configurator invocation-counter discovery/synchronization is deliberately
   gated off in the restored C reader API until the full security-client
   handshake path is implemented; callers must seed the counter explicitly.
@@ -380,8 +384,8 @@ not currently form one consistently verified product:
 
 1. Make CMake build every intended test file, or explicitly mark tests as
    experimental/disabled with a reason.
-2. Extend end-to-end TCP WPDU tests with security-profile live coverage and
-   gateway/proxy scenarios.
+2. Extend end-to-end TCP WPDU tests with ciphered security-profile live
+   coverage and gateway/proxy scenarios.
 3. Complete remaining partial IC handlers or document unsupported operations
    with standard COSEM errors.
 4. Add CI gates for clean MinGW, live simulator smoke, and native addon builds.
