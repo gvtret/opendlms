@@ -24,7 +24,7 @@ if(OPEN_DLMS_BUILD_READER_LAB)
     target_link_libraries(reader_lab PRIVATE cosemlib)
 
     if(WIN32)
-        target_link_libraries(reader_lab PRIVATE ws2_32)
+        target_link_libraries(reader_lab PRIVATE ws2_32 advapi32)
     endif()
 
     target_include_directories(reader_lab PRIVATE

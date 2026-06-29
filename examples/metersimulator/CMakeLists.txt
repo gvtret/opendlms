@@ -33,5 +33,5 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PUBLIC cosemserver cosemlib)
 
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PUBLIC ws2_32)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ws2_32 advapi32)
 endif()

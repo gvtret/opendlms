@@ -242,6 +242,8 @@ not currently form one consistently verified product:
   TCP wrapper traffic to the selected association destination wPort.
 - Hardened `reader_lab` profile parsing so unknown profile names fail early
   instead of silently using the public association.
+- Replaced `rand()`-based ACSE/HLS challenge bytes in the active reader and
+  simulator HALs with OS CSPRNG bytes and unbiased range sampling.
 
 ## Verified
 

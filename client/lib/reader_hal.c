@@ -15,8 +15,14 @@
 #include "sha256.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#if defined(_WIN32) || defined(WIN32)
+#include <windows.h>
+#include <wincrypt.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 #define READER_HAL_MAX_SAP 64U
 #define READER_HAL_MAX_CHANNELS 4U
@@ -80,6 +86,34 @@ static int reader_parse_hex16(const char *hex, uint8_t *out)
     }
 
     return 0;
+}
+
+static int reader_hal_random_byte(uint8_t *out)
+{
+    if (out == NULL)
+    {
+        return 0;
+    }
+
+#if defined(_WIN32) || defined(WIN32)
+    HCRYPTPROV provider = 0;
+    if (!CryptAcquireContextA(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
+    {
+        return 0;
+    }
+    BOOL ok = CryptGenRandom(provider, 1U, out);
+    CryptReleaseContext(provider, 0U);
+    return ok ? 1 : 0;
+#else
+    int fd = open("/dev/urandom", O_RDONLY);
+    if (fd < 0)
+    {
+        return 0;
+    }
+    ssize_t got = read(fd, out, 1U);
+    close(fd);
+    return (got == 1) ? 1 : 0;
+#endif
 }
 
 void reader_hal_init(void)
@@ -316,11 +350,30 @@ int csm_sys_gcm_finish(uint8_t channel, uint8_t *tag)
 
 uint8_t csm_hal_get_random_u8(uint8_t min, uint8_t max)
 {
+    uint8_t value = 0U;
+    uint16_t span;
+    uint16_t limit;
+
     if (max <= min)
     {
         return min;
     }
-    return min + (uint8_t)(rand() % ((max + 1) - min));
+
+    span = (uint16_t)max - (uint16_t)min + 1U;
+    limit = (uint16_t)(256U - (256U % span));
+    for (uint8_t attempt = 0U; attempt < 32U; attempt++)
+    {
+        if (!reader_hal_random_byte(&value))
+        {
+            break;
+        }
+        if ((uint16_t)value < limit)
+        {
+            return (uint8_t)(min + (value % span));
+        }
+    }
+
+    return min;
 }
 
 void csm_hal_get_lls_password(uint8_t sap, uint8_t *array, uint8_t max_size)

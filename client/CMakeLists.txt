@@ -19,6 +19,14 @@ target_include_directories(opendlms_reader PUBLIC
 
 target_link_libraries(opendlms_reader PUBLIC cosemlib)
 
+if(WIN32)
+    target_link_libraries(opendlms_reader PUBLIC advapi32)
+endif()
+
+if(WIN32)
+    target_link_libraries(opendlms_reader PUBLIC advapi32)
+endif()
+
 set_target_properties(opendlms_reader PROPERTIES
     PUBLIC_HEADER "include/opendlms_reader.h;include/opendlms_reader_auth.h;include/reader_hal.h"
 )

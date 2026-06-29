@@ -47,5 +47,8 @@ if(OPEN_DLMS_BUILD_CLIENT)
         ${CMAKE_CURRENT_SOURCE_DIR}/../client/include
     )
     target_link_libraries(reader_hal_smoke PUBLIC cosemlib)
+    if(WIN32)
+        target_link_libraries(reader_hal_smoke PUBLIC advapi32)
+    endif()
     add_test(NAME reader_hal_smoke COMMAND reader_hal_smoke)
 endif()

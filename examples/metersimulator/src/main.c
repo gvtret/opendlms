@@ -1,7 +1,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <time.h> // to initialize the seed
 
 // Cosem stack
 #include "csm_array.h"
@@ -198,8 +197,6 @@ uint8_t tcp_conn_handler(uint8_t channel, enum conn_event event)
 // Application & stack initialization
 void csm_init()
 {
-    srand(time(NULL)); // seed init
-
     // DLMS/Cosem stack initialization
     gDbContext.db = gDataBaseList;
     gDbContext.size = COSEM_DATABASE_SIZE;

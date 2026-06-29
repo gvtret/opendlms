@@ -15,7 +15,13 @@
 
 // Standard libraries
 #include <string.h>
-#include <stdlib.h>
+#if defined(_WIN32) || defined(WIN32)
+#include <windows.h>
+#include <wincrypt.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 /*
 the  leading  (i.e.  the  leftmost)  64  bits  (8  octets)  shall  hold  the  fixed  field.  It  shall  contain  the
@@ -89,6 +95,34 @@ static const cfg_cosem *find_sap_config(uint8_t sap)
         }
     }
     return NULL;
+}
+
+static int meter_hal_random_byte(uint8_t *out)
+{
+    if (out == NULL)
+    {
+        return FALSE;
+    }
+
+#if defined(_WIN32) || defined(WIN32)
+    HCRYPTPROV provider = 0;
+    if (!CryptAcquireContextA(&provider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
+    {
+        return FALSE;
+    }
+    BOOL ok = CryptGenRandom(provider, 1U, out);
+    CryptReleaseContext(provider, 0U);
+    return ok ? TRUE : FALSE;
+#else
+    int fd = open("/dev/urandom", O_RDONLY);
+    if (fd < 0)
+    {
+        return FALSE;
+    }
+    ssize_t got = read(fd, out, 1U);
+    close(fd);
+    return (got == 1) ? TRUE : FALSE;
+#endif
 }
 
 // Keep a context by channel to be thread safe
@@ -251,14 +285,32 @@ uint8_t csm_sys_get_mechanism_id(uint8_t sap)
     return CSM_AUTH_LOWEST_LEVEL;
 }
 
-// TODO: Write a note on the randomize function, it should be NIST compliant (use a target-dependant implementation)
 uint8_t csm_hal_get_random_u8(uint8_t min, uint8_t max)
 {
+    uint8_t value = 0U;
+    uint16_t span;
+    uint16_t limit;
+
     if (max <= min)
     {
         return min;
     }
-    return min + rand() % ((max + 1) - min);
+
+    span = (uint16_t)max - (uint16_t)min + 1U;
+    limit = (uint16_t)(256U - (256U % span));
+    for (uint8_t attempt = 0U; attempt < 32U; attempt++)
+    {
+        if (!meter_hal_random_byte(&value))
+        {
+            break;
+        }
+        if ((uint16_t)value < limit)
+        {
+            return (uint8_t)(min + (value % span));
+        }
+    }
+
+    return min;
 }
 
 
