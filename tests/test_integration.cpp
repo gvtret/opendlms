@@ -1632,6 +1632,53 @@ TEST_CASE("Integration_ResetRegister", "[integration][basic]")
     REQUIRE(buf[3] == 0x00);
 }
 
+TEST_CASE("Integration_DisconnectControlActionsMutateState", "[integration][basic]")
+{
+    test_stack_setup();
+    test_establish_association();
+
+    uint8_t buf[1024];
+    int ret = test_do_get(0x01, 70, &obis_disconnect, 2, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC4);
+    REQUIRE(buf[3] == 0x00);
+    REQUIRE(buf[4] == AXDR_TAG_BOOLEAN);
+    REQUIRE(buf[5] == 0x01);
+
+    ret = test_do_action(0x02, 70, &obis_disconnect, 1, NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_get(0x03, 70, &obis_disconnect, 2, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[4] == AXDR_TAG_BOOLEAN);
+    REQUIRE(buf[5] == 0x00);
+
+    const uint8_t unexpected_payload[] = { AXDR_TAG_UNSIGNED8, 0x01 };
+    ret = test_do_action(0x04, 70, &obis_disconnect, 2,
+                         unexpected_payload, sizeof(unexpected_payload),
+                         buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] != 0x00);
+
+    ret = test_do_get(0x05, 70, &obis_disconnect, 2, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[4] == AXDR_TAG_BOOLEAN);
+    REQUIRE(buf[5] == 0x00);
+
+    ret = test_do_action(0x06, 70, &obis_disconnect, 2, NULL, 0, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_get(0x07, 70, &obis_disconnect, 2, buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[4] == AXDR_TAG_BOOLEAN);
+    REQUIRE(buf[5] == 0x01);
+}
+
 TEST_CASE("Integration_MultipleGets", "[integration][basic]")
 {
     test_stack_setup();

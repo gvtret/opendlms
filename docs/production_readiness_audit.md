@@ -311,6 +311,8 @@ not currently form one consistently verified product:
   the requested script id is not present.
 - Integration tests now verify Sensor Manager `reset` clears previously SET
   active-variant, retry-count, and data-protection state.
+- Integration tests now verify Disconnect Control remote disconnect/reconnect
+  mutate output state and reject unexpected ACTION payloads without changing it.
 - Integration tests now verify Register Table `capture` fails without a
   configured readable target, succeeds for a real Register object attribute, and
   rejects an out-of-range active index.
