@@ -33,6 +33,11 @@ void csm_array_init(csm_array *array, uint8_t *buffer, uint32_t max_size, uint32
 int csm_array_get(const csm_array *array, uint32_t index, uint8_t *byte)
 {
     int ret = FALSE;
+    if ((array == NULL) || (byte == NULL))
+    {
+        return ret;
+    }
+
     if (TEST_INDEX(array, index))
     {
         *byte = array->buff[INDEX(array, index)];

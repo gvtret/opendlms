@@ -72,9 +72,25 @@ void over_limits(void)
     REQUIRE(FALSE == csm_array_write_u8(&array, 0x05U));
 }
 
+void null_safety(void)
+{
+    csm_array array;
+    uint8_t buffer[2] = {0xAAU, 0x55U};
+    uint8_t byte = 0xFFU;
+
+    csm_array_init(&array, buffer, sizeof(buffer), sizeof(buffer), 0U);
+    REQUIRE(FALSE == csm_array_get(NULL, 0U, &byte));
+    REQUIRE(0xFFU == byte);
+    REQUIRE(FALSE == csm_array_get(&array, 0U, NULL));
+
+    REQUIRE(FALSE == csm_array_get(&array, sizeof(buffer), &byte));
+    REQUIRE(0U == byte);
+}
+
 
 TEST_CASE( "Cosem: array utility tests", "[csm_array_tests]" )
 {
     csm_array_basic_test();
     over_limits();
+    null_safety();
 }
