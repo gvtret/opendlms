@@ -215,6 +215,9 @@ not currently form one consistently verified product:
 - Made the restored reader API return operation failure for decoded DLMS
   GET/SET/ACTION error results instead of treating every decoded response as
   success.
+- Corrected public README/example documentation to describe the current
+  production-gated reader profiles and fail-closed Configurator/HLS status
+  instead of implying a completed secure-client path.
 - Hardened the restored C reader TCP-wrapper transport to reject malformed,
   zero-length, and wrong-wPort response frames, and made `reader_lab` drain
   partial socket writes.
