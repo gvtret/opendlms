@@ -32,8 +32,16 @@ int csm_axdr_size(csm_array *array, uint32_t *size)
 {
     int ret = FALSE;
 
+    if ((array == NULL) || (size == NULL))
+    {
+        return FALSE;
+    }
+
     ber_length len;
-    csm_ber_read_len(array, &len);
+    if (!csm_ber_read_len(array, &len))
+    {
+        return FALSE;
+    }
 
     // Check if size is somewhat possible
     if (len.length <= csm_array_unread(array))
@@ -171,6 +179,11 @@ static int csm_axdr_decode_one(csm_array *array, axdr_data_cb callback)
 
 int csm_axdr_decode_tags(csm_array *array, axdr_data_cb callback)
 {
+    if (array == NULL)
+    {
+        return FALSE;
+    }
+
     while (csm_array_unread(array) > 0U)
     {
         if (!csm_axdr_decode_one(array, callback))
@@ -186,13 +199,21 @@ int csm_axdr_decode_block(csm_array *array, uint32_t *size)
 {
     int ret = FALSE;
     uint8_t byte = 0xFFU;
+    if ((array == NULL) || (size == NULL))
+    {
+        return FALSE;
+    }
+
     if (csm_array_read_u8(array, &byte))
     {
         if (byte == 0x00U)
         {
             // begin of the block
             ber_length len;
-            csm_ber_read_len(array, &len);
+            if (!csm_ber_read_len(array, &len))
+            {
+                return FALSE;
+            }
 
             // Check if size is somewhat possible
             if (len.length <= csm_array_unread(array))
@@ -209,6 +230,11 @@ int csm_axdr_decode_block(csm_array *array, uint32_t *size)
 // -------------------------------   ENCODERS ------------------------------------------
 int csm_axdr_wr_octetstring(csm_array *array, const uint8_t *buffer, uint32_t size)
 {
+    if ((array == NULL) || ((buffer == NULL) && (size > 0U)))
+    {
+        return FALSE;
+    }
+
     int valid = csm_array_write_u8(array, AXDR_TAG_OCTETSTRING);
     valid = valid && csm_ber_write_len(array, size);
     valid = valid && csm_array_write_buff(array, buffer, size);
@@ -238,6 +264,11 @@ int csm_axdr_wr_boolean(csm_array *array, uint8_t value)
 
 int csm_axdr_wr_capture_object(csm_array *array, csm_object_t *data)
 {
+    if ((array == NULL) || (data == NULL))
+    {
+        return FALSE;
+    }
+
     int valid = csm_array_write_u8(array, AXDR_TAG_STRUCTURE);
     valid = valid && csm_ber_write_len(array, 4U);
 

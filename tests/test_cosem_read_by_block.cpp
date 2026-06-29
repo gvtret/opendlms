@@ -94,3 +94,27 @@ TEST_CASE("AXDR flat tag decoder", "[Read by block]")
     REQUIRE(decoded_payload_bytes == 3U);
     REQUIRE(csm_array_unread(&array) == 0U);
 }
+
+TEST_CASE("AXDR helpers reject null and truncated inputs", "[Read by block]")
+{
+    uint8_t truncated_block[] = { 0x00U, 0x82U, 0x01U };
+    uint8_t out[8];
+    csm_array array;
+    csm_array out_array;
+    uint32_t size = 0U;
+    csm_object_t object;
+    memset(&object, 0, sizeof(object));
+
+    csm_array_init(&array, truncated_block, sizeof(truncated_block),
+                   sizeof(truncated_block), 0U);
+    csm_array_init(&out_array, out, sizeof(out), 0U, 0U);
+
+    REQUIRE(csm_axdr_decode_tags(NULL, AxdrData) == FALSE);
+    REQUIRE(csm_axdr_decode_block(NULL, &size) == FALSE);
+    REQUIRE(csm_axdr_decode_block(&array, NULL) == FALSE);
+    REQUIRE(csm_axdr_decode_block(&array, &size) == FALSE);
+    REQUIRE(csm_axdr_wr_octetstring(NULL, out, sizeof(out)) == FALSE);
+    REQUIRE(csm_axdr_wr_octetstring(&out_array, NULL, 1U) == FALSE);
+    REQUIRE(csm_axdr_wr_capture_object(NULL, &object) == FALSE);
+    REQUIRE(csm_axdr_wr_capture_object(&out_array, NULL) == FALSE);
+}
