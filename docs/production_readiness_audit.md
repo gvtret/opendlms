@@ -215,6 +215,8 @@ not currently form one consistently verified product:
 - Made the restored reader API return operation failure for decoded DLMS
   GET/SET/ACTION error results instead of treating every decoded response as
   success.
+- Fixed the legacy TCP simulator server to dispatch received frames to the
+  accepted peer's channel instead of always using channel zero.
 - Corrected public README/example documentation to describe the current
   production-gated reader profiles and fail-closed Configurator/HLS status
   instead of implying a completed secure-client path.

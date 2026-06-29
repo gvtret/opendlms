@@ -314,8 +314,8 @@ static void app(data_handler data_func, conn_handler conn_func, memory_t *b, int
                               memcpy(buff, peers[i].recv_buf, frame_size);
                               if (data_func != NULL)
                               {
-                                  // FIXME: change channel number with instance number when multi threaded server is available
-                                  int ret = data_func(0U, b, frame_size);
+                                  uint8_t channel = (uint8_t)(peers[i].connected - 1U);
+                                  int ret = data_func(channel, b, frame_size);
                                   if (ret > 0)
                                   {
                                        write_peer(peers[i].sock, buff, (size_t)ret);
