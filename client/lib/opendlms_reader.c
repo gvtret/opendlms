@@ -7,6 +7,7 @@
 #include "csm_array.h"
 #include "csm_framing.h"
 #include "csm_transport.h"
+#include "reader_hal.h"
 
 #include <string.h>
 
@@ -128,6 +129,7 @@ int opendlms_reader_init(opendlms_reader_t *reader,
 
     reader->associations = associations;
     reader->association_count = association_count;
+    reader_hal_init();
     return 0;
 }
 

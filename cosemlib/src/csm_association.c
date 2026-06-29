@@ -1188,8 +1188,8 @@ int csm_asso_encoder(csm_asso_state *state, csm_array *array, uint8_t tag)
 
     if (csm_array_write_u8(array, tag))
     {
-        // Write dummy size, it will be updated later
-        // Since the AARE is never bigger than 127, the length encoding can one-byte size
+        // Reserve a dummy BER length. It is finalized after payload encoding
+        // because HLS challenges can exceed the short-form 127 byte boundary.
         if (csm_array_write_u8(array, 0U))
         {
             const csm_asso_enc *codec = &aare_encoder_chain[0];
@@ -1229,8 +1229,35 @@ int csm_asso_encoder(csm_asso_state *state, csm_array *array, uint8_t tag)
             if (i >= size)
             {
                 ret = TRUE;
-                // Update the size
-                csm_array_set(array, 1U, array->wr_index - 2U); // skip the BER header (tag+length = 2 bytes)
+                uint32_t payload_len = array->wr_index - 2U;
+                if (payload_len < 128U)
+                {
+                    csm_array_set(array, 1U, (uint8_t)payload_len);
+                }
+                else if ((payload_len <= 0xFFU) && (csm_array_free_size(array) >= 1U))
+                {
+                    memmove(&array->buff[array->offset + 3U],
+                            &array->buff[array->offset + 2U],
+                            payload_len);
+                    array->wr_index++;
+                    csm_array_set(array, 1U, 0x81U);
+                    csm_array_set(array, 2U, (uint8_t)payload_len);
+                }
+                else if ((payload_len <= 0xFFFFU) && (csm_array_free_size(array) >= 2U))
+                {
+                    memmove(&array->buff[array->offset + 4U],
+                            &array->buff[array->offset + 2U],
+                            payload_len);
+                    array->wr_index += 2U;
+                    csm_array_set(array, 1U, 0x82U);
+                    csm_array_set(array, 2U, (uint8_t)((payload_len >> 8U) & 0xFFU));
+                    csm_array_set(array, 3U, (uint8_t)(payload_len & 0xFFU));
+                }
+                else
+                {
+                    ret = FALSE;
+                    CSM_ERR("[ACSE] Encoded frame too large");
+                }
             }
             else
             {

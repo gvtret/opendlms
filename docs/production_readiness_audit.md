@@ -244,6 +244,11 @@ not currently form one consistently verified product:
   instead of silently using the public association.
 - Replaced `rand()`-based ACSE/HLS challenge bytes in the active reader and
   simulator HALs with OS CSPRNG bytes and unbiased range sampling.
+- Fixed ACSE AARQ/AARE BER length finalization so HLS challenge sizes that
+  push payloads past 127 bytes use definite long-form lengths.
+- Made `opendlms_reader_init()` initialize the bundled reader HAL so installed
+  static `OpenDLMS::opendlms_reader` consumers pull the HAL symbols needed by
+  `cosemlib`.
 
 ## Verified
 
