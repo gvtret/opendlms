@@ -450,6 +450,8 @@ not currently form one consistently verified product:
   fixed-array access.
 - Cosemlib security suite tests now verify supported/unsupported suites, null
   algorithm outputs, and boolean support predicate semantics.
+- Cosemlib catalog tests now verify YAML buffers without a trailing newline are
+  parsed completely and overlong lines fail without retaining partial entries.
 - Crypto/security tests now verify auth encrypt/decrypt reject null and
   short-prefix inputs before invoking GCM.
 - Restored reader API tests now verify connect rejects incomplete IO

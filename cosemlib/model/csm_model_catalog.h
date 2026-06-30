@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
 #include <stdint.h>
 #include "csm_definitions.h"
 

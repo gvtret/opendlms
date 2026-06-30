@@ -229,14 +229,15 @@ int csm_model_catalog_parse_buffer(const char *yaml, size_t len)
 
     while (p < end)
     {
-        if (*p == '\n' || *p == '\r' || p == end - 1)
+        if (*p == '\n' || *p == '\r')
         {
-            if (line_pos > 0 && line_pos < (int)sizeof(line) - 1)
+            if (line_pos > 0)
             {
                 line[line_pos] = '\0';
                 if (parse_line(line) != TRUE)
                 {
                     CSM_ERR("[CATALOG] Parse error near: %s", line);
+                    csm_model_catalog_reset();
                     return FALSE;
                 }
             }
@@ -248,12 +249,26 @@ int csm_model_catalog_parse_buffer(const char *yaml, size_t len)
         }
         else
         {
-            if (line_pos < (int)sizeof(line) - 1)
+            if (line_pos >= (int)sizeof(line) - 1)
             {
-                line[line_pos++] = *p;
+                CSM_ERR("[CATALOG] Line too long");
+                csm_model_catalog_reset();
+                return FALSE;
             }
+            line[line_pos++] = *p;
         }
         p++;
+    }
+
+    if (line_pos > 0)
+    {
+        line[line_pos] = '\0';
+        if (parse_line(line) != TRUE)
+        {
+            CSM_ERR("[CATALOG] Parse error near: %s", line);
+            csm_model_catalog_reset();
+            return FALSE;
+        }
     }
 
     CSM_LOG("[CATALOG] Loaded %d entries", catalog_count);

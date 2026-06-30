@@ -10,9 +10,11 @@
 #include "cosemlib.h"
 #include "csm_ber.h"
 #include "csm_keyring.h"
+#include "csm_model_catalog.h"
 #include "csm_security_suite.h"
 #include "os_util.h"
 #include <cstring>
+#include <string>
 
 extern "C" void csm_sys_init();
 
@@ -201,6 +203,32 @@ TEST_CASE("security suite support predicate is boolean", "[cosemlib][security]")
     REQUIRE(csm_sec_suite_is_supported(6U) == 0);
     REQUIRE(csm_sec_suite_is_supported(7U) == 0);
     REQUIRE(csm_sec_suite_is_supported(10U) == 0);
+}
+
+TEST_CASE("catalog parser handles final line and rejects overlong lines", "[cosemlib][catalog]")
+{
+    const char yaml[] =
+        "catalog:\n"
+        "  - class_id: 8\n"
+        "    logical_name: \"0.0.1.0.0.255\"\n"
+        "    version: 0";
+
+    REQUIRE(csm_model_catalog_parse_buffer(yaml, sizeof(yaml) - 1U) == TRUE);
+    REQUIRE(csm_model_catalog_count() == 1);
+
+    const csm_object_t *obj = csm_model_catalog_get(0);
+    REQUIRE(obj != nullptr);
+    REQUIRE(obj->class_id == 8U);
+    REQUIRE(obj->version == 0U);
+    REQUIRE(obj->obis.C == 1U);
+    REQUIRE(obj->obis.F == 255U);
+
+    const std::string overlong =
+        "catalog:\n"
+        "  - class_id: 1\n"
+        "    logical_name: \"" + std::string(150, '1') + "\"\n";
+    REQUIRE(csm_model_catalog_parse_buffer(overlong.c_str(), overlong.size()) == FALSE);
+    REQUIRE(csm_model_catalog_count() == 0);
 }
 
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")
