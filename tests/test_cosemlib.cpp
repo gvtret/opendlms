@@ -265,15 +265,22 @@ TEST_CASE("object list import round-trips exported access rights", "[cosemlib][m
     csm_array out;
     csm_array_init(&out, buf, sizeof(buf), 0U, 0U);
     REQUIRE(csm_model_export_object_list(&out) == CSM_OK);
+    const uint32_t written = csm_array_written(&out);
 
     csm_model_instance_reset();
     csm_array in;
-    csm_array_init(&in, buf, sizeof(buf), csm_array_written(&out), 0U);
+    csm_array_init(&in, buf, sizeof(buf), written, 0U);
     REQUIRE(csm_model_import_object_list(&in) == CSM_OK);
 
     REQUIRE(csm_model_instance_count() == 2);
     REQUIRE(csm_model_instance_find(8U, &clock) != nullptr);
     REQUIRE(csm_model_instance_find(15U, &association) != nullptr);
+
+    buf[written] = 0x00U;
+    csm_array tampered;
+    csm_array_init(&tampered, buf, sizeof(buf), written + 1U, 0U);
+    REQUIRE(csm_model_import_object_list(&tampered) == CSM_ERR_BAD_ENCODING);
+    REQUIRE(csm_model_instance_count() == 0);
 }
 
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")

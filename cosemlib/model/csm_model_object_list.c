@@ -173,5 +173,11 @@ int csm_model_import_object_list(csm_array *in)
         }
     }
 
+    if (csm_array_unread(in) != 0U)
+    {
+        csm_model_instance_reset();
+        return (int)CSM_ERR_BAD_ENCODING;
+    }
+
     return (int)CSM_OK;
 }
