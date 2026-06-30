@@ -483,6 +483,8 @@ not currently form one consistently verified product:
   short-prefix inputs before invoking GCM.
 - Restored reader API tests now verify connect rejects incomplete IO
   configurations before sending an AARQ.
+- Restored reader API tests now verify connect rejects zero TCP-wrapper ports
+  before creating a client or sending an AARQ.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:

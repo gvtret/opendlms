@@ -239,6 +239,10 @@ int opendlms_reader_connect(opendlms_reader_session_t *session)
     {
         return -1;
     }
+    if ((session->source_wport == 0U) || (session->dest_wport == 0U))
+    {
+        return -1;
+    }
     if (session->sync_invocation_counter != 0U)
     {
         return -1;
