@@ -446,6 +446,8 @@ not currently form one consistently verified product:
   the input cursor and caller-owned response state.
 - Cosemlib service tests now verify request encoding and server service
   execution reject null caller state before dereferencing.
+- Cosemlib service tests now verify selective-access range encoding rejects
+  missing object/start/end inputs instead of emitting malformed empty fields.
 - Cosemlib BER tests now verify null input rejection and truncated object
   identifier handling.
 - AXDR read-by-block tests now verify null input rejection and truncated BER

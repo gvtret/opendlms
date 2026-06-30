@@ -1122,6 +1122,12 @@ Selective access with undefined end date
 
 int csm_client_encode_selective_access_by_range(csm_array *array, csm_object_t *restricting_object, csm_array *start, csm_array *end)
 {
+    if ((array == NULL) || (restricting_object == NULL) || (start == NULL) || (end == NULL) ||
+        (csm_array_rd_data(start) == NULL) || (csm_array_rd_data(end) == NULL))
+    {
+        return FALSE;
+    }
+
     int valid = csm_array_write_u8(array, 1U); // by range
     valid = valid && csm_array_write_u8(array, AXDR_TAG_STRUCTURE);
     valid = valid && csm_ber_write_len(array, 4U);
