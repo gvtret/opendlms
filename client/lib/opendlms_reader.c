@@ -235,6 +235,10 @@ int opendlms_reader_connect(opendlms_reader_session_t *session)
     {
         return -1;
     }
+    if (!session->io.write || !session->io.read)
+    {
+        return -1;
+    }
     if (session->sync_invocation_counter != 0U)
     {
         return -1;

@@ -20,6 +20,8 @@ add_executable(${PROJECT_NAME}
     test_transport.cpp
     test_streebog_debug.cpp
     test_reader_auth.cpp
+    test_reader_api.cpp
+    ../client/lib/opendlms_reader.c
     ../client/lib/opendlms_reader_auth.c
     cosem_tests_hal.c
 )
