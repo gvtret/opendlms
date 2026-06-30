@@ -444,6 +444,8 @@ not currently form one consistently verified product:
 - Cosemlib umbrella tests now verify client service helpers reject null inputs.
 - Cosemlib service tests now verify failed client response decoding preserves
   the input cursor and caller-owned response state.
+- Cosemlib service tests now verify request encoding and server service
+  execution reject null caller state before dereferencing.
 - Cosemlib BER tests now verify null input rejection and truncated object
   identifier handling.
 - AXDR read-by-block tests now verify null input rejection and truncated BER

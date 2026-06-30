@@ -61,6 +61,16 @@ TEST_CASE("client service helpers reject null inputs", "[cosemlib][services]")
     REQUIRE(csm_client_decode(&resp, NULL) == 0);
     csm_client_init(NULL, NULL);
     REQUIRE(csm_client_has_more_data(NULL) == 0);
+
+    csm_request req;
+    memset(&req, 0, sizeof(req));
+    REQUIRE(svc_request_encoder(NULL, &arr) == FALSE);
+    REQUIRE(svc_request_encoder(&req, NULL) == FALSE);
+    REQUIRE(csm_server_services_execute_handler(
+        reinterpret_cast<csm_db_access_handler>(1), NULL, NULL, &req, &arr) == 0);
+    REQUIRE(csm_server_services_execute_handler(
+        reinterpret_cast<csm_db_access_handler>(1), NULL,
+        reinterpret_cast<csm_asso_state *>(1), NULL, &arr) == 0);
 }
 
 TEST_CASE("client decode preserves state on unknown response", "[cosemlib][services]")

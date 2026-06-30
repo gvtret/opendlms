@@ -615,6 +615,11 @@ C3 01 41
 
 int svc_request_encoder(csm_request *request, csm_array *array)
 {
+    if ((request == NULL) || (array == NULL))
+    {
+        return FALSE;
+    }
+
     uint8_t tag = (request->db_request.service == SVC_GET) ? AXDR_GET_REQUEST :  (request->db_request.service == SVC_SET) ? AXDR_SET_REQUEST : AXDR_ACTION_REQUEST;
     int valid = csm_array_write_u8(array, tag);
     valid = valid && csm_array_write_u8(array, csm_get_request_type(request));
@@ -755,7 +760,7 @@ int csm_server_services_execute_handler(csm_db_access_handler handler, csm_db_co
 {
     int number_of_bytes = 0;
 
-    if ((handler != NULL) && (array != NULL))
+    if ((handler != NULL) && (state != NULL) && (request != NULL) && (array != NULL))
     {
         uint8_t tag;
         if (csm_array_read_u8(array, &tag))
