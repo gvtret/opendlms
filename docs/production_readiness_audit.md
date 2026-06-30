@@ -454,6 +454,8 @@ not currently form one consistently verified product:
   parsed completely and overlong lines fail without retaining partial entries.
 - Cosemlib catalog numeric parsing now rejects overflowing class/version/OBIS
   values before integer wraparound.
+- Cosemlib catalog file loading now rejects null filenames, seek/size errors,
+  short reads, and file sizes that would overrun the fixed parser buffer.
 - Cosemlib object-list tests now verify exported Association LN object lists
   can be imported back with access-rights fields consumed correctly and reject
   trailing data.

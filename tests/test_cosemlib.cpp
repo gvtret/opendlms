@@ -209,6 +209,8 @@ TEST_CASE("security suite support predicate is boolean", "[cosemlib][security]")
 
 TEST_CASE("catalog parser handles final line and rejects overlong lines", "[cosemlib][catalog]")
 {
+    REQUIRE(csm_model_catalog_load_yaml(nullptr) == FALSE);
+
     const char yaml[] =
         "catalog:\n"
         "  - class_id: 8\n"

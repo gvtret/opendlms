@@ -282,6 +282,12 @@ int csm_model_catalog_parse_buffer(const char *yaml, size_t len)
 
 int csm_model_catalog_load_yaml(const char *filename)
 {
+    if (filename == NULL)
+    {
+        CSM_ERR("[CATALOG] Null filename");
+        return FALSE;
+    }
+
     FILE *fp = fopen(filename, "r");
     if (fp == NULL)
     {
@@ -289,20 +295,35 @@ int csm_model_catalog_load_yaml(const char *filename)
         return FALSE;
     }
 
-    fseek(fp, 0, SEEK_END);
+    if (fseek(fp, 0, SEEK_END) != 0)
+    {
+        fclose(fp);
+        CSM_ERR("[CATALOG] Cannot seek file: %s", filename);
+        return FALSE;
+    }
     long fsize = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    if (fsize < 0L || fseek(fp, 0, SEEK_SET) != 0)
+    {
+        fclose(fp);
+        CSM_ERR("[CATALOG] Cannot determine file size: %s", filename);
+        return FALSE;
+    }
 
-    if (fsize <= 0L || fsize > 8192L)
+    char buf[8192];
+    if (fsize <= 0L || fsize >= (long)sizeof(buf))
     {
         fclose(fp);
         CSM_ERR("[CATALOG] Invalid file size: %ld", fsize);
         return FALSE;
     }
 
-    char buf[8192];
     size_t nread = fread(buf, 1, (size_t)fsize, fp);
     fclose(fp);
+    if (nread != (size_t)fsize)
+    {
+        CSM_ERR("[CATALOG] Short read: %s", filename);
+        return FALSE;
+    }
 
     buf[nread] = '\0';
     return csm_model_catalog_parse_buffer(buf, nread);
