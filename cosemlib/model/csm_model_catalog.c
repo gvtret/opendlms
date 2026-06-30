@@ -33,12 +33,14 @@ static int parse_uint(const char *str, uint32_t max_value, uint32_t *out)
     str = skip_whitespace(str);
     while ((*str >= '0') && (*str <= '9'))
     {
+        uint32_t digit = (uint32_t)(*str - '0');
         have_digit = TRUE;
-        value = (value * 10U) + (uint32_t)(*str - '0');
-        if (value > max_value)
+        if ((value > (max_value / 10U)) ||
+            ((value == (max_value / 10U)) && (digit > (max_value % 10U))))
         {
             return FALSE;
         }
+        value = (value * 10U) + digit;
         str++;
     }
 
@@ -66,12 +68,14 @@ static int parse_obis_string(const char *str, csm_obis_code *obis)
     {
         if ((*str >= '0') && (*str <= '9'))
         {
+            uint32_t digit = (uint32_t)(*str - '0');
             have_digit = TRUE;
-            values[part] = (values[part] * 10U) + (uint32_t)(*str - '0');
-            if (values[part] > 255U)
+            if ((values[part] > 25U) ||
+                ((values[part] == 25U) && (digit > 5U)))
             {
                 return FALSE;
             }
+            values[part] = (values[part] * 10U) + digit;
         }
         else if (*str == '.')
         {
@@ -197,10 +201,11 @@ static int parse_line(const char *line)
         if (starts_with(rest, "class_id:"))
         {
             uint32_t val = 0U;
-            if (parse_uint(rest + 9, 0xFFFFU, &val) == TRUE)
+            if (parse_uint(rest + 9, 0xFFFFU, &val) != TRUE)
             {
-                catalog_entries[catalog_count - 1].class_id = (uint16_t)val;
+                return FALSE;
             }
+            catalog_entries[catalog_count - 1].class_id = (uint16_t)val;
         }
     }
 

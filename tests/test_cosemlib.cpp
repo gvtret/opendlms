@@ -231,6 +231,25 @@ TEST_CASE("catalog parser handles final line and rejects overlong lines", "[cose
     REQUIRE(csm_model_catalog_count() == 0);
 }
 
+TEST_CASE("catalog parser rejects overflowing numeric fields", "[cosemlib][catalog]")
+{
+    const char class_overflow[] =
+        "catalog:\n"
+        "  - class_id: 42949672960\n"
+        "    logical_name: \"0.0.1.0.0.255\"\n"
+        "    version: 0\n";
+    REQUIRE(csm_model_catalog_parse_buffer(class_overflow, sizeof(class_overflow) - 1U) == FALSE);
+    REQUIRE(csm_model_catalog_count() == 0);
+
+    const char obis_overflow[] =
+        "catalog:\n"
+        "  - class_id: 8\n"
+        "    logical_name: \"0.0.42949672960.0.0.255\"\n"
+        "    version: 0\n";
+    REQUIRE(csm_model_catalog_parse_buffer(obis_overflow, sizeof(obis_overflow) - 1U) == FALSE);
+    REQUIRE(csm_model_catalog_count() == 0);
+}
+
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")
 {
     csm_block_state state;

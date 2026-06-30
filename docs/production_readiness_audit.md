@@ -452,6 +452,8 @@ not currently form one consistently verified product:
   algorithm outputs, and boolean support predicate semantics.
 - Cosemlib catalog tests now verify YAML buffers without a trailing newline are
   parsed completely and overlong lines fail without retaining partial entries.
+- Cosemlib catalog numeric parsing now rejects overflowing class/version/OBIS
+  values before integer wraparound.
 - Crypto/security tests now verify auth encrypt/decrypt reject null and
   short-prefix inputs before invoking GCM.
 - Restored reader API tests now verify connect rejects incomplete IO
