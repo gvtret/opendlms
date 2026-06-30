@@ -1027,8 +1027,7 @@ static int svc_get_response_decoder(csm_response *response, csm_array *array)
     if (valid && (response->type == SVC_RESPONSE_WITH_DATABLOCK))
     {
         /* Data starts at current read position */
-        uint32_t data_offset = array->rd_index;
-        uint32_t data_size = array->wr_index - data_offset;
+        uint32_t data_size = csm_array_unread(array);
 
         if (data_size > 0U)
         {
@@ -1040,7 +1039,7 @@ static int svc_get_response_decoder(csm_response *response, csm_array *array)
             }
 
             /* Accumulate this block's data */
-            const uint8_t *data_ptr = &array->buff[data_offset];
+            const uint8_t *data_ptr = csm_array_rd_data(array);
             if (csm_block_get_receive_data(&response->block_state,
                                           data_ptr, data_size,
                                           response->last_block))

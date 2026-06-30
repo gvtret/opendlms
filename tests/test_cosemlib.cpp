@@ -97,6 +97,26 @@ TEST_CASE("client decode preserves state on unknown response", "[cosemlib][servi
     REQUIRE(resp.invoke_id == 7U);
 }
 
+TEST_CASE("client block response rejects corrupted array bounds", "[cosemlib][services]")
+{
+    uint8_t buf[] = {
+        AXDR_GET_RESPONSE,
+        0x02U,
+        0x01U,
+        0x01U,
+        0x00U, 0x00U, 0x00U, 0x01U,
+        0xAAU
+    };
+    csm_array arr;
+    csm_array_init(&arr, buf, sizeof(buf), sizeof(buf), 0U);
+    arr.rd_index = sizeof(buf) + 1U;
+
+    csm_response resp;
+    csm_client_init(NULL, &resp);
+
+    REQUIRE(csm_client_decode(&resp, &arr) == FALSE);
+}
+
 TEST_CASE("cosemlib.h provides server/client API", "[cosemlib]")
 {
     /* Verify server/client types are forward-declared (opaque, pointer-only) */
