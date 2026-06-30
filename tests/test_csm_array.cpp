@@ -132,6 +132,15 @@ void null_safety(void)
     array.wr_index = 0U;
     REQUIRE(0U == csm_array_free_size(&array));
     REQUIRE(0U == csm_array_written(&array));
+
+    csm_array_init(&array, buffer, sizeof(buffer), 0U, 0U);
+    REQUIRE(FALSE == csm_array_writer_jump(&array, UINT32_MAX));
+    REQUIRE(sizeof(buffer) == array.wr_index);
+    REQUIRE(FALSE == csm_array_write_buff(&array, buffer, UINT32_MAX));
+
+    csm_array_init(&array, buffer, sizeof(buffer), sizeof(buffer), 0U);
+    REQUIRE(FALSE == csm_array_reader_jump(&array, UINT32_MAX));
+    REQUIRE(array.rd_index == array.wr_index);
 }
 
 

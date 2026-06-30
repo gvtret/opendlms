@@ -448,6 +448,8 @@ not currently form one consistently verified product:
   length handling.
 - Core array tests now verify invalid initialization parameters and corrupted
   bounds fail closed without pointer underflow.
+- Core array tests now verify oversized reader/writer jumps and writes cannot
+  wrap buffer indices.
 - Cosemlib keyring tests now verify corrupted counts cannot drive out-of-range
   fixed-array access.
 - Cosemlib security suite tests now verify supported/unsupported suites, null

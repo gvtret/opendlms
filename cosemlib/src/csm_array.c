@@ -151,12 +151,16 @@ int csm_array_writer_jump(csm_array *array, uint32_t nb_bytes)
         return FALSE;
     }
 
-    array->wr_index += nb_bytes;
-    if (WR_INDEX(array) > array->size)
+    if ((array->offset > array->size) ||
+        (array->wr_index > (array->size - array->offset)) ||
+        (nb_bytes > ((array->size - array->offset) - array->wr_index)))
     {
-        // saturate
-        array->wr_index = (array->size-array->offset); // Write index out of bound, it forbid any further write
+        array->wr_index = (array->offset <= array->size) ? (array->size - array->offset) : 0U;
         ret = FALSE;
+    }
+    else
+    {
+        array->wr_index += nb_bytes;
     }
 
     return ret;
@@ -170,12 +174,16 @@ int csm_array_reader_jump(csm_array *array, uint32_t nb_bytes)
         return FALSE;
     }
 
-    array->rd_index += nb_bytes;
-    if (RD_INDEX(array) > array->size)
+    if ((array->offset > array->size) ||
+        (array->rd_index > array->wr_index) ||
+        (nb_bytes > (array->wr_index - array->rd_index)))
     {
-        // saturate
-        array->rd_index = (array->size-array->offset);
+        array->rd_index = (array->rd_index <= array->wr_index) ? array->wr_index : 0U;
         ret = FALSE;
+    }
+    else
+    {
+        array->rd_index += nb_bytes;
     }
 
     return ret;
@@ -205,7 +213,7 @@ int csm_array_write_buff(csm_array *array, const uint8_t *buff, uint32_t size)
         return ret;
     }
 
-    if ((WR_INDEX(array) + size) <= array->size)
+    if (csm_array_free_size(array) >= size)
     {
         if (size > 0U)
         {
@@ -224,7 +232,9 @@ int csm_array_write_buff(csm_array *array, const uint8_t *buff, uint32_t size)
 uint32_t csm_array_unread(csm_array *array)
 {
     uint32_t unread = 0U;
-    if ((array != NULL) && (array->wr_index > array->rd_index))
+    if ((array != NULL) && (array->offset <= array->size) &&
+        (array->wr_index <= (array->size - array->offset)) &&
+        (array->wr_index > array->rd_index))
     {
         unread = (array->wr_index - array->rd_index);
     }
