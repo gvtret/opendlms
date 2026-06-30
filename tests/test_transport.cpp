@@ -407,6 +407,24 @@ TEST_CASE("TCP transport: client init rejects invalid hosts", "[transport][tcp]"
     REQUIRE(transport.ctx == nullptr);
 }
 
+TEST_CASE("TCP transport: init rejects invalid framing", "[transport][tcp]")
+{
+    csm_transport transport;
+    transport.ops = nullptr;
+    transport.ctx = nullptr;
+    csm_framing_type invalid = static_cast<csm_framing_type>(99);
+
+    REQUIRE(csm_transport_tcp_client_init(&transport, "127.0.0.1", 4060U,
+                                          invalid) == CSM_TRANSPORT_ERR);
+    REQUIRE(transport.ops == nullptr);
+    REQUIRE(transport.ctx == nullptr);
+
+    REQUIRE(csm_transport_tcp_server_init(&transport, 4060U,
+                                          invalid) == CSM_TRANSPORT_ERR);
+    REQUIRE(transport.ops == nullptr);
+    REQUIRE(transport.ctx == nullptr);
+}
+
 TEST_CASE("TCP transport: receive rejects null and empty buffers", "[transport][tcp]")
 {
     test_socket_runtime sockets;

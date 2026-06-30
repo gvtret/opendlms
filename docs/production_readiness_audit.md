@@ -431,6 +431,8 @@ not currently form one consistently verified product:
   a connected client path.
 - TCP transport tests now verify client initialization rejects null or empty
   hosts without mutating the transport instance.
+- TCP transport tests now verify client/server initialization rejects invalid
+  framing modes before allocating a context.
 - Client transport tests now verify request APIs reject invalid inputs before
   any transport send/receive callbacks are invoked.
 - Server transport tests now verify direct send rejects invalid APDUs before
