@@ -1171,12 +1171,16 @@ int csm_client_decode(csm_response *response, csm_array *array)
 {
     int valid = FALSE;
     uint8_t tag;
+    uint32_t saved_rd_index = 0U;
+    csm_response saved_response;
 
     if ((response == NULL) || (array == NULL))
     {
         return FALSE;
     }
 
+    saved_rd_index = array->rd_index;
+    saved_response = *response;
     response->service = SVC_UNKOWN;
     if (csm_array_read_u8(array, &tag))
     {
@@ -1189,6 +1193,12 @@ int csm_client_decode(csm_response *response, csm_array *array)
                 break;
             }
         }
+    }
+
+    if (valid == FALSE)
+    {
+        array->rd_index = saved_rd_index;
+        *response = saved_response;
     }
 
     return valid;

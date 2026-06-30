@@ -63,6 +63,23 @@ TEST_CASE("client service helpers reject null inputs", "[cosemlib][services]")
     REQUIRE(csm_client_has_more_data(NULL) == 0);
 }
 
+TEST_CASE("client decode preserves state on unknown response", "[cosemlib][services]")
+{
+    uint8_t buf[] = {0xAAU, 0x01U, 0x02U};
+    csm_array arr;
+    csm_array_init(&arr, buf, sizeof(buf), sizeof(buf), 0U);
+
+    csm_response resp;
+    csm_client_init(NULL, &resp);
+    resp.service = SVC_GET;
+    resp.invoke_id = 7U;
+
+    REQUIRE(csm_client_decode(&resp, &arr) == FALSE);
+    REQUIRE(arr.rd_index == 0U);
+    REQUIRE(resp.service == SVC_GET);
+    REQUIRE(resp.invoke_id == 7U);
+}
+
 TEST_CASE("cosemlib.h provides server/client API", "[cosemlib]")
 {
     /* Verify server/client types are forward-declared (opaque, pointer-only) */

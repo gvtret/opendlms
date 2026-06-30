@@ -442,6 +442,8 @@ not currently form one consistently verified product:
 - Block-transfer tests now verify GET and SET encode paths reject zero max
   sizes and overflowed offsets.
 - Cosemlib umbrella tests now verify client service helpers reject null inputs.
+- Cosemlib service tests now verify failed client response decoding preserves
+  the input cursor and caller-owned response state.
 - Cosemlib BER tests now verify null input rejection and truncated object
   identifier handling.
 - AXDR read-by-block tests now verify null input rejection and truncated BER
