@@ -18,12 +18,23 @@ int csm_axdr_rd_null(csm_array *array)
 {
     int ret = FALSE;
     uint8_t byte = 0xFFU;
+    uint32_t saved_rd_index = 0U;
+    if (array == NULL)
+    {
+        return FALSE;
+    }
+
+    saved_rd_index = array->rd_index;
     if (csm_array_read_u8(array, &byte))
     {
         if (byte == AXDR_TAG_NULL)
         {
             ret = TRUE;
         }
+    }
+    if (ret == FALSE)
+    {
+        array->rd_index = saved_rd_index;
     }
     return ret;
 }
@@ -56,12 +67,23 @@ int csm_axdr_rd_octetstring(csm_array *array, uint32_t *size)
 {
     int ret = FALSE;
     uint8_t byte = 0xFFU;
+    uint32_t saved_rd_index = 0U;
+    if ((array == NULL) || (size == NULL))
+    {
+        return FALSE;
+    }
+
+    saved_rd_index = array->rd_index;
     if (csm_array_read_u8(array, &byte))
     {
         if (byte == AXDR_TAG_OCTETSTRING)
         {
             ret = csm_axdr_size(array, size);
         }
+    }
+    if (ret == FALSE)
+    {
+        array->rd_index = saved_rd_index;
     }
     return ret;
 }
@@ -199,11 +221,13 @@ int csm_axdr_decode_block(csm_array *array, uint32_t *size)
 {
     int ret = FALSE;
     uint8_t byte = 0xFFU;
+    uint32_t saved_rd_index = 0U;
     if ((array == NULL) || (size == NULL))
     {
         return FALSE;
     }
 
+    saved_rd_index = array->rd_index;
     if (csm_array_read_u8(array, &byte))
     {
         if (byte == 0x00U)
@@ -222,6 +246,10 @@ int csm_axdr_decode_block(csm_array *array, uint32_t *size)
                 ret = TRUE;
             }
         }
+    }
+    if (ret == FALSE)
+    {
+        array->rd_index = saved_rd_index;
     }
     return ret;
 }

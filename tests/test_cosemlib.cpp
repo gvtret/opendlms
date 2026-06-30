@@ -298,6 +298,28 @@ TEST_CASE("AXDR boolean writer uses boolean tag", "[cosemlib][axdr]")
     REQUIRE(buf[1] == 1U);
 }
 
+TEST_CASE("AXDR read helpers preserve position on failure", "[cosemlib][axdr]")
+{
+    uint8_t octet_buf[] = {AXDR_TAG_BOOLEAN, 0x01U};
+    csm_array array;
+    uint32_t size = 0U;
+
+    csm_array_init(&array, octet_buf, sizeof(octet_buf), sizeof(octet_buf), 0U);
+    REQUIRE(csm_axdr_rd_octetstring(&array, &size) == FALSE);
+    REQUIRE(array.rd_index == 0U);
+    REQUIRE(csm_axdr_rd_octetstring(&array, nullptr) == FALSE);
+    REQUIRE(array.rd_index == 0U);
+    REQUIRE(csm_axdr_rd_null(&array) == FALSE);
+    REQUIRE(array.rd_index == 0U);
+
+    uint8_t block_buf[] = {0x01U, 0x00U};
+    csm_array_init(&array, block_buf, sizeof(block_buf), sizeof(block_buf), 0U);
+    REQUIRE(csm_axdr_decode_block(&array, &size) == FALSE);
+    REQUIRE(array.rd_index == 0U);
+    REQUIRE(csm_axdr_decode_block(&array, nullptr) == FALSE);
+    REQUIRE(array.rd_index == 0U);
+}
+
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")
 {
     csm_block_state state;

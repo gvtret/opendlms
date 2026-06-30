@@ -448,6 +448,8 @@ not currently form one consistently verified product:
   length handling.
 - Cosemlib AXDR tests now verify boolean values are encoded with the standard
   BOOLEAN tag rather than as octet strings.
+- Cosemlib AXDR tests now verify failed primitive reads preserve the read
+  cursor instead of consuming bytes from malformed input.
 - Core array tests now verify invalid initialization parameters and corrupted
   bounds fail closed without pointer underflow.
 - Core array tests now verify oversized reader/writer jumps and writes cannot
