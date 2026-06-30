@@ -448,6 +448,8 @@ not currently form one consistently verified product:
   length handling.
 - Cosemlib keyring tests now verify corrupted counts cannot drive out-of-range
   fixed-array access.
+- Cosemlib security suite tests now verify supported/unsupported suites, null
+  algorithm outputs, and boolean support predicate semantics.
 - Crypto/security tests now verify auth encrypt/decrypt reject null and
   short-prefix inputs before invoking GCM.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.

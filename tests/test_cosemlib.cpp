@@ -10,6 +10,7 @@
 #include "cosemlib.h"
 #include "csm_ber.h"
 #include "csm_keyring.h"
+#include "csm_security_suite.h"
 #include "os_util.h"
 #include <cstring>
 
@@ -174,6 +175,32 @@ TEST_CASE("keyring rejects invalid counts", "[cosemlib][keyring]")
     kr.count = CSM_KEYRING_MAX_KEYS + 1U;
     REQUIRE(csm_keyring_add(&kr, 2U, key, sizeof(key)) == -1);
     REQUIRE(csm_keyring_find(&kr, 2U) == nullptr);
+}
+
+TEST_CASE("security suite support predicate is boolean", "[cosemlib][security]")
+{
+    csm_cipher_id cipher;
+    csm_mac_id mac;
+
+    REQUIRE(csm_sec_suite_get_algorithms(0U, &cipher, &mac) == 0);
+    REQUIRE(cipher == CSM_CIPHER_AES_GCM);
+    REQUIRE(mac == CSM_MAC_AES_GMAC);
+
+    REQUIRE(csm_sec_suite_get_algorithms(8U, &cipher, &mac) == 0);
+    REQUIRE(cipher == CSM_CIPHER_KUZNYECHIK_GCM);
+    REQUIRE(mac == CSM_MAC_STREEBOG_256_CMAC);
+
+    REQUIRE(csm_sec_suite_get_algorithms(6U, &cipher, &mac) == -1);
+    REQUIRE(csm_sec_suite_get_algorithms(0U, nullptr, &mac) == -1);
+    REQUIRE(csm_sec_suite_get_algorithms(0U, &cipher, nullptr) == -1);
+
+    REQUIRE(csm_sec_suite_is_supported(0U) == 1);
+    REQUIRE(csm_sec_suite_is_supported(5U) == 1);
+    REQUIRE(csm_sec_suite_is_supported(8U) == 1);
+    REQUIRE(csm_sec_suite_is_supported(9U) == 1);
+    REQUIRE(csm_sec_suite_is_supported(6U) == 0);
+    REQUIRE(csm_sec_suite_is_supported(7U) == 0);
+    REQUIRE(csm_sec_suite_is_supported(10U) == 0);
 }
 
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")

@@ -44,5 +44,5 @@ int csm_sec_suite_is_supported(uint8_t suite)
 {
     csm_cipher_id cipher;
     csm_mac_id mac;
-    return csm_sec_suite_get_algorithms(suite, &cipher, &mac);
+    return csm_sec_suite_get_algorithms(suite, &cipher, &mac) == 0 ? 1 : 0;
 }
