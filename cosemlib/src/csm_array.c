@@ -21,13 +21,23 @@
 
 void csm_array_init(csm_array *array, uint8_t *buffer, uint32_t max_size, uint32_t used_size, uint32_t offset)
 {
-    CSM_ASSERT(used_size <= max_size);
+    if (array == NULL)
+    {
+        return;
+    }
 
+    memset(array, 0, sizeof(*array));
+
+    if (((buffer == NULL) && (max_size > 0U)) || (offset > max_size))
+    {
+        return;
+    }
+
+    uint32_t capacity = max_size - offset;
     array->buff = buffer;
-    array->rd_index = 0U;
     array->offset = offset;
     array->size = max_size;
-    array->wr_index = (used_size+offset) >= max_size ? (max_size-offset) : used_size;
+    array->wr_index = (used_size > capacity) ? capacity : used_size;
 }
 
 int csm_array_get(const csm_array *array, uint32_t index, uint8_t *byte)
@@ -38,31 +48,29 @@ int csm_array_get(const csm_array *array, uint32_t index, uint8_t *byte)
         return ret;
     }
 
-    if (TEST_INDEX(array, index))
-    {
-        *byte = array->buff[INDEX(array, index)];
-        ret = TRUE;
-    }
-    else
+    if ((array->buff == NULL) ||
+        (array->offset > array->size) || (index >= (array->size - array->offset)))
     {
         *byte = 0U;
+        return ret;
     }
+
+    *byte = array->buff[INDEX(array, index)];
+    ret = TRUE;
     return ret;
 }
 
 int csm_array_set(csm_array *array, uint32_t index, uint8_t byte)
 {
     int ret = FALSE;
-    if (array == NULL)
+    if ((array == NULL) || (array->buff == NULL) ||
+        (array->offset > array->size) || (index >= (array->size - array->offset)))
     {
         return ret;
     }
 
-    if (TEST_INDEX(array, index))
-    {
-        array->buff[INDEX(array, index)] = byte;
-        ret = TRUE;
-    }
+    array->buff[INDEX(array, index)] = byte;
+    ret = TRUE;
     return ret;
 }
 
@@ -229,6 +237,12 @@ uint32_t csm_array_free_size(csm_array *array)
     {
         return 0U;
     }
+    if (((array->buff == NULL) && (array->size > 0U)) ||
+        (array->offset > array->size) ||
+        (array->wr_index > (array->size - array->offset)))
+    {
+        return 0U;
+    }
     return (array->size - WR_INDEX(array));
 }
 
@@ -237,6 +251,14 @@ uint32_t csm_array_written(csm_array *array)
     if (array == NULL)
     {
         return 0U;
+    }
+    if (array->offset > array->size)
+    {
+        return 0U;
+    }
+    if (array->wr_index > (array->size - array->offset))
+    {
+        return array->size;
     }
     return (WR_INDEX(array));
 }
@@ -247,12 +269,22 @@ uint8_t *csm_array_rd_data(csm_array *array)
     {
         return NULL;
     }
+    if ((array->buff == NULL) || (array->offset > array->size) ||
+        (array->rd_index > (array->size - array->offset)))
+    {
+        return NULL;
+    }
     return (array->buff + RD_INDEX(array));
 }
 
 uint8_t *csm_array_wr_data(csm_array *array)
 {
     if (array == NULL)
+    {
+        return NULL;
+    }
+    if ((array->buff == NULL) || (array->offset > array->size) ||
+        (array->wr_index > (array->size - array->offset)))
     {
         return NULL;
     }

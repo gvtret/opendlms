@@ -446,6 +446,8 @@ not currently form one consistently verified product:
   identifier handling.
 - AXDR read-by-block tests now verify null input rejection and truncated BER
   length handling.
+- Core array tests now verify invalid initialization parameters and corrupted
+  bounds fail closed without pointer underflow.
 - Cosemlib keyring tests now verify corrupted counts cannot drive out-of-range
   fixed-array access.
 - Cosemlib security suite tests now verify supported/unsupported suites, null

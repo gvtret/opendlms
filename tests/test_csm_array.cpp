@@ -114,6 +114,24 @@ void null_safety(void)
     REQUIRE(FALSE == csm_array_read_u32(NULL, &value32));
     REQUIRE(FALSE == csm_array_read_u32(&array, NULL));
     csm_array_dump(NULL);
+
+    csm_array_init(NULL, buffer, sizeof(buffer), 0U, 0U);
+
+    csm_array_init(&array, NULL, sizeof(buffer), 0U, 0U);
+    REQUIRE(0U == csm_array_free_size(&array));
+    REQUIRE(FALSE == csm_array_write_u8(&array, 0x01U));
+    REQUIRE(csm_array_wr_data(&array) == nullptr);
+
+    csm_array_init(&array, buffer, sizeof(buffer), 0U, sizeof(buffer) + 1U);
+    REQUIRE(0U == csm_array_free_size(&array));
+    REQUIRE(FALSE == csm_array_write_u8(&array, 0x01U));
+    REQUIRE(csm_array_rd_data(&array) == nullptr);
+
+    array.size = 1U;
+    array.offset = 2U;
+    array.wr_index = 0U;
+    REQUIRE(0U == csm_array_free_size(&array));
+    REQUIRE(0U == csm_array_written(&array));
 }
 
 
