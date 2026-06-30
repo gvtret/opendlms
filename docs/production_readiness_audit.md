@@ -504,6 +504,8 @@ not currently form one consistently verified product:
   primitives, stores configured 128-bit/256-bit security keys, and fails secure
   GCM setup when no key is configured instead of silently using zero keys or
   pass-through data.
+- Reader HAL smoke now verifies security keys are isolated per SAP and invalid
+  SAP key configuration is rejected.
 - LuaBridge live smoke passes against a freshly built simulator on port 4165:
   `npm run test:live -- 4165` reports a non-empty object-list response.
 - `reader_lab` builds from a clean CMake directory with

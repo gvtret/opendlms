@@ -31,8 +31,8 @@ static uint8_t reader_system_title[CSM_DEF_APP_TITLE_SIZE] = {
     0x4DU, 0x4DU, 0x4DU, 0x00U, 0x00U, 0xBCU, 0x61U, 0x4EU
 };
 
-static csm_keyring reader_keyring;
-static uint8_t     reader_keyring_initialized = 0U;
+static csm_keyring reader_keyrings[READER_HAL_MAX_SAP];
+static uint8_t     reader_keyrings_initialized = 0U;
 
 static char reader_lls_password[READER_HAL_MAX_SAP][9];
 static uint8_t reader_lls_valid[READER_HAL_MAX_SAP];
@@ -118,11 +118,24 @@ static int reader_hal_random_byte(uint8_t *out)
 
 void reader_hal_init(void)
 {
-    if (!reader_keyring_initialized)
+    if (!reader_keyrings_initialized)
     {
-        csm_keyring_init(&reader_keyring);
-        reader_keyring_initialized = 1U;
+        for (uint32_t i = 0U; i < READER_HAL_MAX_SAP; i++)
+        {
+            csm_keyring_init(&reader_keyrings[i]);
+        }
+        reader_keyrings_initialized = 1U;
     }
+}
+
+static csm_keyring *reader_keyring_for_sap(uint8_t sap)
+{
+    reader_hal_init();
+    if ((uint32_t)sap >= READER_HAL_MAX_SAP)
+    {
+        return NULL;
+    }
+    return &reader_keyrings[sap];
 }
 
 void reader_hal_set_lls_password(uint8_t sap, const char *password)
@@ -151,8 +164,13 @@ int reader_hal_keyring_set_hex(uint8_t sap,
                                const char *kek_hex)
 {
     uint8_t key[16];
+    csm_keyring *keyring;
 
-    reader_hal_init();
+    keyring = reader_keyring_for_sap(sap);
+    if (keyring == NULL)
+    {
+        return -1;
+    }
 
     if (guek_hex != NULL)
     {
@@ -160,7 +178,7 @@ int reader_hal_keyring_set_hex(uint8_t sap,
         {
             return -1;
         }
-        if (csm_keyring_add(&reader_keyring, (uint8_t)CSM_SEC_GUEK, key, 16U) != 0)
+        if (csm_keyring_add(keyring, (uint8_t)CSM_SEC_GUEK, key, 16U) != 0)
         {
             return -1;
         }
@@ -172,7 +190,7 @@ int reader_hal_keyring_set_hex(uint8_t sap,
         {
             return -1;
         }
-        if (csm_keyring_add(&reader_keyring, (uint8_t)CSM_SEC_GAK, key, 16U) != 0)
+        if (csm_keyring_add(keyring, (uint8_t)CSM_SEC_GAK, key, 16U) != 0)
         {
             return -1;
         }
@@ -184,7 +202,7 @@ int reader_hal_keyring_set_hex(uint8_t sap,
         {
             return -1;
         }
-        if (csm_keyring_add(&reader_keyring, (uint8_t)CSM_SEC_KEK, key, 16U) != 0)
+        if (csm_keyring_add(keyring, (uint8_t)CSM_SEC_KEK, key, 16U) != 0)
         {
             return -1;
         }
@@ -241,13 +259,14 @@ const uint8_t *csm_sys_get_system_title(void)
 uint8_t csm_sys_get_key_len(uint8_t sap, csm_sec_key key_id)
 {
     uint8_t len = 16U;
+    csm_keyring *keyring;
 
-    if (!reader_keyring_initialized)
+    keyring = reader_keyring_for_sap(sap);
+    if (keyring == NULL)
     {
         return len;
     }
-    (void)sap;
-    if (csm_keyring_find(&reader_keyring, (uint8_t)key_id) == NULL)
+    if (csm_keyring_find(keyring, (uint8_t)key_id) == NULL)
     {
         return 16U;
     }
@@ -263,9 +282,12 @@ void csm_sys_apply_security_suite(uint8_t sap, uint8_t sym_key_len, uint8_t kek_
 
 uint8_t *csm_sys_get_key(uint8_t sap, csm_sec_key key_id)
 {
-    reader_hal_init();
-    (void)sap;
-    return (uint8_t *)csm_keyring_find(&reader_keyring, (uint8_t)key_id);
+    csm_keyring *keyring = reader_keyring_for_sap(sap);
+    if (keyring == NULL)
+    {
+        return NULL;
+    }
+    return (uint8_t *)csm_keyring_find(keyring, (uint8_t)key_id);
 }
 
 uint8_t csm_sys_get_mechanism_id(uint8_t sap)

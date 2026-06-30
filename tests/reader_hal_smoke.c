@@ -56,6 +56,11 @@ int main(void)
         return 6;
     }
 
+    if (csm_sys_gcm_init(0U, 49U, CSM_SEC_GUEK, CSM_SEC_ENCRYPT, iv, NULL, 0U) != 0)
+    {
+        return 15;
+    }
+
     if (csm_sys_gcm_init(0U, 48U, CSM_SEC_GUEK, CSM_SEC_ENCRYPT, iv, NULL, 0U) != 1)
     {
         return 7;
@@ -106,6 +111,15 @@ int main(void)
             "31313131313131313131313131313131")) != 0)
     {
         return 14;
+    }
+
+    if (expect_fail(reader_hal_keyring_set_hex(
+            64U,
+            "303132333435363738393A3B3C3D3E3F",
+            NULL,
+            NULL)) != 0)
+    {
+        return 16;
     }
 
     return 0;
