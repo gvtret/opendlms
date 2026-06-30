@@ -11,6 +11,8 @@
 #include "csm_ber.h"
 #include "csm_keyring.h"
 #include "csm_model_catalog.h"
+#include "csm_model_instance.h"
+#include "csm_model_object_list.h"
 #include "csm_security_suite.h"
 #include "os_util.h"
 #include <cstring>
@@ -248,6 +250,30 @@ TEST_CASE("catalog parser rejects overflowing numeric fields", "[cosemlib][catal
         "    version: 0\n";
     REQUIRE(csm_model_catalog_parse_buffer(obis_overflow, sizeof(obis_overflow) - 1U) == FALSE);
     REQUIRE(csm_model_catalog_count() == 0);
+}
+
+TEST_CASE("object list import round-trips exported access rights", "[cosemlib][model]")
+{
+    csm_model_instance_reset();
+
+    const csm_obis_code clock = {0U, 0U, 1U, 0U, 0U, 255U};
+    const csm_obis_code association = {0U, 0U, 40U, 0U, 0U, 255U};
+    REQUIRE(csm_model_instance_add(8U, &clock, 0U) == TRUE);
+    REQUIRE(csm_model_instance_add(15U, &association, 1U) == TRUE);
+
+    uint8_t buf[128];
+    csm_array out;
+    csm_array_init(&out, buf, sizeof(buf), 0U, 0U);
+    REQUIRE(csm_model_export_object_list(&out) == CSM_OK);
+
+    csm_model_instance_reset();
+    csm_array in;
+    csm_array_init(&in, buf, sizeof(buf), csm_array_written(&out), 0U);
+    REQUIRE(csm_model_import_object_list(&in) == CSM_OK);
+
+    REQUIRE(csm_model_instance_count() == 2);
+    REQUIRE(csm_model_instance_find(8U, &clock) != nullptr);
+    REQUIRE(csm_model_instance_find(15U, &association) != nullptr);
 }
 
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")

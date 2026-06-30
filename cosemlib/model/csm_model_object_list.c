@@ -88,10 +88,12 @@ int csm_model_import_object_list(csm_array *in)
         uint8_t fields = 0U;
         if (!csm_array_read_u8(in, &stag) || stag != AXDR_TAG_STRUCTURE)
         {
+            csm_model_instance_reset();
             return (int)CSM_ERR_BAD_ENCODING;
         }
-        if (!csm_array_read_u8(in, &fields) || fields < 3U)
+        if (!csm_array_read_u8(in, &fields) || fields != 4U)
         {
+            csm_model_instance_reset();
             return (int)CSM_ERR_BAD_ENCODING;
         }
 
@@ -99,10 +101,12 @@ int csm_model_import_object_list(csm_array *in)
         uint8_t ctag = 0xFFU;
         if (!csm_array_read_u8(in, &ctag) || ctag != AXDR_TAG_UNSIGNED16)
         {
+            csm_model_instance_reset();
             return (int)CSM_ERR_BAD_ENCODING;
         }
         if (!csm_array_read_u16(in, &class_id))
         {
+            csm_model_instance_reset();
             return (int)CSM_ERR_BAD_ENCODING;
         }
 
@@ -112,16 +116,19 @@ int csm_model_import_object_list(csm_array *in)
         uint8_t olen = 0U;
         if (!csm_array_read_u8(in, &otag) || otag != AXDR_TAG_OCTETSTRING)
         {
+            csm_model_instance_reset();
             return (int)CSM_ERR_BAD_ENCODING;
         }
         if (!csm_array_read_u8(in, &olen) || olen != 6U)
         {
+            csm_model_instance_reset();
             return (int)CSM_ERR_BAD_ENCODING;
         }
         {
             uint8_t ob[6] = {0U};
             if (!csm_array_read_buff(in, ob, 6U))
             {
+                csm_model_instance_reset();
                 return (int)CSM_ERR_BAD_ENCODING;
             }
             obis.A = ob[0];
@@ -136,16 +143,33 @@ int csm_model_import_object_list(csm_array *in)
         uint8_t vtag = 0xFFU;
         if (!csm_array_read_u8(in, &vtag) || vtag != AXDR_TAG_INTEGER8)
         {
+            csm_model_instance_reset();
             return (int)CSM_ERR_BAD_ENCODING;
         }
         if (!csm_array_read_u8(in, &version))
         {
+            csm_model_instance_reset();
+            return (int)CSM_ERR_BAD_ENCODING;
+        }
+
+        uint8_t access_tag = 0xFFU;
+        uint8_t access_fields = 0U;
+        if (!csm_array_read_u8(in, &access_tag) || access_tag != AXDR_TAG_STRUCTURE)
+        {
+            csm_model_instance_reset();
+            return (int)CSM_ERR_BAD_ENCODING;
+        }
+        if (!csm_array_read_u8(in, &access_fields) || access_fields != 0U)
+        {
+            csm_model_instance_reset();
             return (int)CSM_ERR_BAD_ENCODING;
         }
 
         if (!csm_model_instance_add(class_id, &obis, version))
         {
             CSM_ERR("[OBJLIST] Failed to add instance %u", i);
+            csm_model_instance_reset();
+            return (int)CSM_ERR_BAD_ENCODING;
         }
     }
 

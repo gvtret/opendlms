@@ -454,6 +454,8 @@ not currently form one consistently verified product:
   parsed completely and overlong lines fail without retaining partial entries.
 - Cosemlib catalog numeric parsing now rejects overflowing class/version/OBIS
   values before integer wraparound.
+- Cosemlib object-list tests now verify exported Association LN object lists
+  can be imported back with access-rights fields consumed correctly.
 - Crypto/security tests now verify auth encrypt/decrypt reject null and
   short-prefix inputs before invoking GCM.
 - Restored reader API tests now verify connect rejects incomplete IO
