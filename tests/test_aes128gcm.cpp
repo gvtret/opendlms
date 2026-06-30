@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include "gcm.h"
+#include "csm_security.h"
 
 #include <cstring>
 #include <vector>
@@ -86,4 +87,27 @@ TEST_CASE("AES-128 GMAC GreenBook HLS5 tag vector", "[crypto][gcm]")
                                aad.data(), aad.size()) == 0);
     REQUIRE(mbedtls_gcm_finish(&ctx, tag, sizeof(tag)) == 0);
     REQUIRE(std::memcmp(tag, expected_tag, sizeof(expected_tag)) == 0);
+}
+
+TEST_CASE("Security auth helpers reject null and short-prefix inputs", "[crypto][security]")
+{
+    uint8_t buf[32] = {};
+    csm_array array;
+    csm_array_init(&array, buf, sizeof(buf), 5U, 0U);
+    csm_request request;
+    memset(&request, 0, sizeof(request));
+    request.llc.dsap = 1U;
+    uint8_t system_title[8] = {};
+    csm_sec_control_byte sc = {};
+
+    REQUIRE(csm_sec_auth_decrypt(nullptr, &request, system_title) == CSM_SEC_ERROR);
+    REQUIRE(csm_sec_auth_decrypt(&array, nullptr, system_title) == CSM_SEC_ERROR);
+    REQUIRE(csm_sec_auth_decrypt(&array, &request, nullptr) == CSM_SEC_ERROR);
+    REQUIRE(csm_sec_auth_decrypt(&array, &request, system_title) == CSM_SEC_ERROR);
+
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+    REQUIRE(csm_sec_auth_encrypt(nullptr, &request, system_title, sc, 1U) == CSM_SEC_ERROR);
+    REQUIRE(csm_sec_auth_encrypt(&array, nullptr, system_title, sc, 1U) == CSM_SEC_ERROR);
+    REQUIRE(csm_sec_auth_encrypt(&array, &request, nullptr, sc, 1U) == CSM_SEC_ERROR);
+    REQUIRE(csm_sec_auth_encrypt(&array, &request, system_title, sc, 1U) == CSM_SEC_ERROR);
 }

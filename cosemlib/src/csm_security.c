@@ -34,8 +34,16 @@ csm_sec_result csm_sec_auth_decrypt(csm_array *array, csm_request *request, cons
     uint8_t IV[12];
     uint8_t sap;
 
-    csm_array_read_u8(array, &sc.sh_byte);
-    csm_array_read_u32(array, &ic);
+    if ((array == NULL) || (request == NULL) || (system_title == NULL))
+    {
+        return CSM_SEC_ERROR;
+    }
+    if (!csm_array_read_u8(array, &sc.sh_byte) ||
+        !csm_array_read_u32(array, &ic) ||
+        (array->rd_index < 17U))
+    {
+        return CSM_SEC_ERROR;
+    }
 
     if (!csm_sec_get_sap_u8(request, &sap))
     {
@@ -155,6 +163,12 @@ csm_sec_result csm_sec_auth_encrypt(csm_array *array, csm_request *request, cons
     uint32_t aad_size = 0U;
     uint8_t IV[12];
     uint8_t sap;
+
+    if ((array == NULL) || (request == NULL) || (system_title == NULL) ||
+        (array->rd_index < 17U))
+    {
+        return CSM_SEC_ERROR;
+    }
 
     if (!csm_sec_get_sap_u8(request, &sap))
     {

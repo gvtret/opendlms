@@ -204,6 +204,8 @@ not currently form one consistently verified product:
   length fields before reading or writing output state.
 - Hardened keyring add/find helpers against corrupted entry counts before
   indexing fixed-size key storage.
+- Hardened security auth encrypt/decrypt helpers against null inputs, truncated
+  security headers, and missing AAD prefix space before in-place cipher work.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.
@@ -446,6 +448,8 @@ not currently form one consistently verified product:
   length handling.
 - Cosemlib keyring tests now verify corrupted counts cannot drive out-of-range
   fixed-array access.
+- Crypto/security tests now verify auth encrypt/decrypt reject null and
+  short-prefix inputs before invoking GCM.
 - Wrapper tests now verify LLC frame/deframe helpers reject zero-length APDUs.
 - Core utility tests now verify 64-bit big-endian write/read round-trips.
 - Client/API build passes:
