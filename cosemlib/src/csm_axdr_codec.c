@@ -257,7 +257,7 @@ int csm_axdr_wr_u16(csm_array *array, uint16_t value)
 
 int csm_axdr_wr_boolean(csm_array *array, uint8_t value)
 {
-    int valid = csm_array_write_u8(array, AXDR_TAG_OCTETSTRING);
+    int valid = csm_array_write_u8(array, AXDR_TAG_BOOLEAN);
     valid = valid && csm_array_write_u8(array, value);
     return valid;
 }

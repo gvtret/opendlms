@@ -8,6 +8,7 @@
 
 #include "catch.hpp"
 #include "cosemlib.h"
+#include "csm_axdr_codec.h"
 #include "csm_ber.h"
 #include "csm_keyring.h"
 #include "csm_model_catalog.h"
@@ -283,6 +284,18 @@ TEST_CASE("object list import round-trips exported access rights", "[cosemlib][m
     csm_array_init(&tampered, buf, sizeof(buf), written + 1U, 0U);
     REQUIRE(csm_model_import_object_list(&tampered) == CSM_ERR_BAD_ENCODING);
     REQUIRE(csm_model_instance_count() == 0);
+}
+
+TEST_CASE("AXDR boolean writer uses boolean tag", "[cosemlib][axdr]")
+{
+    uint8_t buf[4] = {};
+    csm_array array;
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+
+    REQUIRE(csm_axdr_wr_boolean(&array, 1U) == TRUE);
+    REQUIRE(csm_array_written(&array) == 2U);
+    REQUIRE(buf[0] == AXDR_TAG_BOOLEAN);
+    REQUIRE(buf[1] == 1U);
 }
 
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")

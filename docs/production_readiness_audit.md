@@ -446,6 +446,8 @@ not currently form one consistently verified product:
   identifier handling.
 - AXDR read-by-block tests now verify null input rejection and truncated BER
   length handling.
+- Cosemlib AXDR tests now verify boolean values are encoded with the standard
+  BOOLEAN tag rather than as octet strings.
 - Core array tests now verify invalid initialization parameters and corrupted
   bounds fail closed without pointer underflow.
 - Core array tests now verify oversized reader/writer jumps and writes cannot
