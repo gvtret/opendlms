@@ -135,6 +135,7 @@ static const tag_t tags[] = {
 };
 
 static const uint32_t tags_size = sizeof(tags) / sizeof(tags[0]);
+#define CSM_AXDR_MAX_NESTING 32U
 
 static const tag_t *csm_axdr_find_tag(uint8_t tag)
 {
@@ -148,9 +149,14 @@ static const tag_t *csm_axdr_find_tag(uint8_t tag)
     return NULL;
 }
 
-static int csm_axdr_decode_one(csm_array *array, axdr_data_cb callback)
+static int csm_axdr_decode_one(csm_array *array, axdr_data_cb callback, uint32_t depth)
 {
     uint8_t tag = 0xFFU;
+    if (depth > CSM_AXDR_MAX_NESTING)
+    {
+        return FALSE;
+    }
+
     if (!csm_array_read_u8(array, &tag))
     {
         return FALSE;
@@ -180,7 +186,7 @@ static int csm_axdr_decode_one(csm_array *array, axdr_data_cb callback)
     {
         for (uint32_t i = 0U; i < size; i++)
         {
-            if (!csm_axdr_decode_one(array, callback))
+            if (!csm_axdr_decode_one(array, callback, depth + 1U))
             {
                 return FALSE;
             }
@@ -208,7 +214,7 @@ int csm_axdr_decode_tags(csm_array *array, axdr_data_cb callback)
 
     while (csm_array_unread(array) > 0U)
     {
-        if (!csm_axdr_decode_one(array, callback))
+        if (!csm_axdr_decode_one(array, callback, 0U))
         {
             return FALSE;
         }

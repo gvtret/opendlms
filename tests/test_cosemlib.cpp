@@ -320,6 +320,23 @@ TEST_CASE("AXDR read helpers preserve position on failure", "[cosemlib][axdr]")
     REQUIRE(array.rd_index == 0U);
 }
 
+TEST_CASE("AXDR decode rejects excessive nesting", "[cosemlib][axdr]")
+{
+    uint8_t buf[80] = {};
+    csm_array array;
+    csm_array_init(&array, buf, sizeof(buf), 0U, 0U);
+
+    for (uint32_t i = 0U; i < 34U; i++)
+    {
+        REQUIRE(csm_array_write_u8(&array, AXDR_TAG_STRUCTURE) == TRUE);
+        REQUIRE(csm_array_write_u8(&array, 1U) == TRUE);
+    }
+    REQUIRE(csm_array_write_u8(&array, AXDR_TAG_NULL) == TRUE);
+
+    array.rd_index = 0U;
+    REQUIRE(csm_axdr_decode_tags(&array, nullptr) == FALSE);
+}
+
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")
 {
     csm_block_state state;

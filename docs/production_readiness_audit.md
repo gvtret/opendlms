@@ -450,6 +450,8 @@ not currently form one consistently verified product:
   BOOLEAN tag rather than as octet strings.
 - Cosemlib AXDR tests now verify failed primitive reads preserve the read
   cursor instead of consuming bytes from malformed input.
+- Cosemlib AXDR tests now verify nested structure decoding rejects excessive
+  recursion depth.
 - Core array tests now verify invalid initialization parameters and corrupted
   bounds fail closed without pointer underflow.
 - Core array tests now verify oversized reader/writer jumps and writes cannot
