@@ -110,4 +110,15 @@ TEST_CASE("Security auth helpers reject null and short-prefix inputs", "[crypto]
     REQUIRE(csm_sec_auth_encrypt(&array, nullptr, system_title, sc, 1U) == CSM_SEC_ERROR);
     REQUIRE(csm_sec_auth_encrypt(&array, &request, nullptr, sc, 1U) == CSM_SEC_ERROR);
     REQUIRE(csm_sec_auth_encrypt(&array, &request, system_title, sc, 1U) == CSM_SEC_ERROR);
+
+    csm_array corrupt_decrypt = {};
+    corrupt_decrypt.size = 5U;
+    corrupt_decrypt.wr_index = 5U;
+    REQUIRE(csm_sec_auth_decrypt(&corrupt_decrypt, &request, system_title) == CSM_SEC_ERROR);
+
+    csm_array corrupt_encrypt = {};
+    corrupt_encrypt.size = 20U;
+    corrupt_encrypt.wr_index = 20U;
+    corrupt_encrypt.rd_index = 17U;
+    REQUIRE(csm_sec_auth_encrypt(&corrupt_encrypt, &request, system_title, sc, 1U) == CSM_SEC_ERROR);
 }

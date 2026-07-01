@@ -214,6 +214,8 @@ not currently form one consistently verified product:
   indexing fixed-size key storage.
 - Hardened security auth encrypt/decrypt helpers against null inputs, truncated
   security headers, and missing AAD prefix space before in-place cipher work.
+- Hardened security auth encrypt/decrypt helpers against corrupted arrays
+  without readable payload pointers before AAD construction.
 - Moved the historical block-read AXDR test into the default Catch2 gate,
   fixed `csm_axdr_decode_tags()` success reporting, and made the tag decoder
   recursively walk arrays and structures after block-transfer reassembly.

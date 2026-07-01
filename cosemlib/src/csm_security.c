@@ -55,6 +55,10 @@ csm_sec_result csm_sec_auth_decrypt(csm_array *array, csm_request *request, cons
     PUT_BE32(&IV[CSM_DEF_APP_TITLE_SIZE], ic);
 
     uint8_t *data = csm_array_rd_data(array); // point to the information or tag
+    if (data == NULL)
+    {
+        return CSM_SEC_ERROR;
+    }
 
     uint32_t unread = csm_array_unread(array); // size of information + tag
 
@@ -180,6 +184,10 @@ csm_sec_result csm_sec_auth_encrypt(csm_array *array, csm_request *request, cons
     PUT_BE32(&IV[CSM_DEF_APP_TITLE_SIZE], ic);
 
     uint8_t *data = csm_array_rd_data(array); // point to the information
+    if (data == NULL)
+    {
+        return CSM_SEC_ERROR;
+    }
     uint32_t unread = csm_array_unread(array); // size of information
 
     // We have saved the security header (SC + IC), now  override this header (and beyond) with the AAD
