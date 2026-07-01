@@ -1121,8 +1121,17 @@ Selective access with undefined end date
 
 int csm_client_encode_selective_access_by_range(csm_array *array, csm_object_t *restricting_object, csm_array *start, csm_array *end)
 {
-    if ((array == NULL) || (restricting_object == NULL) || (start == NULL) || (end == NULL) ||
-        (csm_array_rd_data(start) == NULL) || (csm_array_rd_data(end) == NULL))
+    if ((array == NULL) || (restricting_object == NULL) || (start == NULL) || (end == NULL))
+    {
+        return FALSE;
+    }
+
+    uint8_t *start_data = csm_array_rd_data(start);
+    uint8_t *end_data = csm_array_rd_data(end);
+    uint32_t start_size = csm_array_unread(start);
+    uint32_t end_size = csm_array_unread(end);
+    if (((start_size > 0U) && (start_data == NULL)) ||
+        ((end_size > 0U) && (end_data == NULL)))
     {
         return FALSE;
     }
@@ -1135,9 +1144,9 @@ int csm_client_encode_selective_access_by_range(csm_array *array, csm_object_t *
     valid = valid && csm_axdr_wr_capture_object(array, restricting_object);
 
     // 2. start date
-    valid = valid && csm_axdr_wr_octetstring(array, csm_array_rd_data(start), csm_array_written(start));
+    valid = valid && csm_axdr_wr_octetstring(array, start_data, start_size);
     // 3. end date
-    valid = valid && csm_axdr_wr_octetstring(array, csm_array_rd_data(end), csm_array_written(end));
+    valid = valid && csm_axdr_wr_octetstring(array, end_data, end_size);
 
     // 4. selected values
     valid = valid && csm_array_write_u8(array, 0x01U); // selected values

@@ -192,6 +192,8 @@ not currently form one consistently verified product:
 - Hardened high-level client GET/SET/ACTION and block-transfer entry points
   against null OBIS, response buffers, and inconsistent payload pointers before
   encoding or transport send.
+- Fixed selective-access-by-range encoding to copy start/end values from the
+  unread cursor span instead of mixing read pointer with total written length.
 - Hardened server send paths to reject empty APDUs before transport send and to
   propagate response send failures from `csm_server_poll()`.
 - Fixed high-level SET block transfer to encode octet-string chunk lengths via

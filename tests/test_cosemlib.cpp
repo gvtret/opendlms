@@ -88,6 +88,29 @@ TEST_CASE("client service helpers reject null inputs", "[cosemlib][services]")
     REQUIRE(csm_client_encode_selective_access_by_range(&arr, NULL, &arr, &arr) == FALSE);
     REQUIRE(csm_client_encode_selective_access_by_range(&arr, &object, NULL, &arr) == FALSE);
     REQUIRE(csm_client_encode_selective_access_by_range(&arr, &object, &arr, NULL) == FALSE);
+
+    uint8_t out_buf[64] = {};
+    uint8_t start_buf[] = {0x01U, 0x02U, 0x03U, 0x04U};
+    uint8_t end_buf[] = {0x05U, 0x06U, 0x07U, 0x08U};
+    csm_array out;
+    csm_array start;
+    csm_array end;
+    csm_array_init(&out, out_buf, sizeof(out_buf), 0U, 0U);
+    csm_array_init(&start, start_buf, sizeof(start_buf), sizeof(start_buf), 0U);
+    csm_array_init(&end, end_buf, sizeof(end_buf), sizeof(end_buf), 0U);
+    start.rd_index = 2U;
+    end.rd_index = 2U;
+
+    REQUIRE(csm_client_encode_selective_access_by_range(&out, &object, &start, &end) == TRUE);
+    uint32_t two_byte_octets = 0U;
+    for (uint32_t i = 0U; (i + 1U) < csm_array_written(&out); i++)
+    {
+        if ((out_buf[i] == AXDR_TAG_OCTETSTRING) && (out_buf[i + 1U] == 0x02U))
+        {
+            two_byte_octets++;
+        }
+    }
+    REQUIRE(two_byte_octets == 2U);
 }
 
 TEST_CASE("client decode preserves state on unknown response", "[cosemlib][services]")
