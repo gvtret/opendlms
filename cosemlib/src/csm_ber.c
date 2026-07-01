@@ -189,7 +189,8 @@ int csm_ber_decode_object_identifier(ber_object_identifier *oid, csm_array *arra
     }
     if (csm_array_unread(array) >= (uint32_t)(oid->size + 2U))
     {
-        if (memcmp(csm_array_rd_data(array), oid->header, oid->size) == 0)
+        uint8_t *data = csm_array_rd_data(array);
+        if ((data != NULL) && (memcmp(data, oid->header, oid->size) == 0))
         {
             ret = csm_array_reader_jump(array, oid->size);
             ret = ret && csm_array_read_u8(array, &oid->name); // Then copy the object name

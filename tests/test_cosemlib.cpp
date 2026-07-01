@@ -230,6 +230,11 @@ TEST_CASE("BER helpers reject null and truncated inputs", "[cosemlib][ber]")
     REQUIRE(csm_ber_decode_object_identifier(NULL, &arr) == 0);
     REQUIRE(csm_ber_decode_object_identifier(&oid, NULL) == 0);
     REQUIRE(csm_ber_decode_object_identifier(&oid, &arr) == 0);
+
+    csm_array corrupt = {};
+    corrupt.size = 7U;
+    corrupt.wr_index = 7U;
+    REQUIRE(csm_ber_decode_object_identifier(&oid, &corrupt) == 0);
 }
 
 TEST_CASE("keyring rejects invalid counts", "[cosemlib][keyring]")

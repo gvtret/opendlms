@@ -202,6 +202,8 @@ not currently form one consistently verified product:
   and made HLS rejection helpers fail closed on null output arrays.
 - Hardened BER decode helpers against null inputs and truncated object
   identifier buffers.
+- Hardened BER object identifier decoding against corrupted arrays without a
+  readable backing buffer before comparing identifier bytes.
 - Hardened AXDR decode/encode helpers against null inputs and truncated BER
   length fields before reading or writing output state.
 - Made AXDR tag decoding invoke payload callbacks only after primitive payload
