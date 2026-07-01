@@ -196,12 +196,14 @@ int csm_array_read_buff(csm_array *array, uint8_t *to_buff, uint32_t size)
         return FALSE;
     }
 
-    if (csm_array_unread(array) < size)
+    uint8_t *data = csm_array_rd_data(array);
+    if ((csm_array_unread(array) < size) ||
+        ((size > 0U) && (data == NULL)))
     {
         return FALSE;
     }
 
-    (void) memcpy(to_buff, csm_array_rd_data(array), size);
+    (void) memcpy(to_buff, data, size);
     return csm_array_reader_jump(array, size);
 }
 
@@ -233,6 +235,7 @@ uint32_t csm_array_unread(csm_array *array)
 {
     uint32_t unread = 0U;
     if ((array != NULL) && (array->offset <= array->size) &&
+        ((array->buff != NULL) || (array->size == 0U)) &&
         (array->wr_index <= (array->size - array->offset)) &&
         (array->wr_index > array->rd_index))
     {

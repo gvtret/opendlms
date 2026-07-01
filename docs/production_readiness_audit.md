@@ -176,6 +176,8 @@ not currently form one consistently verified product:
   against null inputs.
 - Hardened scalar `csm_array` reads against corrupted arrays with unread bytes
   but no readable backing buffer.
+- Hardened `csm_array_unread()` and `csm_array_read_buff()` against corrupted
+  arrays that advertise unread bytes without a backing buffer.
 - Hardened `csm_array_dump()` against null input.
 - Hardened generic `CSM_FRAMING_NONE` frame/deframe helpers against null
   inputs before memory copies or output pointer writes.
