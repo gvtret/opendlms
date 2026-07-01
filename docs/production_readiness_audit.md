@@ -454,6 +454,8 @@ not currently form one consistently verified product:
   helpers instead of subtracting corrupted cursor state directly.
 - Association tests now verify malformed dedicated-key lengths in AARQ user
   information are rejected before copying key material.
+- Association tests now verify public ACSE encoder/decoder entrypoints reject
+  null state and buffer inputs before dereferencing.
 - Cosemlib BER tests now verify null input rejection and truncated object
   identifier handling.
 - AXDR read-by-block tests now verify null input rejection and truncated BER

@@ -316,6 +316,20 @@ TEST_CASE( "AARQ", "[AARQ-Encoder]" )
     AARQEncoder();
 }
 
+TEST_CASE("Association codec rejects null entrypoint inputs", "[AARQ-Decoder]")
+{
+    csm_asso_state state;
+    csm_asso_init(&state);
+    uint8_t packet[8] = {};
+    csm_array array;
+    csm_array_init(&array, packet, sizeof(packet), 0U, 0U);
+
+    REQUIRE(csm_asso_encoder(nullptr, &array, CSM_ASSO_AARQ) == FALSE);
+    REQUIRE(csm_asso_encoder(&state, nullptr, CSM_ASSO_AARQ) == FALSE);
+    REQUIRE(csm_asso_decoder(nullptr, &array, CSM_ASSO_AARQ) == FALSE);
+    REQUIRE(csm_asso_decoder(&state, nullptr, CSM_ASSO_AARQ) == FALSE);
+}
+
 TEST_CASE("AARQ dedicated key rejects invalid length", "[AARQ-Decoder]")
 {
     csm_asso_state state;

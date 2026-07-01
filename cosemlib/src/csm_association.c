@@ -1098,6 +1098,10 @@ int csm_asso_is_granted(csm_asso_state *state)
 int csm_asso_decoder(csm_asso_state *state, csm_array *array, uint8_t tag)
 {
     csm_ber ber;
+    if ((state == NULL) || (array == NULL))
+    {
+        return FALSE;
+    }
 
     // Decode first bytes
     int ret = csm_ber_decode(&ber, array);
@@ -1187,6 +1191,11 @@ int csm_asso_decoder(csm_asso_state *state, csm_array *array, uint8_t tag)
 
 int csm_asso_encoder(csm_asso_state *state, csm_array *array, uint8_t tag)
 {
+    if ((state == NULL) || (array == NULL))
+    {
+        return FALSE;
+    }
+
     array->wr_index = 0U; // Reinit write pointer
     int ret = FALSE;
     csm_ber ber;
