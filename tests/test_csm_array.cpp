@@ -115,6 +115,14 @@ void null_safety(void)
     REQUIRE(FALSE == csm_array_read_u32(&array, NULL));
     csm_array_dump(NULL);
 
+    csm_array corrupt = {};
+    corrupt.size = 4U;
+    corrupt.wr_index = 4U;
+    REQUIRE(FALSE == csm_array_read_u8(&corrupt, &byte));
+    REQUIRE(FALSE == csm_array_read_u16(&corrupt, &value16));
+    REQUIRE(FALSE == csm_array_read_u32(&corrupt, &value32));
+    REQUIRE(0U == corrupt.rd_index);
+
     csm_array_init(NULL, buffer, sizeof(buffer), 0U, 0U);
 
     csm_array_init(&array, NULL, sizeof(buffer), 0U, 0U);

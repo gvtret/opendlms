@@ -309,9 +309,10 @@ int csm_array_read_u8(csm_array *array, uint8_t *byte)
         return ret;
     }
 
-    if (csm_array_unread(array) >= 1U)
+    uint8_t *start = csm_array_rd_data(array);
+    if ((start != NULL) && (csm_array_unread(array) >= 1U))
     {
-        *byte = array->buff[RD_INDEX(array)];
+        *byte = *start;
         array->rd_index++;
         ret = TRUE;
     }
@@ -330,9 +331,9 @@ int csm_array_read_u32(csm_array *array, uint32_t *value)
         return ret;
     }
 
-    if (csm_array_unread(array) >= 4U)
+    uint8_t *start = csm_array_rd_data(array);
+    if ((start != NULL) && (csm_array_unread(array) >= 4U))
     {
-        uint8_t *start = csm_array_rd_data(array);
         *value = GET_BE32(start);
         ret = csm_array_reader_jump(array, 4U);
     }
@@ -347,9 +348,9 @@ int csm_array_read_u16(csm_array *array, uint16_t *value)
         return ret;
     }
 
-    if (csm_array_unread(array) >= 2U)
+    uint8_t *start = csm_array_rd_data(array);
+    if ((start != NULL) && (csm_array_unread(array) >= 2U))
     {
-        uint8_t *start = csm_array_rd_data(array);
         *value = GET_BE16(start);
         ret = csm_array_reader_jump(array, 2U);
     }

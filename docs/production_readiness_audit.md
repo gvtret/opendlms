@@ -174,6 +174,8 @@ not currently form one consistently verified product:
   array/buffer inputs.
 - Hardened scalar `csm_array` jump, read, size, and data-pointer helpers
   against null inputs.
+- Hardened scalar `csm_array` reads against corrupted arrays with unread bytes
+  but no readable backing buffer.
 - Hardened `csm_array_dump()` against null input.
 - Hardened generic `CSM_FRAMING_NONE` frame/deframe helpers against null
   inputs before memory copies or output pointer writes.
