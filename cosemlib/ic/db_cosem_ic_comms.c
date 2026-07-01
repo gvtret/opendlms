@@ -117,8 +117,13 @@ static csm_db_code iec_local_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         if (attr_id == 2U)
         {
             uint8_t tag = 0xFFU;
+            uint8_t comm_speed = 0U;
             if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_ENUM) { return CSM_ERR_BAD_ENCODING; }
-            if (!csm_array_read_u8(in, &d->comm_speed)) { return CSM_ERR_BAD_ENCODING; }
+            if (!csm_array_read_u8(in, &comm_speed) || csm_array_unread(in) != 0U)
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+            d->comm_speed = comm_speed;
             return CSM_OK;
         }
     }
@@ -240,8 +245,13 @@ static csm_db_code iec_hdlc_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         if (attr_id == 2U)
         {
             uint8_t tag = 0xFFU;
+            uint8_t channel = 0U;
             if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_UNSIGNED8) { return CSM_ERR_BAD_ENCODING; }
-            if (!csm_array_read_u8(in, &d->channel)) { return CSM_ERR_BAD_ENCODING; }
+            if (!csm_array_read_u8(in, &channel) || csm_array_unread(in) != 0U)
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+            d->channel = channel;
             return CSM_OK;
         }
     }
@@ -321,9 +331,19 @@ static int comms_read_octet_string(csm_array *in, uint8_t *buf, uint8_t max_len,
 {
     uint8_t tag = 0xFFU;
     uint8_t len = 0U;
+    uint8_t tmp[COMMS_MAC_MAX];
     if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_OCTETSTRING) { return FALSE; }
-    if (!csm_array_read_u8(in, &len) || len > max_len) { return FALSE; }
-    if (len > 0U && !csm_array_read_buff(in, buf, len)) { return FALSE; }
+    if ((buf == NULL) || (out_len == NULL) || (max_len > COMMS_MAC_MAX) ||
+        !csm_array_read_u8(in, &len) || len > max_len)
+    {
+        return FALSE;
+    }
+    if (len > 0U && !csm_array_read_buff(in, tmp, len)) { return FALSE; }
+    if (csm_array_unread(in) != 0U) { return FALSE; }
+    if (len > 0U)
+    {
+        memcpy(buf, tmp, len);
+    }
     *out_len = len;
     return TRUE;
 }
@@ -417,8 +437,13 @@ static csm_db_code tcp_udp_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         else if (attr_id == 5U)
         {
             uint8_t tag = 0xFFU;
+            uint8_t use_dns = 0U;
             if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_BOOLEAN) { return CSM_ERR_BAD_ENCODING; }
-            if (!csm_array_read_u8(in, &d->use_dns)) { return CSM_ERR_BAD_ENCODING; }
+            if (!csm_array_read_u8(in, &use_dns) || csm_array_unread(in) != 0U)
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+            d->use_dns = use_dns;
             return CSM_OK;
         }
         else if (attr_id == 6U)

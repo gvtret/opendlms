@@ -137,6 +137,8 @@ not currently form one consistently verified product:
   copying the initial NULL placeholder.
 - Fixed Activity Calendar passive-calendar SET to reject trailing bytes and
   preserve the previous passive calendar when malformed payloads fail decoding.
+- Fixed communications setup SET handlers to reject trailing bytes and update
+  IEC Local, IEC HDLC, and TCP-UDP state only after full payload validation.
 - Implemented Table Manager `retrieve_entries_by_row` over configured
   `table_data` instead of returning an empty successful result for every valid
   selector.

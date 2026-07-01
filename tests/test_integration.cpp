@@ -76,6 +76,9 @@ static const csm_obis_code obis_special_day = { 0, 0, 11, 0, 0, 255 };
 static const csm_obis_code obis_activity    = { 0, 0, 20, 0, 0, 255 };
 static const csm_obis_code obis_reg_monitor = { 0, 0, 21, 0, 0, 255 };
 static const csm_obis_code obis_single_act  = { 0, 0, 22, 0, 0, 255 };
+static const csm_obis_code obis_iec_local   = { 0, 0, 19, 0, 0, 255 };
+static const csm_obis_code obis_iec_hdlc    = { 0, 0, 23, 0, 0, 255 };
+static const csm_obis_code obis_tcp_udp     = { 0, 0, 41, 0, 0, 255 };
 static const csm_obis_code obis_nonexist    = { 0, 0, 99, 9, 9, 255 };
 
 static csm_db_code test_db_access(csm_db_context_t *ctx, csm_array *in,
@@ -1287,6 +1290,106 @@ TEST_CASE("Integration_ActivityCalendarActivatesPassiveCalendar", "[integration]
     REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
     REQUIRE(get_buf[5] == 0x06);
     REQUIRE(std::memcmp(&get_buf[6], "summer", 6) == 0);
+}
+
+TEST_CASE("Integration_CommsSetupRejectsTrailingSetPayloads", "[integration][basic]")
+{
+    test_stack_setup();
+    REQUIRE(db_ic_create_inst(19, &obis_iec_local, NULL, NULL) == TRUE);
+    REQUIRE(db_ic_create_inst(23, &obis_iec_hdlc, NULL, NULL) == TRUE);
+    REQUIRE(db_ic_create_inst(41, &obis_tcp_udp, NULL, NULL) == TRUE);
+    test_establish_association();
+
+    const uint8_t comm_speed[] = { AXDR_TAG_ENUM, 0x01 };
+    const uint8_t bad_comm_speed[] = { AXDR_TAG_ENUM, 0x02, 0x00 };
+    const uint8_t channel[] = { AXDR_TAG_UNSIGNED8, 0x03 };
+    const uint8_t bad_channel[] = { AXDR_TAG_UNSIGNED8, 0x04, 0x00 };
+    const uint8_t ip[] = { AXDR_TAG_OCTETSTRING, 0x04, 1, 2, 3, 4 };
+    const uint8_t bad_ip[] = { AXDR_TAG_OCTETSTRING, 0x04, 5, 6, 7, 8, 0x00 };
+    const uint8_t use_dns[] = { AXDR_TAG_BOOLEAN, 0x01 };
+    const uint8_t bad_use_dns[] = { AXDR_TAG_BOOLEAN, 0x00, 0x00 };
+
+    uint8_t buf[1024];
+    int ret = test_do_set(0x01, 19, &obis_iec_local, 2,
+                          comm_speed, sizeof(comm_speed), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_set(0x02, 19, &obis_iec_local, 2,
+                      bad_comm_speed, sizeof(bad_comm_speed), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] != 0x00);
+
+    ret = test_do_set(0x03, 23, &obis_iec_hdlc, 2,
+                      channel, sizeof(channel), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_set(0x04, 23, &obis_iec_hdlc, 2,
+                      bad_channel, sizeof(bad_channel), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] != 0x00);
+
+    ret = test_do_set(0x05, 41, &obis_tcp_udp, 2,
+                      ip, sizeof(ip), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_set(0x06, 41, &obis_tcp_udp, 2,
+                      bad_ip, sizeof(bad_ip), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] != 0x00);
+
+    ret = test_do_set(0x07, 41, &obis_tcp_udp, 5,
+                      use_dns, sizeof(use_dns), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_set(0x08, 41, &obis_tcp_udp, 5,
+                      bad_use_dns, sizeof(bad_use_dns), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] != 0x00);
+
+    uint8_t get_buf[1024];
+    ret = test_do_get(0x09, 19, &obis_iec_local, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ENUM);
+    REQUIRE(get_buf[5] == 0x01);
+
+    ret = test_do_get(0x0A, 23, &obis_iec_hdlc, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_UNSIGNED8);
+    REQUIRE(get_buf[5] == 0x03);
+
+    ret = test_do_get(0x0B, 41, &obis_tcp_udp, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[5] == 0x04);
+    REQUIRE(get_buf[6] == 1);
+    REQUIRE(get_buf[7] == 2);
+    REQUIRE(get_buf[8] == 3);
+    REQUIRE(get_buf[9] == 4);
+
+    ret = test_do_get(0x0C, 41, &obis_tcp_udp, 5, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_BOOLEAN);
+    REQUIRE(get_buf[5] == 0x01);
 }
 
 TEST_CASE("Integration_RegisterMonitorSetAndResetState", "[integration][basic]")
