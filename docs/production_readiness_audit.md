@@ -144,6 +144,8 @@ not currently form one consistently verified product:
   actions so its reset/action behavior operates on configured state.
 - Implemented Single Action Schedule SET support for executed script, schedule
   type, and execution time.
+- Fixed Single Action Schedule type SET to preserve previous state when
+  malformed enum payloads contain trailing bytes.
 - Fixed high-level client SET/ACTION request encoding so normal requests include
   the required presence flags before payload data.
 - Extended `reader_lab` with raw attribute, SAP, destination, and AXDR

@@ -162,12 +162,14 @@ static csm_db_code single_action_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
         else if (attr_id == 3U)
         {
             uint8_t tag = 0U;
+            uint8_t type = 0U;
             if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_ENUM ||
-                !csm_array_read_u8(in, &data->type) ||
+                !csm_array_read_u8(in, &type) ||
                 csm_array_unread(in) != 0U)
             {
                 return CSM_ERR_BAD_ENCODING;
             }
+            data->type = type;
             return CSM_OK;
         }
         else if (attr_id == 4U)

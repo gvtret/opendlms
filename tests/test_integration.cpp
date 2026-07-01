@@ -1406,7 +1406,23 @@ TEST_CASE("Integration_SingleActionScheduleSetGetState", "[integration][basic]")
     REQUIRE(get_buf[4] == AXDR_TAG_ENUM);
     REQUIRE(get_buf[5] == 0x01);
 
-    ret = test_do_get(0x06, 22, &obis_single_act, 4, get_buf, sizeof(get_buf));
+    const uint8_t malformed_type[] = {
+        AXDR_TAG_ENUM, 0x02, 0x00
+    };
+    ret = test_do_set(0x06, 22, &obis_single_act, 3,
+                      malformed_type, sizeof(malformed_type), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] != 0x00);
+
+    ret = test_do_get(0x07, 22, &obis_single_act, 3, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ENUM);
+    REQUIRE(get_buf[5] == 0x01);
+
+    ret = test_do_get(0x08, 22, &obis_single_act, 4, get_buf, sizeof(get_buf));
     REQUIRE(ret > 0);
     REQUIRE(get_buf[0] == 0xC4);
     REQUIRE(get_buf[3] == 0x00);
