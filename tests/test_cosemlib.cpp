@@ -454,4 +454,15 @@ TEST_CASE("csm_channel_ctx API", "[cosemlib][channel]")
     csm_channel_ctx incomplete;
     csm_channel_ctx_init(&incomplete, nullptr, 1U, nullptr, configs, 1U);
     REQUIRE(csm_channel_execute_ctx(&incomplete, nullptr, 0U, &pkt) == FALSE);
+
+    csm_request req;
+    memset(&req, 0, sizeof(req));
+    REQUIRE(csm_channel_hls_pass3_ctx(&ctx, &pkt, nullptr) == FALSE);
+    REQUIRE(csm_channel_hls_pass3_ctx(&ctx, nullptr, &req) == FALSE);
+    REQUIRE(csm_channel_hls_pass4_ctx(&ctx, &pkt, nullptr) == FALSE);
+    REQUIRE(csm_channel_hls_pass4_ctx(&ctx, nullptr, &req) == FALSE);
+
+    req.channel_id = 3U;
+    REQUIRE(csm_channel_hls_pass3_ctx(&ctx, &pkt, &req) == FALSE);
+    REQUIRE(csm_channel_hls_pass4_ctx(&ctx, &pkt, &req) == FALSE);
 }

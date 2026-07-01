@@ -135,6 +135,21 @@ int csm_channel_hls_pass3_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
     csm_sec_control_byte sc;
     uint32_t ic;
     int ret = FALSE;
+    csm_asso_state *asso = NULL;
+
+    if ((ctx == NULL) || (array == NULL) || (request == NULL) ||
+        (ctx->channels == NULL) ||
+        (request->channel_id == INVALID_CHANNEL_ID) ||
+        (request->channel_id > ctx->channel_size))
+    {
+        return FALSE;
+    }
+
+    asso = ctx->channels[request->channel_id - 1U].asso;
+    if (asso == NULL)
+    {
+        return FALSE;
+    }
 
     csm_array_dump(array);
 
@@ -149,10 +164,8 @@ int csm_channel_hls_pass3_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
     {
         uint32_t offset = array->offset;
 
-        if ((ctx != NULL) && (offset >= CSM_DEF_MAX_HLS_SIZE))
+        if (offset >= CSM_DEF_MAX_HLS_SIZE)
         {
-            csm_asso_state *asso = ctx->channels[request->channel_id - 1U].asso;
-
             /* Reserve memory & prepare packet */
             array->offset = (offset + array->rd_index) - (CSM_DEF_SEC_HDR_SIZE + asso->handshake.stoc.size);
             array->rd_index = 0U;
@@ -194,6 +207,15 @@ int csm_channel_hls_pass3_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
 int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_request *request)
 {
     int ret = FALSE;
+    csm_asso_state *asso = NULL;
+
+    if ((ctx == NULL) || (array == NULL) || (request == NULL) ||
+        (ctx->channels == NULL) ||
+        (request->channel_id == INVALID_CHANNEL_ID) ||
+        (request->channel_id > ctx->channel_size))
+    {
+        return FALSE;
+    }
 
     csm_sec_control_byte sc;
     sc.sh_byte = 0U;
@@ -201,10 +223,14 @@ int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
 
     uint32_t offset = array->offset;
 
-    if ((ctx != NULL) && (offset >= CSM_DEF_MAX_HLS_SIZE))
+    asso = ctx->channels[request->channel_id - 1U].asso;
+    if (asso == NULL)
     {
-        csm_asso_state *asso = ctx->channels[request->channel_id - 1U].asso;
+        return FALSE;
+    }
 
+    if (offset >= CSM_DEF_MAX_HLS_SIZE)
+    {
         /* Use per-association invocation counter */
         uint32_t ic = asso->invocation_counter;
         asso->invocation_counter++;

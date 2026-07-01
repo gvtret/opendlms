@@ -472,6 +472,8 @@ not currently form one consistently verified product:
   wrap buffer indices.
 - Cosemlib channel tests now verify context initialization tolerates missing
   backing arrays and execute rejects null packets or out-of-range channels.
+- Cosemlib channel tests now verify HLS pass3/pass4 helpers reject null state
+  and invalid channel ids before indexing channel associations.
 - Cosemlib keyring tests now verify corrupted counts cannot drive out-of-range
   fixed-array access.
 - Cosemlib security suite tests now verify supported/unsupported suites, null
