@@ -135,6 +135,8 @@ not currently form one consistently verified product:
 - Implemented Activity Calendar passive-calendar SET so
   `activate_passive_calendar` can promote real configured data instead of only
   copying the initial NULL placeholder.
+- Fixed Activity Calendar passive-calendar SET to reject trailing bytes and
+  preserve the previous passive calendar when malformed payloads fail decoding.
 - Implemented Table Manager `retrieve_entries_by_row` over configured
   `table_data` instead of returning an empty successful result for every valid
   selector.

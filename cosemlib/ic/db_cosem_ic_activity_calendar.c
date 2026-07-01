@@ -137,6 +137,7 @@ static csm_db_code activity_cal_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
             db_ic_activity_cal_data_t *data = (db_ic_activity_cal_data_t *)inst->data;
             uint8_t tag = 0xFFU;
             uint8_t len = 0U;
+            uint8_t calendar[ACTIVITY_CAL_NAME_LEN];
 
             if (!csm_array_read_u8(in, &tag) || tag != AXDR_TAG_OCTETSTRING)
             {
@@ -147,14 +148,20 @@ static csm_db_code activity_cal_dispatch(db_ic_inst_t *inst, db_ic_op_t op,
                 return CSM_ERR_BAD_ENCODING;
             }
 
-            data->passive_calendar[0] = AXDR_TAG_OCTETSTRING;
-            data->passive_calendar[1] = len;
-            data->passive_len = (uint8_t)(2U + len);
+            calendar[0] = AXDR_TAG_OCTETSTRING;
+            calendar[1] = len;
             if (len > 0U &&
-                !csm_array_read_buff(in, &data->passive_calendar[2], len))
+                !csm_array_read_buff(in, &calendar[2], len))
             {
                 return CSM_ERR_BAD_ENCODING;
             }
+            if (csm_array_unread(in) != 0U)
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
+
+            memcpy(data->passive_calendar, calendar, (uint8_t)(2U + len));
+            data->passive_len = (uint8_t)(2U + len);
             return CSM_OK;
         }
     }

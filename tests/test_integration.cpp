@@ -1264,14 +1264,23 @@ TEST_CASE("Integration_ActivityCalendarActivatesPassiveCalendar", "[integration]
     REQUIRE(buf[0] == 0xC5);
     REQUIRE(buf[3] == 0x00);
 
-    ret = test_do_action(0x02, 20, &obis_activity, 1,
+    const uint8_t malformed_calendar[] = {
+        AXDR_TAG_OCTETSTRING, 0x06, 'w', 'i', 'n', 't', 'e', 'r', 0x00
+    };
+    ret = test_do_set(0x02, 20, &obis_activity, 2,
+                      malformed_calendar, sizeof(malformed_calendar), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC5);
+    REQUIRE(buf[3] != 0x00);
+
+    ret = test_do_action(0x03, 20, &obis_activity, 1,
                          NULL, 0, buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x00);
 
     uint8_t get_buf[1024];
-    ret = test_do_get(0x03, 20, &obis_activity, 3, get_buf, sizeof(get_buf));
+    ret = test_do_get(0x04, 20, &obis_activity, 3, get_buf, sizeof(get_buf));
     REQUIRE(ret > 0);
     REQUIRE(get_buf[0] == 0xC4);
     REQUIRE(get_buf[3] == 0x00);
