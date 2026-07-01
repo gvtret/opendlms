@@ -121,10 +121,12 @@ static csm_db_code schedule_insert_entry(db_ic_schedule_data_t *data, csm_array 
     {
         if (data->entry_id[i] == entry_id)
         {
-            memcpy(data->entries[i], csm_array_rd_data(in), entry_size);
+            if (!csm_array_read_buff(in, data->entries[i], entry_size))
+            {
+                return CSM_ERR_BAD_ENCODING;
+            }
             data->entry_size[i] = (uint8_t)entry_size;
-            return csm_array_reader_jump(in, entry_size)
-                ? CSM_OK : CSM_ERR_BAD_ENCODING;
+            return CSM_OK;
         }
     }
 
@@ -133,11 +135,15 @@ static csm_db_code schedule_insert_entry(db_ic_schedule_data_t *data, csm_array 
         return CSM_ERR_DATA_CONTENT_NOT_OK;
     }
 
-    uint8_t idx = data->entry_count++;
+    uint8_t idx = data->entry_count;
     data->entry_id[idx] = entry_id;
+    if (!csm_array_read_buff(in, data->entries[idx], entry_size))
+    {
+        return CSM_ERR_BAD_ENCODING;
+    }
     data->entry_size[idx] = (uint8_t)entry_size;
-    memcpy(data->entries[idx], csm_array_rd_data(in), entry_size);
-    return csm_array_reader_jump(in, entry_size) ? CSM_OK : CSM_ERR_BAD_ENCODING;
+    data->entry_count++;
+    return CSM_OK;
 }
 
 static csm_db_code schedule_delete_entry(db_ic_schedule_data_t *data, csm_array *in)

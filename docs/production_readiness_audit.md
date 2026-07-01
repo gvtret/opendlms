@@ -121,6 +121,8 @@ not currently form one consistently verified product:
   entry storage keyed by entry id.
 - Implemented Special Days `insert`/`delete` ACTION handling with persistent
   AXDR entry storage keyed by day id.
+- Made Schedule and Special Days entry imports consume input through bounded
+  `csm_array` reads and publish new entries only after successful storage.
 - Made Script Table `execute` validate its script id parameter and report a
   DLMS error when the target script is not present instead of returning a
   successful no-op.

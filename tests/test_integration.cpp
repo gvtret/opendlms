@@ -943,10 +943,30 @@ TEST_CASE("Integration_ScheduleInsertDeleteMutatesEntries", "[integration][basic
     REQUIRE(get_buf[9] == 0x00);
     REQUIRE(get_buf[10] == 0x07);
 
+    const uint8_t replacement_entry[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x07,
+        AXDR_TAG_BOOLEAN, 0x00
+    };
+    ret = test_do_action(0x03, 10, &obis_schedule, 3,
+                         replacement_entry, sizeof(replacement_entry), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_get(0x04, 10, &obis_schedule, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x01);
+    REQUIRE(get_buf[11] == AXDR_TAG_BOOLEAN);
+    REQUIRE(get_buf[12] == 0x00);
+
     const uint8_t missing_entry[] = {
         AXDR_TAG_UNSIGNED16, 0x00, 0x09
     };
-    ret = test_do_action(0x03, 10, &obis_schedule, 4,
+    ret = test_do_action(0x05, 10, &obis_schedule, 4,
                          missing_entry, sizeof(missing_entry), buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
@@ -955,13 +975,13 @@ TEST_CASE("Integration_ScheduleInsertDeleteMutatesEntries", "[integration][basic
     const uint8_t delete_entry[] = {
         AXDR_TAG_UNSIGNED16, 0x00, 0x07
     };
-    ret = test_do_action(0x04, 10, &obis_schedule, 4,
+    ret = test_do_action(0x06, 10, &obis_schedule, 4,
                          delete_entry, sizeof(delete_entry), buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x00);
 
-    ret = test_do_get(0x05, 10, &obis_schedule, 2, get_buf, sizeof(get_buf));
+    ret = test_do_get(0x07, 10, &obis_schedule, 2, get_buf, sizeof(get_buf));
     REQUIRE(ret > 0);
     REQUIRE(get_buf[0] == 0xC4);
     REQUIRE(get_buf[3] == 0x00);
@@ -1001,10 +1021,33 @@ TEST_CASE("Integration_SpecialDaysInsertDeleteMutatesEntries", "[integration][ba
     REQUIRE(get_buf[9] == 0x00);
     REQUIRE(get_buf[10] == 0x11);
 
+    const uint8_t replacement_entry[] = {
+        AXDR_TAG_STRUCTURE, 0x02,
+        AXDR_TAG_UNSIGNED16, 0x00, 0x11,
+        AXDR_TAG_OCTETSTRING, 0x05, 0x07, 0xEB, 0x01, 0x02, 0xFF
+    };
+    ret = test_do_action(0x03, 11, &obis_special_day, 1,
+                         replacement_entry, sizeof(replacement_entry), buf, sizeof(buf));
+    REQUIRE(ret > 0);
+    REQUIRE(buf[0] == 0xC7);
+    REQUIRE(buf[3] == 0x00);
+
+    ret = test_do_get(0x04, 11, &obis_special_day, 2, get_buf, sizeof(get_buf));
+    REQUIRE(ret > 0);
+    REQUIRE(get_buf[0] == 0xC4);
+    REQUIRE(get_buf[3] == 0x00);
+    REQUIRE(get_buf[4] == AXDR_TAG_ARRAY);
+    REQUIRE(get_buf[5] == 0x01);
+    REQUIRE(get_buf[11] == AXDR_TAG_OCTETSTRING);
+    REQUIRE(get_buf[12] == 0x05);
+    REQUIRE(get_buf[14] == 0xEB);
+    REQUIRE(get_buf[15] == 0x01);
+    REQUIRE(get_buf[16] == 0x02);
+
     const uint8_t missing_day[] = {
         AXDR_TAG_UNSIGNED16, 0x00, 0x22
     };
-    ret = test_do_action(0x03, 11, &obis_special_day, 2,
+    ret = test_do_action(0x05, 11, &obis_special_day, 2,
                          missing_day, sizeof(missing_day), buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
@@ -1013,13 +1056,13 @@ TEST_CASE("Integration_SpecialDaysInsertDeleteMutatesEntries", "[integration][ba
     const uint8_t delete_day[] = {
         AXDR_TAG_UNSIGNED16, 0x00, 0x11
     };
-    ret = test_do_action(0x04, 11, &obis_special_day, 2,
+    ret = test_do_action(0x06, 11, &obis_special_day, 2,
                          delete_day, sizeof(delete_day), buf, sizeof(buf));
     REQUIRE(ret > 0);
     REQUIRE(buf[0] == 0xC7);
     REQUIRE(buf[3] == 0x00);
 
-    ret = test_do_get(0x05, 11, &obis_special_day, 2, get_buf, sizeof(get_buf));
+    ret = test_do_get(0x07, 11, &obis_special_day, 2, get_buf, sizeof(get_buf));
     REQUIRE(ret > 0);
     REQUIRE(get_buf[0] == 0xC4);
     REQUIRE(get_buf[3] == 0x00);
