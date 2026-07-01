@@ -452,6 +452,8 @@ not currently form one consistently verified product:
   missing object/start/end inputs instead of emitting malformed empty fields.
 - Cosemlib service tests now verify block response decoding uses bounded array
   helpers instead of subtracting corrupted cursor state directly.
+- Association tests now verify malformed dedicated-key lengths in AARQ user
+  information are rejected before copying key material.
 - Cosemlib BER tests now verify null input rejection and truncated object
   identifier handling.
 - AXDR read-by-block tests now verify null input rejection and truncated BER

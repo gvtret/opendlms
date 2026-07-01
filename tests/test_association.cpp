@@ -4,6 +4,7 @@
 #include "hdlc.h"
 #include "csm_array.h"
 #include "csm_association.h"
+#include "csm_axdr_codec.h"
 
 #include "catch.hpp"
 #include <iostream>
@@ -313,6 +314,45 @@ TEST_CASE( "AARQ", "[AARQ-Encoder]" )
 {
     puts("\r\n--------------------------  COSEM AARQ 1  --------------------------\r\n");
     AARQEncoder();
+}
+
+TEST_CASE("AARQ dedicated key rejects invalid length", "[AARQ-Decoder]")
+{
+    csm_asso_state state;
+    uint8_t packet[180] = {};
+    csm_array array;
+
+    csm_asso_init(&state);
+    state.auth_level = CSM_AUTH_HIGH_LEVEL_GMAC;
+    state.ref = LN_REF_WITH_CYPHERING;
+    state.dedicated_key_size = 16U;
+    for (uint8_t i = 0U; i < state.dedicated_key_size; i++)
+    {
+        state.dedicated_key[i] = i;
+    }
+
+    csm_array_init(&array, packet, sizeof(packet), 0U, 0U);
+    REQUIRE(csm_asso_encoder(&state, &array, CSM_ASSO_AARQ) == TRUE);
+    const uint32_t written = csm_array_written(&array);
+
+    uint32_t key_len_index = written;
+    for (uint32_t i = 0U; i + 18U < written; i++)
+    {
+        if ((packet[i] == AXDR_TAG_OCTETSTRING) && (packet[i + 1U] == 16U) &&
+            (std::memcmp(&packet[i + 2U], state.dedicated_key, state.dedicated_key_size) == 0))
+        {
+            key_len_index = i + 1U;
+            break;
+        }
+    }
+    REQUIRE(key_len_index < written);
+
+    packet[key_len_index] = 17U;
+    csm_asso_state decoded;
+    csm_asso_init(&decoded);
+    csm_array_init(&array, packet, sizeof(packet), written, 0U);
+    REQUIRE(csm_asso_decoder(&decoded, &array, CSM_ASSO_AARQ) == FALSE);
+    REQUIRE(decoded.dedicated_key_size == 0U);
 }
 
 TEST_CASE( "AARE1", "[AARE1-Decoder]" )

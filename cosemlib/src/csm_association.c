@@ -362,12 +362,17 @@ static csm_acse_code acse_user_info_decoder(csm_asso_state *state, csm_ber *ber,
                             if (byte == AXDR_TAG_OCTETSTRING)
                             {
                                 uint8_t key_len = 0;
-                                if (csm_array_read_u8(array, &key_len) && (key_len <= 16U))
+                                if (csm_array_read_u8(array, &key_len) &&
+                                    (key_len <= sizeof(state->dedicated_key)) &&
+                                    (key_len <= csm_array_unread(array)))
                                 {
-                                    memcpy(state->dedicated_key, &array->buff[array->rd_index], key_len);
+                                    csm_array_read_buff(array, state->dedicated_key, key_len);
                                     state->dedicated_key_size = key_len;
-                                    csm_array_reader_jump(array, key_len);
                                     CSM_LOG("[ACSE] Dedicated key received (%d bytes)", key_len);
+                                }
+                                else
+                                {
+                                    valid = FALSE;
                                 }
                             }
                             else
