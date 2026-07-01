@@ -21,6 +21,16 @@
 
 extern "C" void csm_sys_init();
 
+static uint32_t axdr_callback_calls = 0U;
+
+static void count_axdr_callback(uint8_t type, uint32_t size, uint8_t *data)
+{
+    (void) type;
+    (void) size;
+    (void) data;
+    axdr_callback_calls++;
+}
+
 /* ── Umbrella header tests ───────────────────────────────────────────────── */
 
 TEST_CASE("cosemlib.h compiles and provides version info", "[cosemlib]")
@@ -389,6 +399,17 @@ TEST_CASE("AXDR decode rejects excessive nesting", "[cosemlib][axdr]")
 
     array.rd_index = 0U;
     REQUIRE(csm_axdr_decode_tags(&array, nullptr) == FALSE);
+}
+
+TEST_CASE("AXDR decode does not callback on truncated primitive payload", "[cosemlib][axdr]")
+{
+    uint8_t buf[] = { AXDR_TAG_OCTETSTRING, 0x04U, 0xAAU, 0xBBU };
+    csm_array array;
+    csm_array_init(&array, buf, sizeof(buf), sizeof(buf), 0U);
+
+    axdr_callback_calls = 0U;
+    REQUIRE(csm_axdr_decode_tags(&array, count_axdr_callback) == FALSE);
+    REQUIRE(axdr_callback_calls == 0U);
 }
 
 TEST_CASE("csm_block_state lifecycle", "[cosemlib][block_transfer]")

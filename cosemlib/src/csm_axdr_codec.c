@@ -177,13 +177,13 @@ static int csm_axdr_decode_one(csm_array *array, axdr_data_cb callback, uint32_t
         }
     }
 
-    if (callback != NULL)
-    {
-        callback(tag, size, csm_array_rd_data(array));
-    }
-
     if (descriptor->is_struct)
     {
+        if (callback != NULL)
+        {
+            callback(tag, size, csm_array_rd_data(array));
+        }
+
         for (uint32_t i = 0U; i < size; i++)
         {
             if (!csm_axdr_decode_one(array, callback, depth + 1U))
@@ -196,13 +196,28 @@ static int csm_axdr_decode_one(csm_array *array, axdr_data_cb callback, uint32_t
 
     if (size == 0U)
     {
+        if (callback != NULL)
+        {
+            callback(tag, size, csm_array_rd_data(array));
+        }
         return TRUE;
     }
+
+    uint32_t payload_size = size;
     if (tag == AXDR_TAG_BITSTRING)
     {
-        size = BITFIELD_BYTES(size);
+        payload_size = BITFIELD_BYTES(size);
     }
-    return csm_array_reader_jump(array, size);
+    if ((csm_array_unread(array) < payload_size) ||
+        ((payload_size > 0U) && (csm_array_rd_data(array) == NULL)))
+    {
+        return FALSE;
+    }
+    if (callback != NULL)
+    {
+        callback(tag, size, csm_array_rd_data(array));
+    }
+    return csm_array_reader_jump(array, payload_size);
 }
 
 int csm_axdr_decode_tags(csm_array *array, axdr_data_cb callback)

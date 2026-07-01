@@ -204,6 +204,8 @@ not currently form one consistently verified product:
   identifier buffers.
 - Hardened AXDR decode/encode helpers against null inputs and truncated BER
   length fields before reading or writing output state.
+- Made AXDR tag decoding invoke payload callbacks only after primitive payload
+  bounds have been validated.
 - Hardened keyring add/find helpers against corrupted entry counts before
   indexing fixed-size key storage.
 - Hardened security auth encrypt/decrypt helpers against null inputs, truncated
