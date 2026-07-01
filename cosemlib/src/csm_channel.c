@@ -31,12 +31,12 @@ void csm_channel_ctx_init(csm_channel_ctx *ctx,
     ctx->asso_size = asso_size;
     ctx->db_handler = NULL;
 
-    for (uint32_t i = 0U; i < asso_size; i++)
+    for (uint32_t i = 0U; (assos != NULL) && (i < asso_size); i++)
     {
         csm_asso_init(&assos[i]);
     }
 
-    for (uint32_t i = 0U; i < chan_size; i++)
+    for (uint32_t i = 0U; (channels != NULL) && (i < chan_size); i++)
     {
         channels[i].asso = NULL;
         channels[i].request.channel_id = INVALID_CHANNEL_ID;
@@ -58,7 +58,9 @@ int csm_channel_execute_ctx(csm_channel_ctx *ctx, csm_db_context_t *db_ctx, uint
     if ((ctx == NULL) ||
         (ctx->channels == NULL) ||
         (ctx->asso_states == NULL) ||
-        (ctx->asso_configs == NULL))
+        (ctx->asso_configs == NULL) ||
+        (packet == NULL) ||
+        (channel >= ctx->channel_size))
     {
         CSM_ERR("[CHAN] Stack is not initialized. Call csm_channel_ctx_init() first.");
         return ret;

@@ -444,4 +444,14 @@ TEST_CASE("csm_channel_ctx API", "[cosemlib][channel]")
     /* Disconnect */
     csm_channel_disconnect_ctx(&ctx, ch);
     REQUIRE(channels[0].request.channel_id == INVALID_CHANNEL_ID);
+
+    uint8_t pkt_buf[4] = {};
+    csm_array pkt;
+    csm_array_init(&pkt, pkt_buf, sizeof(pkt_buf), sizeof(pkt_buf), 0U);
+    REQUIRE(csm_channel_execute_ctx(&ctx, nullptr, 2U, &pkt) == FALSE);
+    REQUIRE(csm_channel_execute_ctx(&ctx, nullptr, 0U, nullptr) == FALSE);
+
+    csm_channel_ctx incomplete;
+    csm_channel_ctx_init(&incomplete, nullptr, 1U, nullptr, configs, 1U);
+    REQUIRE(csm_channel_execute_ctx(&incomplete, nullptr, 0U, &pkt) == FALSE);
 }

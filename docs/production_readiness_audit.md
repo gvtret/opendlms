@@ -470,6 +470,8 @@ not currently form one consistently verified product:
   bounds fail closed without pointer underflow.
 - Core array tests now verify oversized reader/writer jumps and writes cannot
   wrap buffer indices.
+- Cosemlib channel tests now verify context initialization tolerates missing
+  backing arrays and execute rejects null packets or out-of-range channels.
 - Cosemlib keyring tests now verify corrupted counts cannot drive out-of-range
   fixed-array access.
 - Cosemlib security suite tests now verify supported/unsupported suites, null
