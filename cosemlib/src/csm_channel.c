@@ -164,18 +164,27 @@ int csm_channel_hls_pass3_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
     {
         uint32_t offset = array->offset;
 
-        if (offset >= CSM_DEF_MAX_HLS_SIZE)
+        /* csm_sec_auth_decrypt overwrites the 17 bytes preceding the information
+         * with the SC || AK AAD and requires its read cursor to land at >= 17
+         * after consuming the 5-byte SC/IC header. Reserve 12 bytes of scratch
+         * headroom before SC so the read cursor starts at 12. */
+        if (offset >= (CSM_DEF_MAX_HLS_SIZE + 12U))
         {
-            /* Reserve memory & prepare packet */
-            array->offset = (offset + array->rd_index) - (CSM_DEF_SEC_HDR_SIZE + asso->handshake.stoc.size);
+            /* Reserve memory & prepare packet. Shifting the working offset by an
+             * extra 12 bytes keeps the incoming tag in its original position. */
+            array->offset = (offset + array->rd_index)
+                          - (CSM_DEF_SEC_HDR_SIZE + asso->handshake.stoc.size + 12U);
             array->rd_index = 0U;
             array->wr_index = 0U;
 
-            /* Build a new fake packet with: SC || IC || Information || Tag */
+            /* Build SC || IC || Information || Tag, preceded by AAD scratch */
+            csm_array_writer_jump(array, 12U);
             csm_array_write_u8(array, sc.sh_byte);
             csm_array_write_u32(array, ic);
             csm_array_write_buff(array, &asso->handshake.stoc.value[0], asso->handshake.stoc.size);
             csm_array_writer_jump(array, 12U);
+
+            array->rd_index = 12U;
 
             csm_sec_result res = csm_sec_auth_decrypt(array, request, &asso->client_app_title[0]);
 
@@ -229,25 +238,44 @@ int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
         return FALSE;
     }
 
-    if (offset >= CSM_DEF_MAX_HLS_SIZE)
+    (void) offset;
+    uint8_t ctos_size = asso->handshake.ctos.size;
+
+    /* Need room after the buffer offset for [17 AAD scratch][CtoS][12 tag]. */
+    if ((ctos_size > 0U) && (ctos_size <= CSM_DEF_CHALLENGE_SIZE) &&
+        ((array->size - array->offset) >= (17U + (uint32_t)ctos_size + 12U)))
     {
         /* Use per-association invocation counter */
         uint32_t ic = asso->invocation_counter;
         asso->invocation_counter++;
 
-        array->offset = offset - (asso->handshake.ctos.size - CSM_DEF_SEC_HDR_SIZE - 2U);
-        csm_array_write_buff(array, &asso->handshake.ctos.value[0], asso->handshake.ctos.size);
+        /* GMAC over CtoS: layout [17 AAD scratch][CtoS][12 tag], info cursor 17. */
+        array->rd_index = 0U;
+        array->wr_index = 0U;
+        int valid = csm_array_writer_jump(array, 17U);
+        valid = valid && csm_array_write_buff(array, &asso->handshake.ctos.value[0], ctos_size);
+        array->rd_index = 17U;
 
-        csm_sec_result res = csm_sec_auth_encrypt(array, request, csm_sys_get_system_title(), sc, ic);
+        csm_sec_result res = CSM_SEC_ERROR;
+        if (valid)
+        {
+            res = csm_sec_auth_encrypt(array, request, csm_sys_get_system_title(), sc, ic);
+        }
 
-        array->offset = offset;
-        array->wr_index = 0;
+        uint8_t tag[12];
+        for (uint32_t i = 0U; valid && (i < 12U); i++)
+        {
+            valid = csm_array_get(array, 17U + (uint32_t)ctos_size + i, &tag[i]);
+        }
 
-        int valid = csm_array_write_u8(array, AXDR_TAG_OCTETSTRING);
+        /* Emit the reply_to_HLS response octet-string SC || IC || tag. */
+        array->rd_index = 0U;
+        array->wr_index = 0U;
+        valid = valid && csm_array_write_u8(array, AXDR_TAG_OCTETSTRING);
         valid = valid && csm_ber_write_len(array, 17U);
         valid = valid && csm_array_write_u8(array, sc.sh_byte);
         valid = valid && csm_array_write_u32(array, ic);
-        valid = valid && csm_array_writer_jump(array, 12U);
+        valid = valid && csm_array_write_buff(array, tag, 12U);
 
         if ((res == CSM_SEC_OK) && valid)
         {

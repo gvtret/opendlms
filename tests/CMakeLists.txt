@@ -13,6 +13,7 @@ add_executable(${PROJECT_NAME}
     test_hdlc.cpp
     test_association.cpp
     test_aes128gcm.cpp
+    test_hls.cpp
     test_block_transfer.cpp
     test_clock.cpp
     test_gost.cpp

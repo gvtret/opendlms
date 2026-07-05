@@ -66,31 +66,34 @@ const uint8_t *csm_sys_get_system_title()
     return system_title;
 }
 
+/* Test key material, GreenBook HLS5 GMAC vector compatible (same for all SAPs).
+ * GUEK = 000102..0F, GAK = D0D1..DF, KEK = 313131..31. */
+static uint8_t key_guek[16] = { 0x00U,0x01U,0x02U,0x03U,0x04U,0x05U,0x06U,0x07U,
+                                0x08U,0x09U,0x0AU,0x0BU,0x0CU,0x0DU,0x0EU,0x0FU };
+static uint8_t key_gbek[16] = { 0x00U,0x01U,0x02U,0x03U,0x04U,0x05U,0x06U,0x07U,
+                                0x08U,0x09U,0x0AU,0x0BU,0x0CU,0x0DU,0x0EU,0x0FU };
+static uint8_t key_gak[16]  = { 0xD0U,0xD1U,0xD2U,0xD3U,0xD4U,0xD5U,0xD6U,0xD7U,
+                                0xD8U,0xD9U,0xDAU,0xDBU,0xDCU,0xDDU,0xDEU,0xDFU };
+static uint8_t key_kek[16]  = { 0x31U,0x31U,0x31U,0x31U,0x31U,0x31U,0x31U,0x31U,
+                                0x31U,0x31U,0x31U,0x31U,0x31U,0x31U,0x31U,0x31U };
+
 uint8_t *csm_sys_get_key(uint8_t sap, csm_sec_key key_id)
 {
-    (void) sap; // FIXME: manage one key per SAP in a configuration file
-    (void) key_id;
-    uint8_t *key = NULL;
+    (void) sap; // Test HAL: same key material for every SAP
 
-    /*
-    switch(key_id)
+    switch (key_id)
     {
     case CSM_SEC_KEK:
-        key = key_kek;
-        break;
+        return key_kek;
     case CSM_SEC_GUEK:
-        key = key_guek;
-        break;
+        return key_guek;
     case CSM_SEC_GBEK:
-        key = key_gbek;
-        break;
-    default:
+        return key_gbek;
     case CSM_SEC_GAK:
-        key = key_gak;
-        break;
+        return key_gak;
+    default:
+        return NULL;
     }
-    */
-    return key;
 }
 
 
