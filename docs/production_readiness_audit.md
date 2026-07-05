@@ -1,7 +1,83 @@
 # OpenDLMS production readiness audit
 
-Date: 2026-06-27
+Date: 2026-06-27 (original), 2026-07-05 (re-audit update below)
 Branch: full-rework
+
+## 2026-07-05 re-audit + changes
+
+Re-audited on Linux (GCC + Clang). Baseline established green:
+`cmake --preset production && ctest --test-dir build-production` → 3/3 pass
+(`cosemtest`, `reader_lab_live_smoke`, `reader_hal_smoke`). The `build-production`
+tree checked in previously was a stale Windows/MSVC multi-config build and cannot
+run under WSL/Linux; it was rebuilt.
+
+Changes made this pass (all verified — see below):
+
+- **CI: added an ASan + UBSan sanitizer gate** (Clang) that builds tests, server,
+  client, meter simulator and reader_lab and runs the full CTest suite with leak
+  detection on. `enum` UBSan is excluded because negative tests deliberately pass
+  out-of-range enum values to prove the library rejects them. This job also gives
+  the project its first Clang coverage in CI.
+- **Fixed 16 pre-existing memory leaks in the test suite** so the sanitizer gate
+  runs with leak detection enabled: unfreed `mbedtls_gcm_context` in
+  `test_aes128gcm.cpp` (2) and unfreed `malloc` buffers in `test_association.cpp`
+  helpers `ACSEDecoder`/`HexToBin` (14). No library leaks were found — the core
+  is allocation-clean as designed.
+- **Corrected the GOST security-suite declaration** (`csm_security_suite.{c,h}`)
+  against R 1323565.1.028 §4 (verified via knowledge base): suite 8 is
+  `KUZN-CTR-CMAC` (Kuznyechik CTR + Kuznyechik CMAC — both implemented and
+  tested), not the previously declared Kuznyechik-GCM + Streebog-256 CMAC. **Suite
+  9 now fails closed** (`is_supported(9) == 0`) because it additionally requires
+  GOST 34.10-2018 signature, VKO-256 key agreement, and GOST 34.11-2018
+  (Streebog-256) — none production-ready (Streebog L-transform still incorrect).
+  Fixed the stale `RFC 7838` citation (unrelated HTTP RFC) → R 1323565.1 / RFC 9189.
+- **Repo hygiene**: `.gitignore` now covers the transient audit/gate/smoke run
+  logs and electron scratch files that were polluting `git status`.
+
+Verified: `ctest --test-dir build-production` → 3/3; `cosemtest` under
+ASan/UBSan+LeakSanitizer → `Passed all 211 test cases with 1937 assertions`, 0
+leaks, 0 UB; full `ctest --test-dir build-asan` (incl. live smoke) → 3/3.
+
+### Sharpened #1 blocker: client-side HLS + ciphered services
+
+Confirmed by code trace + knowledge base (Green Book §9.2.7.4; IEC 62056-5-3
+§5.2.2.2.4/5.7.4). The client/reader cannot establish an HLS (Configurator, SAP 48,
+mechanism 5 GMAC) association. What exists vs. what is missing:
+
+- Present: `csm_client_connect()` sends AARQ and parses AARE; the AARQ encoder
+  emits the CtoS challenge (`acse_aarq_auth_value_encoder`) and the AARE decoder
+  stores StoC into `asso->handshake.stoc`. Server-side HLS pass 3/4 is complete
+  (`csm_channel_hls_pass3/4_ctx`, driven by `db_cosem_associations_func`), and the
+  simulator supports HLS server-side — so a client implementation can be verified
+  end-to-end against `metersimulator`.
+- Missing (precise integration points):
+  1. **AARQ calling-AP-title** — the client AARQ encoder table does NOT emit the
+     client system title. For GMAC the IV is `system-title || IC`, and the server
+     verifies pass 3 using `asso->client_app_title` taken from the AARQ. Without
+     it, verification cannot match. Add a calling-AP-title encoder to the AARQ
+     encoder table in `csm_association.c`.
+  2. **Client pass 3** — build `f(StoC) = SC || IC || GMAC(SC || AK || StoC)`
+     (17-byte octet string) and send it via ACTION `reply_to_HLS_authentication`
+     (Association LN class 15, OBIS `0.0.40.0.0.255`, method 1). Mirror of the
+     server `csm_channel_hls_pass4_ctx`; reuse `csm_sec_auth_encrypt` with a
+     buffer laid out `[17-byte AAD headroom][StoC][12-byte tag]`, `rd_index=17`.
+  3. **Client pass 4 verify** — decode the ACTION response return-data octet
+     string `f(CtoS)` and verify `GMAC(SC || AK || CtoS)`.
+  4. **Wire into `csm_client_connect`** after AARE-accepted when
+     `auth_level >= CSM_AUTH_HIGH_LEVEL_*`; mark associated only on pass-4 success.
+     Remove the `sync_invocation_counter` fail-closed guard in
+     `opendlms_reader_connect` once seeding works.
+  5. **glo-ciphered services** — the Configurator profile also uses application
+     context 3 (ciphered). Protected GET/SET/ACTION need client-side glo-* wrap
+     (encrypt request, decrypt response) + invocation-counter management. This is
+     separate from, and larger than, the HLS handshake.
+  6. **Live ciphered test coverage** — extend `reader_lab`/live smoke to drive HLS
+     pass 3/4 and a protected GET against the simulator.
+
+This is a security-critical, multi-part feature and is intentionally left for a
+dedicated test-driven pass rather than rushed — shipping partially-verified
+handshake crypto would be worse than the current honest fail-closed behaviour.
+
 
 ## Current status
 
