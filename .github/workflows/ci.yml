@@ -75,6 +75,42 @@ jobs:
             build/client/libopendlms_reader.a
             ${{ github.workspace }}/install/
 
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang python3
+
+      - name: Configure (Clang, ASan + UBSan)
+        # enum is excluded: negative tests deliberately pass out-of-range enum
+        # values to verify the library rejects them, which is UB to materialize.
+        run: |
+          SAN="-fsanitize=address,undefined -fno-sanitize=enum -fno-omit-frame-pointer -fno-sanitize-recover=all"
+          cmake -B build-san -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_FLAGS="$SAN" -DCMAKE_CXX_FLAGS="$SAN" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+            -DOPEN_DLMS_BUILD_TESTS=ON \
+            -DOPEN_DLMS_BUILD_SERVER=ON \
+            -DOPEN_DLMS_BUILD_CLIENT=ON \
+            -DOPEN_DLMS_BUILD_METER_SIM=ON \
+            -DOPEN_DLMS_BUILD_READER_LAB=ON \
+            -DCOSEMLIB_SHARED=OFF
+
+      - name: Build
+        run: cmake --build build-san
+
+      - name: Run tests (ASan/UBSan, leak detection on)
+        run: cd build-san && ctest --output-on-failure
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
   build-windows:
     runs-on: windows-latest
     steps:
