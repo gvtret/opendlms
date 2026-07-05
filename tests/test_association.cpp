@@ -217,6 +217,8 @@ void ACSEDecoder(const char *frame, int sz, csm_asso_tag tag)
             puts("StoC\r\n");
             print_hex((const char*)&state.handshake.stoc.value[0], state.handshake.stoc.size);
         }
+
+        free(packet);
     }
 }
 
@@ -270,6 +272,9 @@ void TestVectorHLS3()
         REQUIRE(expected[i] == digest[i]);
     }
 
+    free(secret);
+    free(stoc);
+    free(expected);
 }
 
 
@@ -308,6 +313,9 @@ void TestVectorHLS2Saphir()
         REQUIRE(expected[i] == digest[i]);
     }
 
+    free(secret);
+    free(stoc);
+    free(expected);
 }
 
 TEST_CASE( "AARQ", "[AARQ-Encoder]" )

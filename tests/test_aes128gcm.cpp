@@ -50,6 +50,7 @@ TEST_CASE("AES-128 GCM NIST tag vector", "[crypto][gcm]")
 
     REQUIRE(mbedtls_gcm_finish(&ctx, tag, sizeof(tag)) == 0);
     REQUIRE(std::memcmp(tag, expected_tag, sizeof(expected_tag)) == 0);
+    mbedtls_gcm_free(&ctx);
 }
 
 TEST_CASE("AES-128 GMAC GreenBook HLS5 tag vector", "[crypto][gcm]")
@@ -87,6 +88,7 @@ TEST_CASE("AES-128 GMAC GreenBook HLS5 tag vector", "[crypto][gcm]")
                                aad.data(), aad.size()) == 0);
     REQUIRE(mbedtls_gcm_finish(&ctx, tag, sizeof(tag)) == 0);
     REQUIRE(std::memcmp(tag, expected_tag, sizeof(expected_tag)) == 0);
+    mbedtls_gcm_free(&ctx);
 }
 
 TEST_CASE("Security auth helpers reject null and short-prefix inputs", "[crypto][security]")
