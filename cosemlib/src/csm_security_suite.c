@@ -29,11 +29,16 @@ int csm_sec_suite_get_algorithms(uint8_t suite, csm_cipher_id *cipher, csm_mac_i
         return 0;
 
     case 8:
-    case 9:
-        /* GOST suites: Kuznyechik-GCM + Streebog-256 CMAC */
-        *cipher = CSM_CIPHER_KUZNYECHIK_GCM;
-        *mac = CSM_MAC_STREEBOG_256_CMAC;
+        /* GOST suite 8 (R 1323565.1.028): Kuznyechik CTR + CMAC */
+        *cipher = CSM_CIPHER_KUZNYECHIK_CTR;
+        *mac = CSM_MAC_KUZNYECHIK_CMAC;
         return 0;
+
+    case 9:
+        /* Suite 9 additionally requires GOST 34.10-2018 signature,
+         * VKO-256 key agreement, and GOST 34.11-2018 (Streebog-256).
+         * These are not production-ready — fail closed. */
+        return -1;
 
     default:
         return -1;

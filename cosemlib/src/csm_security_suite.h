@@ -4,15 +4,16 @@
  * \brief Security suite definitions for COSEM authentication
  *
  *  IEC 62056-5-3 Table 28 — Security Suites:
- *    0: AES-GCM-128 (LSG)
- *    1: AES-GCM-128 (LSG)
- *    2: AES-GCM-128 (LSG)
- *    3: AES-GCM-128 (LSG)
- *    4: AES-GCM-128 (LSG)
- *    5: AES-GCM-128 (LSG)
+ *    0-5: AES-GCM-128 (LSG)
  *    6-7: reserved
- *    8: Kuznyechik-GCM + Streebog-256 CMAC (GOST)
- *    9: Kuznyechik-GCM + Streebog-256 CMAC (GOST)
+ *
+ *  GOST suites per R 1323565.1.028 §4 (see also RFC 9189):
+ *    8: KUZN-CTR-CMAC — Kuznyechik (GOST 34.12-2018) CTR + CMAC.
+ *    9: adds GOST 34.10-2018 signature, VKO-256 key agreement, and
+ *       GOST 34.11-2018 (Streebog-256) hash.
+ *
+ *  Suite 9 is reported unsupported here: its signature / key-agreement /
+ *  Streebog-256 primitives are not production-ready in this build.
  *
  *  Copyright (c) 2024, OpenDLMS contributors
  *  SPDX-License-Identifier: MIT
@@ -42,9 +43,9 @@ typedef enum
     CSM_SEC_SUITE_ID_6 = 6,
     CSM_SEC_SUITE_ID_7 = 7,
 
-    /* GOST suites (RFC 7838) */
-    CSM_SEC_SUITE_ID_8 = 8,  /* Kuznyechik-GCM + Streebog-256 CMAC */
-    CSM_SEC_SUITE_ID_9 = 9,  /* Kuznyechik-GCM + Streebog-256 CMAC */
+    /* GOST suites (R 1323565.1.028) */
+    CSM_SEC_SUITE_ID_8 = 8,  /* KUZN-CTR-CMAC */
+    CSM_SEC_SUITE_ID_9 = 9,  /* + GOST 34.10 signature / VKO / Streebog-256 */
 } csm_sec_suite_id;
 
 /**
@@ -53,7 +54,7 @@ typedef enum
 typedef enum
 {
     CSM_CIPHER_AES_GCM = 0,
-    CSM_CIPHER_KUZNYECHIK_GCM = 8,
+    CSM_CIPHER_KUZNYECHIK_CTR = 8,
 } csm_cipher_id;
 
 /**
@@ -62,7 +63,7 @@ typedef enum
 typedef enum
 {
     CSM_MAC_AES_GMAC = 0,
-    CSM_MAC_STREEBOG_256_CMAC = 8,
+    CSM_MAC_KUZNYECHIK_CMAC = 8,
 } csm_mac_id;
 
 /**

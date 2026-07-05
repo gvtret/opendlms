@@ -284,8 +284,11 @@ TEST_CASE("security suite support predicate is boolean", "[cosemlib][security]")
     REQUIRE(mac == CSM_MAC_AES_GMAC);
 
     REQUIRE(csm_sec_suite_get_algorithms(8U, &cipher, &mac) == 0);
-    REQUIRE(cipher == CSM_CIPHER_KUZNYECHIK_GCM);
-    REQUIRE(mac == CSM_MAC_STREEBOG_256_CMAC);
+    REQUIRE(cipher == CSM_CIPHER_KUZNYECHIK_CTR);
+    REQUIRE(mac == CSM_MAC_KUZNYECHIK_CMAC);
+
+    /* Suite 9 needs GOST 34.10 signature / VKO / Streebog-256 — fail closed. */
+    REQUIRE(csm_sec_suite_get_algorithms(9U, &cipher, &mac) == -1);
 
     REQUIRE(csm_sec_suite_get_algorithms(6U, &cipher, &mac) == -1);
     REQUIRE(csm_sec_suite_get_algorithms(0U, nullptr, &mac) == -1);
@@ -294,7 +297,7 @@ TEST_CASE("security suite support predicate is boolean", "[cosemlib][security]")
     REQUIRE(csm_sec_suite_is_supported(0U) == 1);
     REQUIRE(csm_sec_suite_is_supported(5U) == 1);
     REQUIRE(csm_sec_suite_is_supported(8U) == 1);
-    REQUIRE(csm_sec_suite_is_supported(9U) == 1);
+    REQUIRE(csm_sec_suite_is_supported(9U) == 0);
     REQUIRE(csm_sec_suite_is_supported(6U) == 0);
     REQUIRE(csm_sec_suite_is_supported(7U) == 0);
     REQUIRE(csm_sec_suite_is_supported(10U) == 0);
