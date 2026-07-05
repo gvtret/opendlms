@@ -15,6 +15,8 @@
 #include "csm_security.h"
 #include "csm_axdr_codec.h"
 
+#include <string.h>
+
 /* ── Context-based API (thread-safe) ─────────────────────────────────────── */
 
 void csm_channel_ctx_init(csm_channel_ctx *ctx,
@@ -293,6 +295,80 @@ int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
     }
 
     return ret;
+}
+
+uint32_t csm_channel_client_hls_pass3(csm_asso_state *asso, csm_request *request,
+                                      uint8_t *out, uint32_t out_size)
+{
+    if ((asso == NULL) || (request == NULL) || (out == NULL) || (out_size < 17U))
+    {
+        return 0U;
+    }
+
+    uint8_t chsize = asso->handshake.stoc.size;
+    if ((chsize == 0U) || (chsize > CSM_DEF_CHALLENGE_SIZE))
+    {
+        return 0U;
+    }
+
+    csm_sec_control_byte sc;
+    sc.sh_byte = 0U;
+    sc.sh_bit_field.authentication = 1U;
+
+    uint32_t ic = asso->invocation_counter;
+    asso->invocation_counter++;
+
+    /* Layout [17 AAD scratch][StoC][12 tag] with the info cursor at 17. */
+    uint8_t buf[17U + CSM_DEF_CHALLENGE_SIZE + 12U];
+    memset(buf, 0, sizeof(buf));
+    memcpy(&buf[17], &asso->handshake.stoc.value[0], chsize);
+
+    csm_array a;
+    csm_array_init(&a, buf, sizeof(buf), 17U + (uint32_t)chsize, 0U);
+    a.rd_index = 17U;
+
+    if (csm_sec_auth_encrypt(&a, request, csm_sys_get_system_title(), sc, ic) != CSM_SEC_OK)
+    {
+        return 0U;
+    }
+
+    out[0] = sc.sh_byte;
+    out[1] = (uint8_t)((ic >> 24) & 0xFFU);
+    out[2] = (uint8_t)((ic >> 16) & 0xFFU);
+    out[3] = (uint8_t)((ic >> 8) & 0xFFU);
+    out[4] = (uint8_t)(ic & 0xFFU);
+    memcpy(&out[5], &buf[17U + (uint32_t)chsize], 12U);
+    return 17U;
+}
+
+int csm_channel_client_hls_verify_pass4(csm_asso_state *asso, csm_request *request,
+                                        const uint8_t *reply, uint32_t reply_len)
+{
+    if ((asso == NULL) || (request == NULL) || (reply == NULL) || (reply_len < 17U))
+    {
+        return FALSE;
+    }
+
+    uint8_t chsize = asso->handshake.ctos.size;
+    if ((chsize == 0U) || (chsize > CSM_DEF_CHALLENGE_SIZE))
+    {
+        return FALSE;
+    }
+
+    /* Reconstruct [12 scratch][SC][IC][CtoS][tag] with the header cursor at 12. */
+    uint8_t buf[12U + 1U + 4U + CSM_DEF_CHALLENGE_SIZE + 12U];
+    memset(buf, 0, sizeof(buf));
+    buf[12] = reply[0];               /* SC */
+    memcpy(&buf[13], &reply[1], 4U);  /* IC */
+    memcpy(&buf[17], &asso->handshake.ctos.value[0], chsize);
+    memcpy(&buf[17U + (uint32_t)chsize], &reply[5], 12U); /* tag */
+
+    csm_array d;
+    csm_array_init(&d, buf, sizeof(buf), 17U + (uint32_t)chsize + 12U, 0U);
+    d.rd_index = 12U;
+
+    return (csm_sec_auth_decrypt(&d, request, &asso->server_app_title[0]) == CSM_SEC_OK)
+               ? TRUE : FALSE;
 }
 
 void csm_channel_disconnect_ctx(csm_channel_ctx *ctx, uint8_t channel)

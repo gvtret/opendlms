@@ -22,63 +22,6 @@ extern "C" {
 
 extern "C" void csm_sys_init();
 
-/* Build the HLS reply_to_HLS payload f(challenge) = SC || IC || GMAC into out[17].
- * This is exactly what the client side must send in pass 3. */
-static void build_f_challenge(const uint8_t *challenge, uint8_t chsize,
-                              uint32_t ic, uint8_t sap, uint8_t channel,
-                              uint8_t out[17])
-{
-    csm_sec_control_byte sc;
-    sc.sh_byte = 0U;
-    sc.sh_bit_field.authentication = 1U;
-
-    uint8_t buf[17U + CSM_DEF_CHALLENGE_SIZE + 12U];
-    memset(buf, 0, sizeof(buf));
-    memcpy(&buf[17], challenge, chsize);
-
-    csm_array a;
-    csm_array_init(&a, buf, sizeof(buf), 17U + chsize, 0U);
-    a.rd_index = 17U;
-
-    csm_request req;
-    memset(&req, 0, sizeof(req));
-    req.channel_id = channel;
-    req.llc.dsap = sap;
-
-    REQUIRE(csm_sec_auth_encrypt(&a, &req, csm_sys_get_system_title(), sc, ic)
-            == CSM_SEC_OK);
-
-    out[0] = sc.sh_byte;
-    out[1] = (uint8_t)((ic >> 24) & 0xFFU);
-    out[2] = (uint8_t)((ic >> 16) & 0xFFU);
-    out[3] = (uint8_t)((ic >> 8) & 0xFFU);
-    out[4] = (uint8_t)(ic & 0xFFU);
-    memcpy(&out[5], &buf[17U + chsize], 12U);
-}
-
-/* Client-side verification of a server f(challenge) = SC || IC || tag reply. */
-static bool verify_f_challenge(const uint8_t *challenge, uint8_t chsize,
-                               const uint8_t *f, uint8_t sap, uint8_t channel)
-{
-    uint8_t dbuf[12U + 1U + 4U + CSM_DEF_CHALLENGE_SIZE + 12U];
-    memset(dbuf, 0, sizeof(dbuf));
-    dbuf[12] = f[0];                 /* SC */
-    memcpy(&dbuf[13], &f[1], 4U);    /* IC */
-    memcpy(&dbuf[17], challenge, chsize);
-    memcpy(&dbuf[17U + chsize], &f[5], 12U); /* tag */
-
-    csm_array d;
-    csm_array_init(&d, dbuf, sizeof(dbuf), 17U + chsize + 12U, 0U);
-    d.rd_index = 12U;
-
-    csm_request req;
-    memset(&req, 0, sizeof(req));
-    req.channel_id = channel;
-    req.llc.dsap = sap;
-
-    return csm_sec_auth_decrypt(&d, &req, csm_sys_get_system_title()) == CSM_SEC_OK;
-}
-
 /* Auth-only GMAC over an 8-octet challenge, mirroring HLS mechanism 5:
  * f(challenge) = SC || IC || GMAC(SC || AK || challenge).
  * Encrypt produces the tag; decrypt over the same inputs must verify it. */
@@ -171,9 +114,14 @@ TEST_CASE("HLS pass 3 verifies a client GMAC reply", "[hls][channel]")
     /* Client and server share the test HAL system title. */
     memcpy(asso->client_app_title, csm_sys_get_system_title(), CSM_DEF_APP_TITLE_SIZE);
 
-    const uint32_t ic = 0x00000001U;
+    csm_request req;
+    memset(&req, 0, sizeof(req));
+    req.channel_id = 1U;
+    req.llc.dsap = 1U;
+
+    /* Client builds the reply_to_HLS payload via the library function. */
     uint8_t f_stoc[17];
-    build_f_challenge(stoc, 8U, ic, 1U, 1U, f_stoc);
+    REQUIRE(csm_channel_client_hls_pass3(asso, &req, f_stoc, sizeof(f_stoc)) == 17U);
 
     /* reply_to_HLS payload SC || IC || tag in a buffer with offset headroom. */
     uint8_t big[256];
@@ -181,11 +129,6 @@ TEST_CASE("HLS pass 3 verifies a client GMAC reply", "[hls][channel]")
     csm_array pkt;
     csm_array_init(&pkt, big, sizeof(big), 0U, 128U);
     REQUIRE(csm_array_write_buff(&pkt, f_stoc, 17U) == TRUE);
-
-    csm_request req;
-    memset(&req, 0, sizeof(req));
-    req.channel_id = 1U;
-    req.llc.dsap = 1U;
 
     REQUIRE(csm_channel_hls_pass3_ctx(&ctx, &pkt, &req) == TRUE);
 }
@@ -212,6 +155,8 @@ TEST_CASE("HLS pass 4 reply verifies on the client", "[hls][channel]")
     asso->handshake.ctos.size = 8U;
     memcpy(asso->handshake.ctos.value, ctos, 8U);
     asso->invocation_counter = 5U;
+    /* Client verifies with the peer (server) system title. */
+    memcpy(asso->server_app_title, csm_sys_get_system_title(), CSM_DEF_APP_TITLE_SIZE);
 
     csm_request req;
     memset(&req, 0, sizeof(req));
@@ -231,5 +176,5 @@ TEST_CASE("HLS pass 4 reply verifies on the client", "[hls][channel]")
 
     uint8_t f_ctos[17];
     memcpy(f_ctos, &out[66], 17U);
-    REQUIRE(verify_f_challenge(ctos, 8U, f_ctos, 1U, 1U) == true);
+    REQUIRE(csm_channel_client_hls_verify_pass4(asso, &req, f_ctos, 17U) == TRUE);
 }

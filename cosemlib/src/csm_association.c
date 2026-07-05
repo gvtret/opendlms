@@ -39,7 +39,15 @@ enum acse_context
     ACSE_ALWAYS,   //!< Always decode/encode
     ACSE_OPT,   //!< Optional, skiped if not exists
     ACSE_SEC,   //!< When use ciphered authentication
+    ACSE_SEC_TITLE, //!< Only for HLS mechanisms that carry a system title (GMAC/SHA-256)
 };
+
+/* Mechanisms 5 (GMAC) and 6 (SHA-256) require the caller to publish its system
+ * title so the peer can rebuild the GMAC/hash inputs. */
+static int asso_auth_uses_system_title(enum csm_auth_level level)
+{
+    return (level == CSM_AUTH_HIGH_LEVEL_GMAC) || (level == CSM_AUTH_HIGH_LEVEL_SHA256);
+}
 
 typedef struct
 {
@@ -754,6 +762,26 @@ static csm_acse_code acse_resp_system_title_encoder(csm_asso_state *state, csm_b
     return ret;
 }
 
+static csm_acse_code acse_calling_system_title_encoder(csm_asso_state *state, csm_ber *ber, csm_array *array)
+{
+    csm_acse_code ret = CSM_ACSE_ERR;
+    (void) state;
+    (void) ber;
+
+    CSM_LOG("[ACSE] Encoding calling AP-Title ...");
+
+    int valid = csm_ber_write_len(array, CSM_DEF_APP_TITLE_SIZE + 2U);
+    valid = valid && csm_array_write_u8(array, CSM_BER_TYPE_OCTET_STRING);
+    valid = valid && csm_array_write_u8(array, CSM_DEF_APP_TITLE_SIZE);
+    valid = valid && csm_array_write_buff(array, csm_sys_get_system_title(), CSM_DEF_APP_TITLE_SIZE);
+
+    if (valid)
+    {
+        ret = CSM_ACSE_OK;
+    }
+    return ret;
+}
+
 static csm_acse_code acse_requirements_encoder(csm_asso_state *state, csm_ber *ber, csm_array *array)
 {
     csm_acse_code ret = CSM_ACSE_ERR;
@@ -1018,6 +1046,7 @@ static const csm_asso_enc aarq_encoder_chain[] =
 {
     {CSM_ASSO_APP_CONTEXT_NAME,         ACSE_ALWAYS,    acse_app_context_encoder},
     {CSM_BER_TYPE_OBJECT_IDENTIFIER,    ACSE_ALWAYS,    acse_oid_context_encoder},
+    {CSM_ASSO_CALLING_AP_TITLE,         ACSE_SEC_TITLE, acse_calling_system_title_encoder},
     {CSM_ASSO_SENDER_ACSE_REQU,         ACSE_SEC,       acse_requirements_encoder},
     {CSM_ASSO_REQ_MECHANISM_NAME,       ACSE_SEC,       acse_oid_mechanism_encoder},
     {CSM_ASSO_CALLING_AUTH_VALUE,       ACSE_SEC,       acse_aarq_auth_value_encoder},
@@ -1222,6 +1251,12 @@ int csm_asso_encoder(csm_asso_state *state, csm_array *array, uint8_t tag)
                 {
                     // Don't encode security fields only when authentication is lowest level (none)
                     if ((state->auth_level == CSM_AUTH_LOWEST_LEVEL) && (codec[i].context == ACSE_SEC))
+                    {
+                        continue;
+                    }
+                    // The calling AP-title is only sent for HLS mechanisms that carry it
+                    else if ((codec[i].context == ACSE_SEC_TITLE) &&
+                             !asso_auth_uses_system_title(state->auth_level))
                     {
                         continue;
                     }
