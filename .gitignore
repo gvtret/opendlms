@@ -31,6 +31,16 @@ tmp/
 tmp_*.log
 tmp_*.c
 
+# Audit / gate / smoke run logs (transient)
+*-audit-*.log
+build-audit-*.log
+gate-*.log
+meter-*.log
+restore-*.log
+fsck-*.log
+electron-studio/*.log
+electron-studio/test_*.js
+
 # OpenClaw workspace
 .openclaw/
 AGENTS.md
