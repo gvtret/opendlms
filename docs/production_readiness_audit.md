@@ -78,6 +78,37 @@ This is a security-critical, multi-part feature and is intentionally left for a
 dedicated test-driven pass rather than rushed — shipping partially-verified
 handshake crypto would be worse than the current honest fail-closed behaviour.
 
+### 2026-07-05 (later): server HLS was broken; now fixed + verified
+
+Investigating the client HLS work surfaced that the **server** HLS handshake was
+itself non-functional and had no positive test coverage:
+
+- A hardening guard (`rd_index < 17`) added to `csm_sec_auth_decrypt`/`encrypt`
+  requires the read cursor to sit at >= 17 (17 bytes of AAD scratch precede the
+  SC/IC header). `csm_channel_hls_pass3_ctx`/`pass4_ctx` positioned it at 0, so
+  every HLS GMAC handshake silently failed. Only negative tests existed, and the
+  `[integration][ciphered]` tests assert `ret >= 0`, which tolerates failure.
+- The unit-test HAL `csm_sys_get_key()` returned NULL for all keys, so no
+  ciphered/HLS path could run under Catch2 at all.
+
+Fixed and verified (commit `fix: repair and verify HLS pass 3/4 GMAC handshake`):
+
+- Reworked `csm_channel_hls_pass3_ctx` (12-byte AAD scratch, decrypt cursor at
+  rd_index 12, incoming tag kept in place) and `csm_channel_hls_pass4_ctx`
+  (`[17 scratch][CtoS][12 tag]`, encrypt cursor at 17, emits `SC || IC || tag`).
+- Provisioned real GMAC key material in the test HAL.
+- Added `tests/test_hls.cpp`: GMAC round-trip plus the first positive loopback
+  coverage of pass 3 (client reply verified by server) and pass 4 (server reply
+  verified by client). Suite: 214 cases / 1947 assertions, green under ASan/UBSan.
+
+The HLS **crypto core (server + client) is now done and verified**. The client
+f(StoC) build and f(CtoS) verify are proven as the `build_f_challenge` /
+`verify_f_challenge` test helpers and can be lifted into the library. Remaining
+for end-to-end client HLS: lift those into `cosemlib`, add the AARQ
+calling-AP-title encoder, wire the reply_to_HLS ACTION + pass-4 verify into
+`csm_client_connect`, confirm the real service-path buffers give pass 3 the
+required offset headroom (>= 93), and add ciphered live coverage.
+
 
 ## Current status
 
