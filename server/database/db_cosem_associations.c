@@ -1,10 +1,11 @@
 #include "db_cosem_associations.h"
-#include "csm_channel.h"
 #include "csm_axdr_codec.h"
 
 csm_db_code db_cosem_associations_func(csm_db_context_t *ctx, csm_array *in, csm_array *out, csm_request *request)
 {
     csm_db_code code = CSM_ERR_OBJECT_ERROR;
+
+    (void) in; /* reply_to_HLS_authentication (method 1) is handled in the channel */
 
     if (request->db_request.service == SVC_GET)
     {
@@ -64,22 +65,8 @@ csm_db_code db_cosem_associations_func(csm_db_context_t *ctx, csm_array *in, csm
     {
         // Not implemented
     }
-    else
-    {
-        // Action
-        uint32_t size = 0;
-        if (csm_axdr_rd_octetstring(in, &size))
-        {
-            CSM_LOG("[DB] Reply to HLS authentication");
-            int ret = csm_channel_hls_pass3(in, request);
-            ret = ret && csm_channel_hls_pass4(out, request);
-
-            if (ret)
-            {
-                code = CSM_OK;
-            }
-        }
-    }
+    /* ACTION on the current association (reply_to_HLS_authentication) is handled
+     * by the channel before the db handler runs, so no method dispatch here. */
 
     return code;
 }
