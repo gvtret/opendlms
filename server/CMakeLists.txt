@@ -14,7 +14,6 @@ add_library(${PROJECT_NAME}
 
     # Server wiring
     lib/opendlms_meter.c
-    lib/db_cosem_associations.c
     lib/db_cosem_push.c
     lib/db_cosem_event_notify.c
     lib/db_cosem_catalog_legacy.c
