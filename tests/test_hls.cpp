@@ -14,11 +14,15 @@
 #include "csm_definitions.h"
 #include "csm_array.h"
 #include "csm_association.h"
+#include "csm_axdr_codec.h"
 extern "C" {
 #include "csm_channel.h"
+#include "csm_server.h"
+#include "csm_transport.h"
 }
 
 #include <cstring>
+#include <cstdlib>
 
 extern "C" void csm_sys_init();
 
@@ -177,4 +181,136 @@ TEST_CASE("HLS pass 4 reply verifies on the client", "[hls][channel]")
     uint8_t f_ctos[17];
     memcpy(f_ctos, &out[66], 17U);
     REQUIRE(csm_channel_client_hls_verify_pass4(asso, &req, f_ctos, 17U) == TRUE);
+}
+
+/* ---- Full client HLS handshake over an in-process loopback transport ----
+ * The loopback runs the real server: csm_asso_server_execute for AARQ/AARE and
+ * csm_channel_hls_pass3/4 for the reply_to_HLS ACTION. This proves the client
+ * csm_client_connect HLS wiring end to end against real server crypto. */
+
+struct hls_loopback
+{
+    csm_channel     channels[1];
+    csm_asso_state  assos[1];
+    csm_asso_config configs[1];
+    csm_channel_ctx ctx;
+    uint8_t         resp[256];
+    uint32_t        resp_len;
+};
+
+static int lb_open(void *ctx, uint8_t ch) { (void)ctx; (void)ch; return CSM_TRANSPORT_OK; }
+static int lb_is_connected(void *ctx, uint8_t ch) { (void)ctx; (void)ch; return 1; }
+static void lb_close(void *ctx, uint8_t ch) { (void)ctx; (void)ch; }
+
+static int lb_send(void *vctx, uint8_t ch, const uint8_t *data, uint32_t len)
+{
+    (void)ch;
+    hls_loopback *lb = static_cast<hls_loopback *>(vctx);
+    lb->resp_len = 0U;
+
+    if ((len == 0U) || (data == nullptr))
+    {
+        return -1;
+    }
+
+    if (data[0] == CSM_ASSO_AARQ)
+    {
+        uint8_t buf[512];
+        memset(buf, 0, sizeof(buf));
+        memcpy(buf, data, len);
+        csm_array pkt;
+        csm_array_init(&pkt, buf, sizeof(buf), len, 0U);
+        int n = csm_asso_server_execute(&lb->assos[0], &pkt);
+        if (n <= 0) { return -1; }
+        memcpy(lb->resp, buf, (uint32_t)n);
+        lb->resp_len = (uint32_t)n;
+    }
+    else if (data[0] == AXDR_ACTION_REQUEST)
+    {
+        csm_request req;
+        memset(&req, 0, sizeof(req));
+        req.channel_id = 1U;
+        req.llc.dsap = 1U;
+
+        /* ACTION request: C3 01 iid class(2) obis(6) method present 09 11 <17>. */
+        uint8_t sbuf[256];
+        memset(sbuf, 0, sizeof(sbuf));
+        csm_array in;
+        csm_array_init(&in, sbuf, sizeof(sbuf), 0U, 128U);
+        if (csm_array_write_buff(&in, &data[13], 19U) != TRUE) { return -1; }
+        uint32_t osize = 0U;
+        if (csm_axdr_rd_octetstring(&in, &osize) != TRUE) { return -1; }
+        if (csm_channel_hls_pass3_ctx(&lb->ctx, &in, &req) != TRUE) { return -1; }
+
+        uint8_t obuf[256];
+        memset(obuf, 0, sizeof(obuf));
+        csm_array out;
+        csm_array_init(&out, obuf, sizeof(obuf), 0U, 64U);
+        if (csm_channel_hls_pass4_ctx(&lb->ctx, &out, &req) != TRUE) { return -1; }
+
+        /* Envelope: C7 01 iid 00 01 00 <octet-string 09 11 SC IC tag>. */
+        lb->resp[0] = (uint8_t)AXDR_ACTION_RESPONSE;
+        lb->resp[1] = 0x01U;
+        lb->resp[2] = data[2];
+        lb->resp[3] = 0x00U;
+        lb->resp[4] = 0x01U;
+        lb->resp[5] = 0x00U;
+        memcpy(&lb->resp[6], &obuf[64], 19U);
+        lb->resp_len = 25U;
+    }
+    else
+    {
+        return -1;
+    }
+    return (int)len;
+}
+
+static int lb_recv(void *vctx, uint8_t ch, uint8_t *buf, uint32_t sz, uint32_t ms)
+{
+    (void)ch; (void)ms;
+    hls_loopback *lb = static_cast<hls_loopback *>(vctx);
+    if ((lb->resp_len == 0U) || (lb->resp_len > sz)) { return -1; }
+    memcpy(buf, lb->resp, lb->resp_len);
+    return (int)lb->resp_len;
+}
+
+static const csm_transport_ops lb_ops = {
+    lb_open, lb_send, lb_recv, lb_close, lb_is_connected, nullptr
+};
+
+TEST_CASE("Client HLS GMAC handshake completes over loopback", "[hls][client]")
+{
+    csm_sys_init();
+
+    hls_loopback lb;
+    memset(&lb, 0, sizeof(lb));
+    lb.configs[0].llc.ssap = 0x01;
+    lb.configs[0].llc.dsap = 0x00;
+    lb.configs[0].conformance = 0xFFFFFFFFU;
+    csm_channel_ctx_init(&lb.ctx, lb.channels, 1U, lb.assos, lb.configs, 1U);
+    lb.channels[0].asso = &lb.assos[0];
+    /* csm_channel_execute normally links the config; the loopback drives the
+     * server association directly, so wire it up here. */
+    lb.assos[0].config = &lb.configs[0];
+
+    csm_transport transport;
+    transport.ops = &lb_ops;
+    transport.ctx = &lb;
+
+    csm_client *client = csm_client_create(&transport, 0U, CSM_FRAMING_NONE);
+    REQUIRE(client != nullptr);
+
+    csm_asso_config cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.authentication = (uint8_t)CSM_AUTH_HIGH_LEVEL_GMAC;
+    cfg.application_context = (uint8_t)LN_REF;
+    cfg.llc.ssap = 0x00;
+    cfg.llc.dsap = 0x01;
+    REQUIRE(csm_client_set_association(client, &cfg) == 0);
+
+    /* connect returns OK only if AARQ/AARE and HLS pass 3/4 all succeeded. */
+    REQUIRE(csm_client_connect(client, 1000U) == CSM_TRANSPORT_OK);
+
+    csm_client_destroy(client);
+    free(client);
 }

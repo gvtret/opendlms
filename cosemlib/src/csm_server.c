@@ -203,6 +203,55 @@ int csm_dlms_client_init(csm_client *client, csm_transport *transport,
     return 0;
 }
 
+/* HLS mechanism 5 (GMAC) pass 3/4: send reply_to_HLS_authentication with
+ * f(StoC) and verify the server's f(CtoS) reply. Returns 0 on success. */
+static int client_hls_gmac_handshake(csm_client *client, csm_asso_state *asso)
+{
+    csm_request req;
+    memset(&req, 0, sizeof(req));
+    req.channel_id = client->channel;
+    req.llc.dsap = (uint8_t)(client->asso_configs[0].llc.dsap & 0xFFU);
+
+    uint8_t f_stoc[17];
+    if (csm_channel_client_hls_pass3(asso, &req, f_stoc, sizeof(f_stoc)) != 17U)
+    {
+        return -1;
+    }
+
+    /* Wrap f(StoC) as the octet-string ACTION parameter. */
+    uint8_t param[19];
+    param[0] = (uint8_t)AXDR_TAG_OCTETSTRING;
+    param[1] = 17U;
+    memcpy(&param[2], f_stoc, 17U);
+
+    /* reply_to_HLS_authentication = method 1 of the current Association LN. */
+    csm_obis_code current_asso = { 0U, 0U, 40U, 0U, 0U, 255U };
+    uint8_t resp[64];
+    int rlen = csm_client_action(client, 1U, 15U, &current_asso, 1U,
+                                 param, sizeof(param), resp, sizeof(resp));
+    if (rlen <= 0)
+    {
+        return -1;
+    }
+
+    /* Expect ACTION-response-normal, success, with an octet-string f(CtoS):
+     * C7 01 <iid> 00 01 00 09 11 <17 bytes>. */
+    if ((rlen < 25) ||
+        (resp[0] != (uint8_t)AXDR_ACTION_RESPONSE) ||
+        (resp[3] != 0x00U) ||
+        (resp[6] != (uint8_t)AXDR_TAG_OCTETSTRING) ||
+        (resp[7] != 17U))
+    {
+        return -1;
+    }
+
+    if (!csm_channel_client_hls_verify_pass4(asso, &req, &resp[8], 17U))
+    {
+        return -1;
+    }
+    return 0;
+}
+
 int csm_client_connect(csm_client *client, uint32_t timeout_ms)
 {
     if (!client || !client->transport) return -1;
@@ -230,6 +279,15 @@ int csm_client_connect(csm_client *client, uint32_t timeout_ms)
     csm_array_init(&resp, client->rx_buf, sizeof(client->rx_buf), (uint32_t)resp_len, 0);
     if (!csm_asso_decoder(asso, &resp, CSM_ASSO_AARE)) return -1;
     if (!asso->handshake.accepted) return -1;
+
+    /* HLS mechanism 5 (GMAC): complete pass 3/4 before the AA is usable. */
+    if (asso->auth_level == CSM_AUTH_HIGH_LEVEL_GMAC)
+    {
+        if (client_hls_gmac_handshake(client, asso) != 0)
+        {
+            return -1;
+        }
+    }
 
     asso->state_cf = CF_ASSOCIATED;
     return CSM_TRANSPORT_OK;

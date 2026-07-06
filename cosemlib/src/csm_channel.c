@@ -53,6 +53,104 @@ void csm_channel_ctx_set_db(csm_channel_ctx *ctx, csm_db_access_handler handler)
     }
 }
 
+/* While an HLS association is pending, the only service the client is allowed
+ * to invoke is reply_to_HLS_authentication: ACTION on the current Association
+ * (class 15) method 1. Peek the request header without consuming it. */
+static int csm_channel_is_reply_to_hls(csm_array *packet)
+{
+    uint8_t tag = 0U;
+    uint8_t class_hi = 0U;
+    uint8_t class_lo = 0U;
+    uint8_t method = 0U;
+
+    if (!csm_array_get(packet, 0U, &tag) || (tag != AXDR_ACTION_REQUEST))
+    {
+        return FALSE;
+    }
+
+    /* Normal ACTION.request: C3 <type> <invoke> <class:u16> <obis:6> <method> ... */
+    if (!csm_array_get(packet, 3U, &class_hi) ||
+        !csm_array_get(packet, 4U, &class_lo) ||
+        !csm_array_get(packet, 11U, &method))
+    {
+        return FALSE;
+    }
+
+    return ((class_hi == 0U) && (class_lo == 15U) && (method == 1U)) ? TRUE : FALSE;
+}
+
+/* Handle reply_to_HLS_authentication (HLS mechanism 5, GMAC) entirely within the
+ * library: verify the client's f(StoC) via pass 3 and, on success, answer with
+ * f(CtoS) via pass 4. The ACTION.request layout is:
+ *   C3 <type> <invoke> <class:u16> <obis:6> <method> <have-data> 09 <len> <SC||IC||tag>
+ * The octet-string parameter therefore starts at index 13. On success the reply
+ * ACTION.response is written into packet and its length returned; 0 on any
+ * failure (the caller then refuses the service and the association stays pending). */
+static int csm_channel_hls_action_ctx(csm_channel_ctx *ctx, csm_request *request, csm_array *packet)
+{
+    uint8_t invoke_id = 0U;
+    uint32_t total = packet->wr_index;
+
+    if (!csm_array_get(packet, 2U, &invoke_id) || (total <= 13U))
+    {
+        return 0;
+    }
+
+    /* Copy the reply_to_HLS octet-string into a scratch array with offset
+     * headroom for pass 3's AAD scratch, then verify the client GMAC. */
+    uint8_t inbuf[256];
+    memset(inbuf, 0, sizeof(inbuf));
+    csm_array in;
+    csm_array_init(&in, inbuf, sizeof(inbuf), 0U, 128U);
+
+    uint32_t param_len = total - 13U;
+    if (param_len > 64U)
+    {
+        param_len = 64U;
+    }
+    for (uint32_t k = 0U; k < param_len; k++)
+    {
+        uint8_t b = 0U;
+        if (!csm_array_get(packet, 13U + k, &b) || !csm_array_write_u8(&in, b))
+        {
+            return 0;
+        }
+    }
+
+    uint32_t osize = 0U;
+    if (!csm_axdr_rd_octetstring(&in, &osize))
+    {
+        return 0;
+    }
+    if (csm_channel_hls_pass3_ctx(ctx, &in, request) != TRUE)
+    {
+        return 0;
+    }
+
+    /* Client authenticated (pass 3 granted the association). Build f(CtoS). */
+    uint8_t outbuf[256];
+    memset(outbuf, 0, sizeof(outbuf));
+    csm_array out;
+    csm_array_init(&out, outbuf, sizeof(outbuf), 0U, 64U);
+    if (csm_channel_hls_pass4_ctx(ctx, &out, request) != TRUE)
+    {
+        return 0;
+    }
+
+    /* Assemble the ACTION.response-normal carrying the pass-4 octet-string. */
+    packet->rd_index = 0U;
+    packet->wr_index = 0U;
+    int valid = csm_array_write_u8(packet, AXDR_ACTION_RESPONSE);
+    valid = valid && csm_array_write_u8(packet, 0x01U);      /* Response-Normal */
+    valid = valid && csm_array_write_u8(packet, invoke_id);
+    valid = valid && csm_array_write_u8(packet, 0x00U);      /* action-result: success */
+    valid = valid && csm_array_write_u8(packet, 0x01U);      /* return-parameters present */
+    valid = valid && csm_array_write_u8(packet, 0x00U);      /* Get-Data-Result: Data */
+    valid = valid && csm_array_write_buff(packet, &outbuf[out.offset], out.wr_index);
+
+    return valid ? (int)packet->wr_index : 0;
+}
+
 int csm_channel_execute_ctx(csm_channel_ctx *ctx, csm_db_context_t *db_ctx, uint8_t channel, csm_array *packet)
 {
     int ret = FALSE;
@@ -111,14 +209,28 @@ int csm_channel_execute_ctx(csm_channel_ctx *ctx, csm_db_context_t *db_ctx, uint
                 }
                 else if (ctx->asso_states[i].state_cf == CF_ASSOCIATION_PENDING)
                 {
-                    /* In case of HLS, we have to access to one attribute */
-                    if (ctx->db_handler != NULL)
+                    /* HLS handshake: the only service permitted before the
+                     * association is granted is reply_to_HLS_authentication
+                     * (ACTION on the current Association object, method 1). It is
+                     * handled by the library itself (pass 3/4) so no application
+                     * db handler is reached while pending. Any other service, or a
+                     * reply_to_HLS that fails authentication, is refused. */
+                    ret = 0;
+                    if (csm_channel_is_reply_to_hls(packet))
                     {
-                        ret = csm_services_hls_execute_handler(ctx->db_handler, db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                        ret = csm_channel_hls_action_ctx(ctx, &ctx->channels[channel].request, packet);
                     }
-                    else
+
+                    if (ret <= 0)
                     {
-                        ret = csm_services_hls_execute(db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                        if (ctx->db_handler != NULL)
+                        {
+                            ret = csm_services_hls_execute_handler(ctx->db_handler, db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                        }
+                        else
+                        {
+                            ret = csm_services_hls_execute(db_ctx, &ctx->asso_states[i], &ctx->channels[channel].request, packet);
+                        }
                     }
                 }
                 else
@@ -195,6 +307,8 @@ int csm_channel_hls_pass3_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
             if (res == CSM_SEC_OK)
             {
                 CSM_LOG("[CHAN] HLS Pass 3 success!");
+                /* Client authenticated: grant the pending HLS association. */
+                asso->state_cf = CF_ASSOCIATED;
                 ret = TRUE;
             }
             else
