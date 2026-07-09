@@ -173,7 +173,7 @@ The library requires application-provided HAL functions:
 | `csm_hal_decode_selective_access(req, array)` | Selective access decoder |
 | `csm_sys_get_system_title()` | 8-byte system title |
 | `csm_sys_set_system_title(buf)` | Set system title |
-| `csm_sys_get_key(sap, key_id)` | Key by SAP and ID |
+| `csm_sys_get_key(sap, key_id)` | Key by SAP and ID (HAL must zeroize after use) |
 | `csm_sys_get_mechanism_id(sap)` | Mechanism ID by SAP |
 | `csm_sys_gcm_init(ch, sap, key, mode, iv, aad, aad_len)` | GCM init |
 | `csm_sys_gcm_update(ch, plain, len, crypt)` | GCM update |

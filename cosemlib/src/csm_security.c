@@ -7,6 +7,12 @@
  * This software may be modified and distributed under the terms of the MIT license.
  * See LICENSE.txt for more details.
  *
+ * SECURITY NOTE: Keys are accessed via csm_sys_get_key() which returns a pointer
+ * into HAL-provided storage. The library does NOT zeroize key material after use.
+ * HAL implementations MUST provide secure key storage and zeroize keys when they
+ * are no longer needed. On platforms without secure memory, copy keys to a stack
+ * buffer, use them, and zeroize the stack buffer explicitly.
+ *
  */
 
 #include "csm_security.h"

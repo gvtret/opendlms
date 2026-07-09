@@ -263,6 +263,13 @@ typedef enum {
 	CSM_SEC_DECRYPT
 } csm_sec_mode;
 
+/**
+ * @brief Get encryption/authentication key for a given SAP
+ *
+ * SECURITY: The library does not zeroize key material after use. The HAL
+ * implementation is responsible for secure key storage and zeroization.
+ * Keys returned by this pointer should not outlive the crypto operation.
+ */
 uint8_t *csm_sys_get_key(uint8_t sap, csm_sec_key key_id);
 
 

@@ -1695,7 +1695,7 @@ TEST_CASE("Integration_CipheredGetClockTime", "[integration][ciphered]") {
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_CipheredGetClockTimeSuite2", "[integration][ciphered]") {
@@ -1722,7 +1722,7 @@ TEST_CASE("Integration_CipheredGetClockTimeSuite2", "[integration][ciphered]") {
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_ClientCipherGetClockTime", "[integration][ciphered]") {
@@ -1752,7 +1752,7 @@ TEST_CASE("Integration_ClientCipherGetClockTime", "[integration][ciphered]") {
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_ClientCipherAccessBatchGet", "[integration][ciphered]") {
@@ -1781,7 +1781,7 @@ TEST_CASE("Integration_ClientCipherAccessBatchGet", "[integration][ciphered]") {
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_EventNotificationCipherUnsolicited", "[integration][ciphered]") {
@@ -1809,7 +1809,7 @@ TEST_CASE("Integration_EventNotificationCipherUnsolicited", "[integration][ciphe
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_CipheredTamperedTag", "[integration][ciphered]") {
@@ -1865,7 +1865,7 @@ TEST_CASE("Integration_CipheredReplayProtection", "[integration][ciphered]") {
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_CipheredGbtGetClockTime", "[integration][ciphered]") {
@@ -1896,7 +1896,7 @@ TEST_CASE("Integration_CipheredGbtGetClockTime", "[integration][ciphered]") {
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_CipheredIcPersistedAcrossRestart", "[integration][ciphered]") {
@@ -1922,7 +1922,7 @@ TEST_CASE("Integration_CipheredIcPersistedAcrossRestart", "[integration][ciphere
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt1);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 
 	test_stack_setup();
 	test_do_aarq(CSM_AUTH_HIGH_LEVEL_GMAC, LN_REF_WITH_CYPHERING);
@@ -1941,7 +1941,7 @@ TEST_CASE("Integration_CipheredIcPersistedAcrossRestart", "[integration][ciphere
 	test_channels[0].request.channel_id = 1;
 
 	ret = csm_channel_execute(&test_db_ctx, 0, &pkt2);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 /* ========================= Service Tests (10) ========================= */
@@ -2130,7 +2130,7 @@ TEST_CASE("Integration_GbtServerWrap", "[integration][service]") {
 	csm_array_write_u32(&pkt, 0x00000001U);
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_GbtServerMultiBlockFragmentation", "[integration][service]") {
@@ -2148,7 +2148,7 @@ TEST_CASE("Integration_GbtServerMultiBlockFragmentation", "[integration][service
 	csm_array_write_u32(&pkt, 0x00000001U);
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 
 	csm_array_init(&pkt, buf, sizeof(buf), 0, 0);
 	csm_array_write_u8(&pkt, 0xC0);
@@ -2158,7 +2158,7 @@ TEST_CASE("Integration_GbtServerMultiBlockFragmentation", "[integration][service
 	csm_array_write_u32(&pkt, 0x00000002U);
 
 	ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 /* ========================= Association Tests (10) ========================= */
@@ -2330,7 +2330,7 @@ TEST_CASE("Integration_AccessBatchGet", "[integration][security]") {
 	csm_array_write_u8(&pkt, 1);
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
 
 TEST_CASE("Integration_SecuritySetupDirectDb", "[integration][security]") {
@@ -2496,5 +2496,5 @@ TEST_CASE("Integration_GeneralGloGetClockTime", "[integration][security]") {
 	test_channels[0].request.channel_id = 1;
 
 	int ret = csm_channel_execute(&test_db_ctx, 0, &pkt);
-	REQUIRE(ret >= 0);
+	REQUIRE(ret > 0);
 }
