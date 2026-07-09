@@ -17,10 +17,9 @@
 
 #define INVALID_CHANNEL_ID 0U
 
-typedef struct csm_channel_s
-{
-    csm_request request;
-    csm_asso_state *asso;   //!< Association used for that channel
+typedef struct csm_channel_s {
+	csm_request request;
+	csm_asso_state *asso;  //!< Association used for that channel
 
 } csm_channel;
 
@@ -30,21 +29,18 @@ typedef struct csm_channel_s
  *  Eliminates global mutable state for thread safety.
  *  One context per server/client instance.
  */
-typedef struct
-{
-    csm_channel             *channels;
-    uint8_t                  channel_size;
-    csm_asso_state          *asso_states;
-    const csm_asso_config   *asso_configs;
-    uint8_t                  asso_size;
-    csm_db_access_handler    db_handler;
+typedef struct {
+	csm_channel *channels;
+	uint8_t channel_size;
+	csm_asso_state *asso_states;
+	const csm_asso_config *asso_configs;
+	uint8_t asso_size;
+	csm_db_access_handler db_handler;
 } csm_channel_ctx;
 
-
-void csm_channel_ctx_init(csm_channel_ctx *ctx,
-                          csm_channel *channels, uint8_t chan_size,
-                          csm_asso_state *assos, const csm_asso_config *assos_config,
-                          uint8_t asso_size);
+void csm_channel_ctx_init(
+    csm_channel_ctx *ctx, csm_channel *channels, uint8_t chan_size, csm_asso_state *assos, const csm_asso_config *assos_config, uint8_t asso_size
+);
 
 void csm_channel_ctx_set_db(csm_channel_ctx *ctx, csm_db_access_handler handler);
 
@@ -64,10 +60,8 @@ int csm_channel_hls_pass4_ctx(csm_channel_ctx *ctx, csm_array *array, csm_reques
  * title (asso->server_app_title). Returns TRUE when the tag is valid.
  *
  * request supplies the SAP (llc.dsap) and channel_id used for key lookup. */
-uint32_t csm_channel_client_hls_pass3(csm_asso_state *asso, csm_request *request,
-                                      uint8_t *out, uint32_t out_size);
-int csm_channel_client_hls_verify_pass4(csm_asso_state *asso, csm_request *request,
-                                        const uint8_t *reply, uint32_t reply_len);
+uint32_t csm_channel_client_hls_pass3(csm_asso_state *asso, csm_request *request, uint8_t *out, uint32_t out_size);
+int csm_channel_client_hls_verify_pass4(csm_asso_state *asso, csm_request *request, const uint8_t *reply, uint32_t reply_len);
 int csm_channel_execute_ctx(csm_channel_ctx *ctx, csm_db_context_t *db_ctx, uint8_t channel, csm_array *packet);
 uint8_t csm_channel_new_ctx(csm_channel_ctx *ctx);
 
@@ -79,4 +73,4 @@ int csm_channel_hls_pass4(csm_array *array, csm_request *request);
 int csm_channel_execute(csm_db_context_t *ctx, uint8_t channel, csm_array *packet);
 uint8_t csm_channel_new(void);
 
-#endif // CSM_CHANNEL_H
+#endif  // CSM_CHANNEL_H

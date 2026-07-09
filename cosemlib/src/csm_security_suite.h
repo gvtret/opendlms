@@ -29,41 +29,38 @@
 extern "C" {
 #endif
 
-typedef enum
-{
-    /* AES-GCM suites (IEC 62056-5-3) */
-    CSM_SEC_SUITE_ID_0 = 0,
-    CSM_SEC_SUITE_ID_1 = 1,
-    CSM_SEC_SUITE_ID_2 = 2,
-    CSM_SEC_SUITE_ID_3 = 3,
-    CSM_SEC_SUITE_ID_4 = 4,
-    CSM_SEC_SUITE_ID_5 = 5,
+typedef enum {
+	/* AES-GCM suites (IEC 62056-5-3) */
+	CSM_SEC_SUITE_ID_0 = 0,
+	CSM_SEC_SUITE_ID_1 = 1,
+	CSM_SEC_SUITE_ID_2 = 2,
+	CSM_SEC_SUITE_ID_3 = 3,
+	CSM_SEC_SUITE_ID_4 = 4,
+	CSM_SEC_SUITE_ID_5 = 5,
 
-    /* Reserved */
-    CSM_SEC_SUITE_ID_6 = 6,
-    CSM_SEC_SUITE_ID_7 = 7,
+	/* Reserved */
+	CSM_SEC_SUITE_ID_6 = 6,
+	CSM_SEC_SUITE_ID_7 = 7,
 
-    /* GOST suites (R 1323565.1.028) */
-    CSM_SEC_SUITE_ID_8 = 8,  /* KUZN-CTR-CMAC */
-    CSM_SEC_SUITE_ID_9 = 9,  /* + GOST 34.10 signature / VKO / Streebog-256 */
+	/* GOST suites (R 1323565.1.028) */
+	CSM_SEC_SUITE_ID_8 = 8, /* KUZN-CTR-CMAC */
+	CSM_SEC_SUITE_ID_9 = 9, /* + GOST 34.10 signature / VKO / Streebog-256 */
 } csm_sec_suite_id;
 
 /**
  * \brief Cipher algorithm identifier
  */
-typedef enum
-{
-    CSM_CIPHER_AES_GCM = 0,
-    CSM_CIPHER_KUZNYECHIK_CTR = 8,
+typedef enum {
+	CSM_CIPHER_AES_GCM = 0,
+	CSM_CIPHER_KUZNYECHIK_CTR = 8,
 } csm_cipher_id;
 
 /**
  * \brief MAC algorithm identifier
  */
-typedef enum
-{
-    CSM_MAC_AES_GMAC = 0,
-    CSM_MAC_KUZNYECHIK_CMAC = 8,
+typedef enum {
+	CSM_MAC_AES_GMAC = 0,
+	CSM_MAC_KUZNYECHIK_CMAC = 8,
 } csm_mac_id;
 
 /**

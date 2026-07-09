@@ -54,38 +54,36 @@ dont-care                          [255] IMPLICIT   NULL
 }
 */
 
-enum axdr_tag
-{
-    AXDR_TAG_NULL           = 0U,
-    AXDR_TAG_ARRAY          = 1U,
-    AXDR_TAG_STRUCTURE      = 2U,
-    AXDR_TAG_BOOLEAN        = 3U,
-    AXDR_TAG_BITSTRING      = 4U,
-    AXDR_TAG_INTEGER32      = 5U,
-    AXDR_TAG_UNSIGNED32     = 6U,
-    AXDR_TAG_OCTETSTRING    = 9U,
-    AXDR_TAG_VISIBLESTRING  = 10U,
-    AXDR_TAG_UTF8_STRING    = 12U,
-    AXDR_TAG_BCD            = 13U,
-    AXDR_TAG_INTEGER8       = 15U,
-    AXDR_TAG_INTEGER16      = 16U,
-    AXDR_TAG_UNSIGNED8      = 17U,
-    AXDR_TAG_UNSIGNED16     = 18U,
-    AXDR_TAG_INTEGER64      = 20U,
-    AXDR_TAG_UNSIGNED64     = 21U,
-    AXDR_TAG_ENUM           = 22U,
-    AXDR_TAG_FLOAT32        = 23U,
-    AXDR_TAG_FLOAT64        = 24U,
-    AXDR_TAG_DATE_TIME      = 25U,
-    AXDR_TAG_DATE           = 26U,
-    AXDR_TAG_TIME           = 27U,
-    AXDR_TAG_DONT_CARE      = 255U,
-    AXDR_TAG_UNKNOWN        = 255U
-
+enum axdr_tag {
+	AXDR_TAG_NULL = 0U,
+	AXDR_TAG_ARRAY = 1U,
+	AXDR_TAG_STRUCTURE = 2U,
+	AXDR_TAG_BOOLEAN = 3U,
+	AXDR_TAG_BITSTRING = 4U,
+	AXDR_TAG_INTEGER32 = 5U,
+	AXDR_TAG_UNSIGNED32 = 6U,
+	AXDR_TAG_OCTETSTRING = 9U,
+	AXDR_TAG_VISIBLESTRING = 10U,
+	AXDR_TAG_UTF8_STRING = 12U,
+	AXDR_TAG_BCD = 13U,
+	AXDR_TAG_INTEGER8 = 15U,
+	AXDR_TAG_INTEGER16 = 16U,
+	AXDR_TAG_UNSIGNED8 = 17U,
+	AXDR_TAG_UNSIGNED16 = 18U,
+	AXDR_TAG_INTEGER64 = 20U,
+	AXDR_TAG_UNSIGNED64 = 21U,
+	AXDR_TAG_ENUM = 22U,
+	AXDR_TAG_FLOAT32 = 23U,
+	AXDR_TAG_FLOAT64 = 24U,
+	AXDR_TAG_DATE_TIME = 25U,
+	AXDR_TAG_DATE = 26U,
+	AXDR_TAG_TIME = 27U,
+	AXDR_TAG_DONT_CARE = 255U,
+	AXDR_TAG_UNKNOWN = 255U
 };
 
 // Compute how many bytes are needed to store a bit field
-#define BITFIELD_BYTES(bits)    (((bits - 1U) >> 3U) + 1U)
+#define BITFIELD_BYTES(bits) (((bits - 1U) >> 3U) + 1U)
 
 typedef void (*axdr_data_cb)(uint8_t type, uint32_t size, uint8_t *data);
 
@@ -107,4 +105,4 @@ int csm_axdr_wr_capture_object(csm_array *array, csm_object_t *data);
 }
 #endif
 
-#endif // AXDR_CODEC_H
+#endif  // AXDR_CODEC_H

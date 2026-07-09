@@ -19,59 +19,49 @@
 #include "os_util.h"
 #include <stdio.h>
 
-int memcmp_const(const void *a, const void *b, size_t len)
-{
+int memcmp_const(const void *a, const void *b, size_t len) {
 	const uint8_t *aa = a;
 	const uint8_t *bb = b;
 	size_t i;
 	uint8_t res;
 
-	for (res = 0, i = 0; i < len; i++)
-	{
+	for (res = 0, i = 0; i < len; i++) {
 		res |= aa[i] ^ bb[i];
 	}
 
 	return res;
 }
 
-void byte_to_hex(const char byte, char *out)
-{
-    int i = 0U;
-    static const char binHex[] = "0123456789ABCDEF";
+void byte_to_hex(const char byte, char *out) {
+	int i = 0U;
+	static const char binHex[] = "0123456789ABCDEF";
 
-    out[2*i] = binHex[(byte >> 4) & 0x0F];
-    out[2*i + 1] = binHex[byte & 0x0F];
+	out[2 * i] = binHex[(byte >> 4) & 0x0F];
+	out[2 * i + 1] = binHex[byte & 0x0F];
 }
 
+void print_hex(const char *buf, int size) {
+	int i = 0U;
+	char out[2];
 
-void print_hex(const char *buf, int size)
-{
-    int i = 0U;
-    char out[2];
+	for (i = 0U; i < size; i++) {
+		byte_to_hex(buf[i], &out[0]);
 
-    for (i = 0U; i < size; i++)
-    {
-        byte_to_hex(buf[i], &out[0]);
+		printf("%c", out[0]);
+		printf("%c", out[1]);
+	}
 
-        printf("%c", out[0]);
-        printf("%c", out[1]);
-    }
-
-    printf("\n");
-    fflush(stdout);
+	printf("\n");
+	fflush(stdout);
 }
 
+void hex2bin(const char *in, char *out, int size) {
+	int i = 0;
+	int j = 0;
 
-void hex2bin(const char *in, char* out, int size)
-{
-    int i = 0;
-    int j = 0;
+	int final_len = size / 2U;
 
-    int final_len = size / 2U;
-
-    for (i = 0, j = 0; j<final_len; i+=2, j++)
-    {
-        out[j] = (in[i] % 32 + 9) % 25 * 16 + (in[i+1] % 32 + 9) % 25;
-    }
+	for (i = 0, j = 0; j < final_len; i += 2, j++) {
+		out[j] = (in[i] % 32 + 9) % 25 * 16 + (in[i + 1] % 32 + 9) % 25;
+	}
 }
-

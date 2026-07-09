@@ -158,6 +158,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DOPEN_DLMS_BUILD_TESTS=ON \
             -DOPEN_DLMS_BUILD_SERVER=ON \
+            -DOPEN_DLMS_BUILD_CLIENT=ON \
+            -DOPEN_DLMS_BUILD_READER_LAB=ON \
             -DCOSEMLIB_SHARED=OFF
 
       - name: Build

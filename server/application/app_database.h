@@ -11,4 +11,4 @@ csm_db_code csm_db_access_func(csm_db_context_t *ctx, csm_array *in, csm_array *
 // Initialize Cosem database (objects list)
 void csm_db_set_database(const struct db_element *db, uint32_t size);
 
-#endif // CSM_DATABASE_H
+#endif  // CSM_DATABASE_H

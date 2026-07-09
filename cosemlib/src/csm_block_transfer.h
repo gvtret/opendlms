@@ -25,7 +25,7 @@ extern "C" {
 
 /* ── Limits ─────────────────────────────────────────────────────────────── */
 
-#define CSM_MAX_BLOCK_TRANSFERS 64U    ///< Max concurrent block transfers per association
+#define CSM_MAX_BLOCK_TRANSFERS 64U  ///< Max concurrent block transfers per association
 
 /* ── Block Transfer State ───────────────────────────────────────────────── */
 
@@ -51,9 +51,7 @@ void csm_block_init(csm_block_state *state);
  * \param block_size   Maximum bytes per block (0 = use default)
  * \return 0 on success
  */
-int csm_block_start_server(csm_block_state *state, uint8_t invoke_id,
-                           const uint8_t *data, uint32_t data_size,
-                           uint32_t block_size);
+int csm_block_start_server(csm_block_state *state, uint8_t invoke_id, const uint8_t *data, uint32_t data_size, uint32_t block_size);
 
 /**
  * \brief Encode the first block of a server → client transfer
@@ -104,9 +102,7 @@ void csm_block_abort(csm_block_state *state);
  * \param block_size   Maximum bytes per block (0 = use default)
  * \return 1 on success, 0 on error
  */
-int csm_block_start_client(csm_block_state *state, uint8_t invoke_id,
-                           const uint8_t *data, uint32_t data_size,
-                           uint32_t block_size);
+int csm_block_start_client(csm_block_state *state, uint8_t invoke_id, const uint8_t *data, uint32_t data_size, uint32_t block_size);
 
 /**
  * \brief Encode a SET request with block transfer
@@ -119,8 +115,7 @@ int csm_block_start_client(csm_block_state *state, uint8_t invoke_id,
  * \param max_size    Maximum data bytes to include in this block
  * \return 1 on success, 0 on error
  */
-int csm_block_encode_set_request(csm_block_state *state, csm_array *array,
-                                 const csm_request *request, uint32_t max_size);
+int csm_block_encode_set_request(csm_block_state *state, csm_array *array, const csm_request *request, uint32_t max_size);
 
 /**
  * \brief Encode the next SET request block
@@ -145,8 +140,7 @@ int csm_block_encode_set_next(csm_block_state *state, csm_array *array, uint32_t
  * \param block_size   Expected block size (0 = use default)
  * \return 1 on success, 0 on error
  */
-int csm_block_start_receive(csm_block_state *state, uint8_t invoke_id,
-                            uint32_t block_size);
+int csm_block_start_receive(csm_block_state *state, uint8_t invoke_id, uint32_t block_size);
 
 /**
  * \brief Add received data block to the accumulation buffer
@@ -159,8 +153,7 @@ int csm_block_start_receive(csm_block_state *state, uint8_t invoke_id,
  * \param is_last   1 if this is the last block
  * \return 1 on success, 0 on error
  */
-int csm_block_receive_data(csm_block_state *state, const uint8_t *data,
-                           uint32_t data_size, uint8_t is_last);
+int csm_block_receive_data(csm_block_state *state, const uint8_t *data, uint32_t data_size, uint8_t is_last);
 
 /**
  * \brief Get accumulated data after transfer complete
@@ -170,8 +163,7 @@ int csm_block_receive_data(csm_block_state *state, const uint8_t *data,
  * \param data_size Pointer to receive total size
  * \return 1 if data available, 0 if transfer not complete
  */
-int csm_block_get_received(const csm_block_state *state, const uint8_t **data,
-                           uint32_t *data_size);
+int csm_block_get_received(const csm_block_state *state, const uint8_t **data, uint32_t *data_size);
 
 /**
  * \brief Encode SET response acknowledgment (block received)
@@ -201,8 +193,7 @@ int csm_block_can_receive(const csm_block_state *state);
  * \param block_number  Block number to request next
  * \return 1 on success, 0 on error
  */
-int csm_block_encode_get_next(csm_block_state *state, csm_array *array,
-                              uint8_t invoke_id, uint32_t block_number);
+int csm_block_encode_get_next(csm_block_state *state, csm_array *array, uint8_t invoke_id, uint32_t block_number);
 
 /**
  * \brief Start accumulating GET blocks from server
@@ -214,8 +205,7 @@ int csm_block_encode_get_next(csm_block_state *state, csm_array *array,
  * \param block_size   Expected block size (0 = use default)
  * \return 1 on success, 0 on error
  */
-int csm_block_start_get_receive(csm_block_state *state, uint8_t invoke_id,
-                                uint32_t block_size);
+int csm_block_start_get_receive(csm_block_state *state, uint8_t invoke_id, uint32_t block_size);
 
 /**
  * \brief Add received GET block data to accumulation buffer
@@ -226,8 +216,7 @@ int csm_block_start_get_receive(csm_block_state *state, uint8_t invoke_id,
  * \param is_last   1 if this is the last block
  * \return 1 on success, 0 on error
  */
-int csm_block_get_receive_data(csm_block_state *state, const uint8_t *data,
-                               uint32_t data_size, uint8_t is_last);
+int csm_block_get_receive_data(csm_block_state *state, const uint8_t *data, uint32_t data_size, uint8_t is_last);
 
 /**
  * \brief Get accumulated GET data after transfer complete
@@ -237,8 +226,7 @@ int csm_block_get_receive_data(csm_block_state *state, const uint8_t *data,
  * \param data_size Pointer to receive total size
  * \return 1 if data available, 0 if transfer not complete
  */
-int csm_block_get_received_data(const csm_block_state *state, const uint8_t **data,
-                                uint32_t *data_size);
+int csm_block_get_received_data(const csm_block_state *state, const uint8_t **data, uint32_t *data_size);
 
 #ifdef __cplusplus
 }

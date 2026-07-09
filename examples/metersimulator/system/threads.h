@@ -18,10 +18,10 @@ Main project site: https://github.com/jtsiomb/c11threads
 #include <time.h>
 #include <errno.h>
 #include <pthread.h>
-#include <sched.h>	/* for sched_yield */
+#include <sched.h> /* for sched_yield */
 #include <sys/time.h>
 
-#define ONCE_FLAG_INIT	PTHREAD_ONCE_INIT
+#define ONCE_FLAG_INIT PTHREAD_ONCE_INIT
 
 /* types */
 typedef pthread_t thrd_t;
@@ -30,9 +30,8 @@ typedef pthread_cond_t cnd_t;
 typedef pthread_key_t tss_t;
 typedef pthread_once_t once_flag;
 
-typedef void (*thrd_start_t)(void*);
-typedef void (*tss_dtor_t)(void*);
-
+typedef void (*thrd_start_t)(void *);
+typedef void (*tss_dtor_t)(void *);
 
 typedef struct {
 	time_t sec;
@@ -40,10 +39,10 @@ typedef struct {
 } xtime;
 
 enum {
-	mtx_plain		= 0,
-	mtx_recursive	= 1,
-	mtx_timed		= 2,
-	mtx_try			= 4
+	mtx_plain = 0,
+	mtx_recursive = 1,
+	mtx_timed = 2,
+	mtx_try = 4
 };
 
 enum {
@@ -53,52 +52,44 @@ enum {
 	thrd_nomem
 };
 
-
 /* ---- thread management ---- */
 
-static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg)
-{
+static inline int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
 	/* XXX there's a third possible value returned according to the standard:
 	 * thrd_nomem. but it doesn't seem to correspond to any pthread_create errors.
 	 */
-	return pthread_create(thr, 0, (void*(*)(void*))func, arg) == 0 ? thrd_success : thrd_error;
+	return pthread_create(thr, 0, (void *(*)(void *))func, arg) == 0 ? thrd_success : thrd_error;
 }
 
-static inline void thrd_exit(int res)
-{
-	pthread_exit((void*)(long)res);
+static inline void thrd_exit(int res) {
+	pthread_exit((void *)(long)res);
 }
 
-static inline int thrd_join(thrd_t thr, int *res)
-{
+static inline int thrd_join(thrd_t thr, int *res) {
 	void *retval;
 
-	if(pthread_join(thr, &retval) != 0) {
+	if (pthread_join(thr, &retval) != 0) {
 		return thrd_error;
 	}
-	if(res) {
+	if (res) {
 		*res = (long)retval;
 	}
 	return thrd_success;
 }
 
-static inline int thrd_detach(thrd_t thr)
-{
+static inline int thrd_detach(thrd_t thr) {
 	return pthread_detach(thr) == 0 ? thrd_success : thrd_error;
 }
 
-static inline thrd_t thrd_current(void)
-{
+static inline thrd_t thrd_current(void) {
 	return pthread_self();
 }
 
-static inline int thrd_equal(thrd_t a, thrd_t b)
-{
+static inline int thrd_equal(thrd_t a, thrd_t b) {
 	return pthread_equal(a, b);
 }
 
-static inline void thrd_sleep(const xtime *xt)
-{
+static inline void thrd_sleep(const xtime *xt) {
 	int res;
 	struct timespec ts;
 	ts.tv_sec = (long)xt->sec;
@@ -108,31 +99,29 @@ static inline void thrd_sleep(const xtime *xt)
 		struct timespec rem;
 		res = nanosleep(&ts, &rem);
 		ts = rem;
-	} while(res == -1 && errno == EINTR);
+	} while (res == -1 && errno == EINTR);
 }
 
-static inline void thrd_yield(void)
-{
+static inline void thrd_yield(void) {
 	sched_yield();
 }
 
 /* ---- mutexes ---- */
 
-static inline int mtx_init(mtx_t *mtx, int type)
-{
+static inline int mtx_init(mtx_t *mtx, int type) {
 	int res;
 	pthread_mutexattr_t attr;
 
 	pthread_mutexattr_init(&attr);
 
 	/* XXX I don't think these are exactly correct semantics */
-	if(type & mtx_try) {
+	if (type & mtx_try) {
 		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
 	}
-	if(type & mtx_timed) {
+	if (type & mtx_timed) {
 		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_TIMED_NP);
 	}
-	if(type & mtx_recursive) {
+	if (type & mtx_recursive) {
 		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	}
 
@@ -141,84 +130,73 @@ static inline int mtx_init(mtx_t *mtx, int type)
 	return res;
 }
 
-static inline void mtx_destroy(mtx_t *mtx)
-{
+static inline void mtx_destroy(mtx_t *mtx) {
 	pthread_mutex_destroy(mtx);
 }
 
-static inline int mtx_lock(mtx_t *mtx)
-{
+static inline int mtx_lock(mtx_t *mtx) {
 	int res = pthread_mutex_lock(mtx);
-	if(res == EDEADLK) {
+	if (res == EDEADLK) {
 		return thrd_busy;
 	}
 	return res == 0 ? thrd_success : thrd_error;
 }
 
-static inline int mtx_trylock(mtx_t *mtx)
-{
+static inline int mtx_trylock(mtx_t *mtx) {
 	int res = pthread_mutex_trylock(mtx);
-	if(res == EBUSY) {
+	if (res == EBUSY) {
 		return thrd_busy;
 	}
 	return res == 0 ? thrd_success : thrd_error;
 }
 
-static inline int mtx_timedlock(mtx_t *mtx, const xtime *xt)
-{
+static inline int mtx_timedlock(mtx_t *mtx, const xtime *xt) {
 	int res;
 	struct timespec ts;
 
 	ts.tv_sec = (long)xt->sec;
 	ts.tv_nsec = xt->nsec;
 
-	if((res = pthread_mutex_timedlock(mtx, &ts)) == EBUSY) {
+	if ((res = pthread_mutex_timedlock(mtx, &ts)) == EBUSY) {
 		return thrd_busy;
 	}
 	return res == 0 ? thrd_success : thrd_error;
 }
 
-static inline int mtx_unlock(mtx_t *mtx)
-{
+static inline int mtx_unlock(mtx_t *mtx) {
 	return pthread_mutex_unlock(mtx) == 0 ? thrd_success : thrd_error;
 }
 
 /* ---- condition variables ---- */
 
-static inline int cnd_init(cnd_t *cond)
-{
+static inline int cnd_init(cnd_t *cond) {
 	return pthread_cond_init(cond, 0) == 0 ? thrd_success : thrd_error;
 }
 
-static inline void cnd_destroy(cnd_t *cond)
-{
+static inline void cnd_destroy(cnd_t *cond) {
 	pthread_cond_destroy(cond);
 }
 
-static inline int cnd_signal(cnd_t *cond)
-{
+static inline int cnd_signal(cnd_t *cond) {
 	return pthread_cond_signal(cond) == 0 ? thrd_success : thrd_error;
 }
 
-static inline int cnd_broadcast(cnd_t *cond)
-{
+static inline int cnd_broadcast(cnd_t *cond) {
 	return pthread_cond_broadcast(cond) == 0 ? thrd_success : thrd_error;
 }
 
-static inline int cnd_wait(cnd_t *cond, mtx_t *mtx)
-{
+static inline int cnd_wait(cnd_t *cond, mtx_t *mtx) {
 	return pthread_cond_wait(cond, mtx) == 0 ? thrd_success : thrd_error;
 }
 
-static inline int cnd_timedwait(cnd_t *cond, mtx_t *mtx, const xtime *xt)
-{
+static inline int cnd_timedwait(cnd_t *cond, mtx_t *mtx, const xtime *xt) {
 	int res;
 	struct timespec ts;
 
 	ts.tv_sec = (long)xt->sec;
 	ts.tv_nsec = xt->nsec;
 
-	if((res = pthread_cond_timedwait(cond, mtx, &ts)) != 0) {
+	if ((res = pthread_cond_timedwait(cond, mtx, &ts)) != 0) {
 		return res == ETIMEDOUT ? thrd_busy : thrd_error;
 	}
 	return thrd_success;
@@ -226,36 +204,30 @@ static inline int cnd_timedwait(cnd_t *cond, mtx_t *mtx, const xtime *xt)
 
 /* ---- thread-specific data ---- */
 
-static inline int tss_create(tss_t *key, tss_dtor_t dtor)
-{
+static inline int tss_create(tss_t *key, tss_dtor_t dtor) {
 	return pthread_key_create(key, dtor) == 0 ? thrd_success : thrd_error;
 }
 
-static inline void tss_delete(tss_t key)
-{
+static inline void tss_delete(tss_t key) {
 	pthread_key_delete(key);
 }
 
-static inline int tss_set(tss_t key, void *val)
-{
+static inline int tss_set(tss_t key, void *val) {
 	return pthread_setspecific(key, val) == 0 ? thrd_success : thrd_error;
 }
 
-static inline void *tss_get(tss_t key)
-{
+static inline void *tss_get(tss_t key) {
 	return pthread_getspecific(key);
 }
 
 /* ---- misc ---- */
 
-static inline void call_once(once_flag *flag, void (*func)(void))
-{
+static inline void call_once(once_flag *flag, void (*func)(void)) {
 	pthread_once(flag, func);
 }
 
 /* TODO take base into account */
-static inline int xtime_get(xtime *xt, int base)
-{
+static inline int xtime_get(xtime *xt, int base) {
 	struct timeval tv;
 
 	gettimeofday(&tv, 0);
@@ -265,4 +237,4 @@ static inline int xtime_get(xtime *xt, int base)
 	return base;
 }
 
-#endif	/* C11THREADS_H_ */
+#endif /* C11THREADS_H_ */

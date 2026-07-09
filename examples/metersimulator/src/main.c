@@ -20,33 +20,36 @@
 
 static csm_db_context_t gDbContext;
 
-const csm_asso_config assos_config[] =
-{
+const csm_asso_config assos_config[] = {
     // Client public association
-    { {16U, 1U},
-      CSM_CBLOCK_GET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ,
-      0U, // No auto-connected
+    {
+     {16U, 1U},
+     CSM_CBLOCK_GET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ,
+     0U,  // No auto-connected
     },
 
     // Client management association
-    { {1U, 1U},
-      CSM_CBLOCK_GET | CSM_CBLOCK_ACTION | CSM_CBLOCK_SET |CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ | CSM_CBLOCK_SELECTIVE_ACCESS,
-      0U, // No auto-connected
+    {
+     {1U, 1U},
+     CSM_CBLOCK_GET | CSM_CBLOCK_ACTION | CSM_CBLOCK_SET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ | CSM_CBLOCK_SELECTIVE_ACCESS,
+     0U,  // No auto-connected
     },
 
     // Client reader association (LLS)
-    { {32U, 1U},
-      CSM_CBLOCK_GET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ,
-      0U, // No auto-connected
+    {
+     {32U, 1U},
+     CSM_CBLOCK_GET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ,
+     0U,  // No auto-connected
     },
 
     // Client configurator association (HLS5 GMAC)
-    { {48U, 48U},
-      CSM_CBLOCK_GET | CSM_CBLOCK_ACTION | CSM_CBLOCK_SET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ | CSM_CBLOCK_SELECTIVE_ACCESS,
-      0U, // No auto-connected
-      (uint8_t)LN_REF,
-      (uint8_t)CSM_AUTH_HIGH_LEVEL_GMAC,
-    }
+    {
+     {48U, 48U},
+     CSM_CBLOCK_GET | CSM_CBLOCK_ACTION | CSM_CBLOCK_SET | CSM_CBLOCK_BLOCK_TRANSFER_WITH_GET_OR_READ | CSM_CBLOCK_SELECTIVE_ACCESS,
+     0U,  // No auto-connected
+        (uint8_t)LN_REF,
+     (uint8_t)CSM_AUTH_HIGH_LEVEL_GMAC,
+     }
 };
 
 #define NUMBER_OF_ASSOS (sizeof(assos_config) / sizeof(csm_asso_config))
@@ -64,12 +67,11 @@ csm_channel channels[NUMBER_OF_CHANNELS];
 
 static const uint16_t COSEM_WRAPPER_VERSION = 0x0001U;
 #define COSEM_WRAPPER_SIZE 8U
-#define BUF_SIZE (CSM_DEF_PDU_SIZE + CSM_DEF_MAX_HLS_SIZE + COSEM_WRAPPER_SIZE)
+#define BUF_SIZE           (CSM_DEF_PDU_SIZE + CSM_DEF_MAX_HLS_SIZE + COSEM_WRAPPER_SIZE)
 
 
-#define BUF_WRAPPER_OFFSET  (CSM_DEF_MAX_HLS_SIZE)
-#define BUF_APDU_OFFSET     (COSEM_WRAPPER_SIZE + CSM_DEF_MAX_HLS_SIZE)
-
+#define BUF_WRAPPER_OFFSET (CSM_DEF_MAX_HLS_SIZE)
+#define BUF_APDU_OFFSET    (COSEM_WRAPPER_SIZE + CSM_DEF_MAX_HLS_SIZE)
 
 /**
  * @brief tcp_data_handler
@@ -85,161 +87,137 @@ static const uint16_t COSEM_WRAPPER_VERSION = 0x0001U;
  * @param size
  * @return > 0 the number of bytes to reply back to the sender
  */
-int tcp_data_handler(uint8_t channel, memory_t *b, uint32_t payload_size)
-{
-    int ret = -1;
-    uint16_t version;
-    uint16_t apdu_size;
-    csm_array packet;
-    uint8_t *buffer;
+int tcp_data_handler(uint8_t channel, memory_t *b, uint32_t payload_size) {
+	int ret = -1;
+	uint16_t version;
+	uint16_t apdu_size;
+	csm_array packet;
+	uint8_t *buffer;
 
-    if ((b == NULL) || (b->data == NULL) || (b->offset > b->max_size) ||
-        (payload_size > (b->max_size - b->offset)) ||
-        (payload_size <= COSEM_WRAPPER_SIZE) || (channel >= NUMBER_OF_CHANNELS))
-    {
-        CSM_ERR("[LLC] Bad Packet received");
-        return ret;
-    }
+	if ((b == NULL) || (b->data == NULL) || (b->offset > b->max_size) || (payload_size > (b->max_size - b->offset)) || (payload_size <= COSEM_WRAPPER_SIZE) ||
+	    (channel >= NUMBER_OF_CHANNELS)) {
+		CSM_ERR("[LLC] Bad Packet received");
+		return ret;
+	}
 
-    buffer = b->data + b->offset;
+	buffer = b->data + b->offset;
 
-    // The TCP/IP Cosem packet is sent with a header. See GreenBook 8 7.3.3.2 The wrapper protocol data unit (WPDU)
+	// The TCP/IP Cosem packet is sent with a header. See GreenBook 8 7.3.3.2 The wrapper protocol data unit (WPDU)
 
-    // Version, 2 bytes
-    // Source wPort, 2 bytes
-    // Destination wPort: 2 bytes
-    // Length: 2 bytes
-    CSM_LOG("[LLC] TCP Packet received");
+	// Version, 2 bytes
+	// Source wPort, 2 bytes
+	// Destination wPort: 2 bytes
+	// Length: 2 bytes
+	CSM_LOG("[LLC] TCP Packet received");
 
-    print_hex((uint8_t *)buffer, payload_size);
+	print_hex((uint8_t *)buffer, payload_size);
 
-    version = GET_BE16(&buffer[0U]);
-    channels[channel].request.llc.ssap = GET_BE16(&buffer[2]);
-    channels[channel].request.llc.dsap = GET_BE16(&buffer[4]);
-    apdu_size = GET_BE16(&buffer[6]);
+	version = GET_BE16(&buffer[0U]);
+	channels[channel].request.llc.ssap = GET_BE16(&buffer[2]);
+	channels[channel].request.llc.dsap = GET_BE16(&buffer[4]);
+	apdu_size = GET_BE16(&buffer[6]);
 
-    // Sanity check of the packet
-    if ((payload_size == ((uint32_t)apdu_size + COSEM_WRAPPER_SIZE)) && (version == COSEM_WRAPPER_VERSION))
-    {
-        print_hex((uint8_t *)&b->data[BUF_APDU_OFFSET], apdu_size);
+	// Sanity check of the packet
+	if ((payload_size == ((uint32_t)apdu_size + COSEM_WRAPPER_SIZE)) && (version == COSEM_WRAPPER_VERSION)) {
+		print_hex((uint8_t *)&b->data[BUF_APDU_OFFSET], apdu_size);
 
-        // Then decode the packet, the reply, if any is located in the buffer
-        // The reply is valid if the return code is > 0
-        csm_array_init(&packet, (uint8_t *)&b->data[0], b->max_size, apdu_size, BUF_APDU_OFFSET);
-        ret = csm_channel_execute(&gDbContext, channel, &packet);
+		// Then decode the packet, the reply, if any is located in the buffer
+		// The reply is valid if the return code is > 0
+		csm_array_init(&packet, (uint8_t *)&b->data[0], b->max_size, apdu_size, BUF_APDU_OFFSET);
+		ret = csm_channel_execute(&gDbContext, channel, &packet);
 
-        if (ret > 0)
-        {
-            print_hex((uint8_t *)&b->data[BUF_APDU_OFFSET], ret);
+		if (ret > 0) {
+			print_hex((uint8_t *)&b->data[BUF_APDU_OFFSET], ret);
 
-            // Set Version
-            PUT_BE16(&buffer[0], version);
+			// Set Version
+			PUT_BE16(&buffer[0], version);
 
-            // Swap SSAP and DSAP
-            PUT_BE16(&buffer[2], channels[channel].request.llc.dsap);
-            PUT_BE16(&buffer[4], channels[channel].request.llc.ssap);
+			// Swap SSAP and DSAP
+			PUT_BE16(&buffer[2], channels[channel].request.llc.dsap);
+			PUT_BE16(&buffer[4], channels[channel].request.llc.ssap);
 
-            // Update Cosem Wrapper length
-            PUT_BE16(&buffer[6], (uint16_t) ret);
+			// Update Cosem Wrapper length
+			PUT_BE16(&buffer[6], (uint16_t)ret);
 
-            // Add wrapper size to the data packet size
-            ret += COSEM_WRAPPER_SIZE;
-        }
-    }
-    else
-    {
-        CSM_ERR("[LLC] Bad Packet received");
-    }
+			// Add wrapper size to the data packet size
+			ret += COSEM_WRAPPER_SIZE;
+		}
+	} else {
+		CSM_ERR("[LLC] Bad Packet received");
+	}
 
-    return ret;
+	return ret;
 }
 
-uint8_t tcp_conn_handler(uint8_t channel, enum conn_event event)
-{
-    uint8_t ret = FALSE;
-    switch(event)
-    {
-    case CONN_DISCONNECTED:
-    {
-        if (channel > INVALID_CHANNEL_ID)
-        {
-            channel--; // transform id into index
-            csm_channel_disconnect(channel);
-            ret = TRUE;
-            CSM_ERR("[LLC] Channel %d disconnected", channel);
-        }
-        else
-        {
-            CSM_ERR("[LLC] Channel id invalid");
-        }
-        break;
-    }
+uint8_t tcp_conn_handler(uint8_t channel, enum conn_event event) {
+	uint8_t ret = FALSE;
+	switch (event) {
+		case CONN_DISCONNECTED: {
+			if (channel > INVALID_CHANNEL_ID) {
+				channel--;  // transform id into index
+				csm_channel_disconnect(channel);
+				ret = TRUE;
+				CSM_ERR("[LLC] Channel %d disconnected", channel);
+			} else {
+				CSM_ERR("[LLC] Channel id invalid");
+			}
+			break;
+		}
 
-    case CONN_NEW:
-    {
-        ret = csm_channel_new();
-        if (!ret)
-        {
-            CSM_ERR("[LLC] Cannot find free channel slot");
-        }
+		case CONN_NEW: {
+			ret = csm_channel_new();
+			if (!ret) {
+				CSM_ERR("[LLC] Cannot find free channel slot");
+			}
 
-        break;
-    }
+			break;
+		}
 
-    default:
-        CSM_ERR("[LLC] Received spurious event");
-        break;
-    }
-    return ret; // Returns error or the channel id
+		default:
+			CSM_ERR("[LLC] Received spurious event");
+			break;
+	}
+	return ret;  // Returns error or the channel id
 }
-
 
 // Application & stack initialization
-void csm_init()
-{
-    // DLMS/Cosem stack initialization
-    gDbContext.db = gDataBaseList;
-    gDbContext.size = COSEM_DATABASE_SIZE;
+void csm_init() {
+	// DLMS/Cosem stack initialization
+	gDbContext.db = gDataBaseList;
+	gDbContext.size = COSEM_DATABASE_SIZE;
 
-    csm_db_set_database(gDataBaseList, COSEM_DATABASE_SIZE);
-    csm_services_init(csm_db_access_func);
-    csm_channel_init(&channels[0], NUMBER_OF_CHANNELS, &assos[0], &assos_config[0], NUMBER_OF_ASSOS);
+	csm_db_set_database(gDataBaseList, COSEM_DATABASE_SIZE);
+	csm_services_init(csm_db_access_func);
+	csm_channel_init(&channels[0], NUMBER_OF_CHANNELS, &assos[0], &assos_config[0], NUMBER_OF_ASSOS);
 }
 
+int main(int argc, const char *argv[]) {
+	int tcp_port = TCP_PORT;
+	const char *env_port = getenv("OPENDLMS_METER_PORT");
 
+	if ((env_port != NULL) && (env_port[0] != '\0')) {
+		tcp_port = atoi(env_port);
+	}
+	if (argc >= 2) {
+		tcp_port = atoi(argv[1]);
+	}
+	if ((tcp_port <= 0) || (tcp_port > 65535)) {
+		fprintf(stderr, "Invalid TCP port: %d\r\n", tcp_port);
+		return 1;
+	}
 
-int main(int argc, const char * argv[])
-{
-    int tcp_port = TCP_PORT;
-    const char *env_port = getenv("OPENDLMS_METER_PORT");
+	uint8_t gBuffer[BUF_SIZE];  // working buffer, keep it private
 
-    if ((env_port != NULL) && (env_port[0] != '\0'))
-    {
-        tcp_port = atoi(env_port);
-    }
-    if (argc >= 2)
-    {
-        tcp_port = atoi(argv[1]);
-    }
-    if ((tcp_port <= 0) || (tcp_port > 65535))
-    {
-        fprintf(stderr, "Invalid TCP port: %d\r\n", tcp_port);
-        return 1;
-    }
+	// Debug: fill buffer with pattern
+	memset(&gBuffer[0], 0xAA, BUF_SIZE);
 
-    uint8_t gBuffer[BUF_SIZE]; // working buffer, keep it private
+	memory_t buff;
+	buff.data = &gBuffer[0];
+	buff.offset = BUF_WRAPPER_OFFSET;
+	buff.max_size = BUF_SIZE;
 
-    // Debug: fill buffer with pattern
-    memset(&gBuffer[0], 0xAA, BUF_SIZE);
+	csm_init();
+	printf("Starting DLMS/Cosem meter simulator on port %d\r\nCosem library version: %s\r\n\r\n", tcp_port, CSM_DEF_LIB_VERSION);
 
-    memory_t buff;
-    buff.data = &gBuffer[0];
-    buff.offset = BUF_WRAPPER_OFFSET;
-    buff.max_size = BUF_SIZE;
-
-    csm_init();
-    printf("Starting DLMS/Cosem meter simulator on port %d\r\nCosem library version: %s\r\n\r\n",
-           tcp_port, CSM_DEF_LIB_VERSION);
-
-    return tcp_server_init(tcp_data_handler, tcp_conn_handler, &buff, tcp_port);
+	return tcp_server_init(tcp_data_handler, tcp_conn_handler, &buff, tcp_port);
 }

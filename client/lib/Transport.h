@@ -20,69 +20,58 @@
 #include <mutex>
 #include "Semaphore.h"
 
-enum PrintFormat
-{
-    NO_PRINT,
-    PRINT_RAW,
-    PRINT_HEX
+enum PrintFormat {
+	NO_PRINT,
+	PRINT_RAW,
+	PRINT_HEX
 };
 
-
-class Transport
-{
+class Transport {
 public:
+	enum Type {
+		SERIAL,
+		TCP_IP
+	};
 
-    enum Type
-    {
-        SERIAL,
-        TCP_IP
-    };
+	struct Params {
+		Params(): type(SERIAL), baudrate(9600) {
+		}
 
-    struct Params
-    {
-        Params()
-            : type(SERIAL)
-            , baudrate(9600)
-        {
+		Type type;
+		std::string address;
+		std::string port;
+		unsigned int baudrate;
+	};
 
-        }
-        Type type;
-        std::string address;
-        std::string port;
-        unsigned int baudrate;
-    };
+	Transport();
 
-    Transport();
+	void Start();
+	void WaitForStop();
 
-    void Start();
-    void WaitForStop();
+	bool Open(const Params &params);
+	int Send(const std::string &data, PrintFormat format);
+	bool WaitForData(std::string &data, int timeout);
 
-    bool Open(const Params &params);
-    int Send(const std::string &data, PrintFormat format);
-    bool WaitForData(std::string &data, int timeout);
-
-    static void Printer(const char *text, int size, PrintFormat format);
+	static void Printer(const char *text, int size, PrintFormat format);
 
 private:
+	static const uint32_t cBufferSize = 40U * 1024U;
+	char mRcvBuffer[cBufferSize];
 
-    static const uint32_t cBufferSize = 40U*1024U;
-    char mRcvBuffer[cBufferSize];
+	bool mStarted;
+	Params mConf;
+	bool mUseTcpGateway;
+	int mSerialHandle;
+	bool mTerminate;
+	std::string mData;
 
-    bool mStarted;
-    Params mConf;
-    bool mUseTcpGateway;
-    int mSerialHandle;
-    bool mTerminate;
-    std::string mData;
+	std::thread mThread;
+	Semaphore mSem;
+	std::mutex mMutex;
 
-    std::thread mThread;
-    Semaphore mSem;
-    std::mutex mMutex;
-
-    static void EntryPoint(void *pthis);
-    void Reader();
+	static void EntryPoint(void *pthis);
+	void Reader();
 };
-
 
 
 #endif /* COSEMCLIENT_LIB_TRANSPORT_H_ */

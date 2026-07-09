@@ -23,11 +23,11 @@ extern "C" {
 #include "csm_config.h"
 
 typedef struct {
-    uint32_t rd_index;
-    uint32_t wr_index;
-    uint32_t offset; // optional offset where the logical 0 position begins
-    uint32_t size;
-    uint8_t *buff;
+	uint32_t rd_index;
+	uint32_t wr_index;
+	uint32_t offset;  // optional offset where the logical 0 position begins
+	uint32_t size;
+	uint8_t *buff;
 } csm_array;
 
 void csm_array_init(csm_array *array, uint8_t *buffer, uint32_t max_size, uint32_t used_size, uint32_t offset);
@@ -66,4 +66,4 @@ uint32_t csm_array_written(csm_array *array);
 }
 #endif
 
-#endif // CSM_ARRAY_H
+#endif  // CSM_ARRAY_H

@@ -18,145 +18,121 @@
 
 // 31 tags
 static const char *cUniversalTypes[] = {
-"Reserved",
-"BOOLEAN",
-"INTEGER",
-"BIT STRING",
-"OCTET STRING",
-"NULL",
-"OBJECT IDENTIFIER",
-"ObjectDescriptor",
-"INSTANCE OF",
-"REAL",
-"ENUMERATED",
-"EMBEDDED PDV",
-"UTF8String",
-"RELATIVE-OID",
-"SEQUENCE, SEQUENCE OF",
-"SET, SET OF",
-"NumericString",
-"PrintableString",
-"TeletexString, T61String",
-"VideotexString",
-"IA5String",
-"UTCTime",
-"GeneralizedTime",
-"GraphicString",
-"VisibleString, ISO646String",
-"GeneralString",
-"UniversalString",
-"CHARACTER STRING",
-"BMPString" };
+    "Reserved",
+    "BOOLEAN",
+    "INTEGER",
+    "BIT STRING",
+    "OCTET STRING",
+    "NULL",
+    "OBJECT IDENTIFIER",
+    "ObjectDescriptor",
+    "INSTANCE OF",
+    "REAL",
+    "ENUMERATED",
+    "EMBEDDED PDV",
+    "UTF8String",
+    "RELATIVE-OID",
+    "SEQUENCE, SEQUENCE OF",
+    "SET, SET OF",
+    "NumericString",
+    "PrintableString",
+    "TeletexString, T61String",
+    "VideotexString",
+    "IA5String",
+    "UTCTime",
+    "GeneralizedTime",
+    "GraphicString",
+    "VisibleString, ISO646String",
+    "GeneralString",
+    "UniversalString",
+    "CHARACTER STRING",
+    "BMPString"
+};
 
-static int csm_ber_read_tag(csm_array *i_array, ber_tag *o_tag)
-{
-    int ret = FALSE;
-    uint8_t b;
+static int csm_ber_read_tag(csm_array *i_array, ber_tag *o_tag) {
+	int ret = FALSE;
+	uint8_t b;
 
-    if ((i_array == NULL) || (o_tag == NULL))
-    {
-        return FALSE;
-    }
+	if ((i_array == NULL) || (o_tag == NULL)) {
+		return FALSE;
+	}
 
-    memset(o_tag, 0, sizeof(ber_tag));
+	memset(o_tag, 0, sizeof(ber_tag));
 
-    if (csm_array_read_u8(i_array, &b))
-    {
-        o_tag->nbytes = 1;
-        o_tag->tag = b;
-        o_tag->cls = b & CLASS_MASK;
-        o_tag->isPrimitive = (b & TYPE_MASK) == 0;
-        o_tag->id = b & TAG_MASK;
+	if (csm_array_read_u8(i_array, &b)) {
+		o_tag->nbytes = 1;
+		o_tag->tag = b;
+		o_tag->cls = b & CLASS_MASK;
+		o_tag->isPrimitive = (b & TYPE_MASK) == 0;
+		o_tag->id = b & TAG_MASK;
 
-        if (o_tag->id == TAG_MASK)
-        {
-            // Long tag, encoded as a sequence of 7-bit values is partially supported to only one extension byte
-            if (csm_array_read_u8(i_array, &b))
-            {
-                o_tag->ext = b & 0x7FU;
-                ret = TRUE;
-            }
-        }
-        else
-        {
-            ret = TRUE;
-        }
-    }
-    return ret;
+		if (o_tag->id == TAG_MASK) {
+			// Long tag, encoded as a sequence of 7-bit values is partially supported to only one extension byte
+			if (csm_array_read_u8(i_array, &b)) {
+				o_tag->ext = b & 0x7FU;
+				ret = TRUE;
+			}
+		} else {
+			ret = TRUE;
+		}
+	}
+	return ret;
 }
 
-int csm_ber_write_len(csm_array *array, uint16_t len)
-{
-    int ret = TRUE;
+int csm_ber_write_len(csm_array *array, uint16_t len) {
+	int ret = TRUE;
 
-    if (len <= 127U)
-    {
-        ret = csm_array_write_u8(array, (uint8_t)len);
-    }
-    else if (len <= 255U)
-    {
-        ret = csm_array_write_u8(array, LEN_XTND | 1U);
-        ret = ret && csm_array_write_u8(array, (uint8_t)len);
-    }
-    else
-    {
-        ret = csm_array_write_u8(array, LEN_XTND | 2U);
-        ret = ret && csm_array_write_u8(array, (uint8_t)(len >> 8U));
-        ret = ret && csm_array_write_u8(array, (uint8_t)(len & 0xFFU));
-    }
+	if (len <= 127U) {
+		ret = csm_array_write_u8(array, (uint8_t)len);
+	} else if (len <= 255U) {
+		ret = csm_array_write_u8(array, LEN_XTND | 1U);
+		ret = ret && csm_array_write_u8(array, (uint8_t)len);
+	} else {
+		ret = csm_array_write_u8(array, LEN_XTND | 2U);
+		ret = ret && csm_array_write_u8(array, (uint8_t)(len >> 8U));
+		ret = ret && csm_array_write_u8(array, (uint8_t)(len & 0xFFU));
+	}
 
-    return ret;
+	return ret;
 }
 
-int csm_ber_read_len(csm_array *array, ber_length *o_len)
-{
-    int ret = FALSE;
-    uint8_t b;
+int csm_ber_read_len(csm_array *array, ber_length *o_len) {
+	int ret = FALSE;
+	uint8_t b;
 
-    if ((array == NULL) || (o_len == NULL))
-    {
-        return FALSE;
-    }
+	if ((array == NULL) || (o_len == NULL)) {
+		return FALSE;
+	}
 
-    memset(o_len, 0, sizeof(ber_length));
+	memset(o_len, 0, sizeof(ber_length));
 
-    if (csm_array_read_u8(array, &b))
-    {
-        o_len->nbytes = 1;
-        o_len->length = b;
+	if (csm_array_read_u8(array, &b)) {
+		o_len->nbytes = 1;
+		o_len->length = b;
 
-        if ((o_len->length & LEN_XTND) == LEN_XTND)
-        {
-            uint16_t numoct = o_len->length & LEN_MASK;
+		if ((o_len->length & LEN_XTND) == LEN_XTND) {
+			uint16_t numoct = o_len->length & LEN_MASK;
 
-            o_len->length = 0;
+			o_len->length = 0;
 
-            if (numoct <= sizeof(o_len->length))
-            {
-                for (uint32_t i = 0; i < numoct; i++)
-                {
-                    if (csm_array_read_u8(array, &b))
-                    {
-                        o_len->length = (o_len->length << 8U) | b;
-                        o_len->nbytes++;
-                        ret = TRUE;
-                    }
-                    else
-                    {
-                        ret = FALSE;
-                        break;
-                    }
-                }
-            }
-        }
-        else
-        {
-            ret = TRUE;
-        }
-    }
-    return ret;
+			if (numoct <= sizeof(o_len->length)) {
+				for (uint32_t i = 0; i < numoct; i++) {
+					if (csm_array_read_u8(array, &b)) {
+						o_len->length = (o_len->length << 8U) | b;
+						o_len->nbytes++;
+						ret = TRUE;
+					} else {
+						ret = FALSE;
+						break;
+					}
+				}
+			}
+		} else {
+			ret = TRUE;
+		}
+	}
+	return ret;
 }
-
 
 /**
  * @brief csm_ber_decode_object_identifier
@@ -180,124 +156,93 @@ int csm_ber_read_len(csm_array *array, ber_length *o_len)
  * @return
  */
 
-int csm_ber_decode_object_identifier(ber_object_identifier *oid, csm_array *array)
-{
-    int ret = FALSE;
-    if ((oid == NULL) || (array == NULL) || (oid->header == NULL))
-    {
-        return FALSE;
-    }
-    if (csm_array_unread(array) >= (uint32_t)(oid->size + 2U))
-    {
-        uint8_t *data = csm_array_rd_data(array);
-        if ((data != NULL) && (memcmp(data, oid->header, oid->size) == 0))
-        {
-            ret = csm_array_reader_jump(array, oid->size);
-            ret = ret && csm_array_read_u8(array, &oid->name); // Then copy the object name
-            ret = ret && csm_array_read_u8(array, &oid->id); // Then copy the object id
-        }
-    }
-    return ret;
+int csm_ber_decode_object_identifier(ber_object_identifier *oid, csm_array *array) {
+	int ret = FALSE;
+	if ((oid == NULL) || (array == NULL) || (oid->header == NULL)) {
+		return FALSE;
+	}
+	if (csm_array_unread(array) >= (uint32_t)(oid->size + 2U)) {
+		uint8_t *data = csm_array_rd_data(array);
+		if ((data != NULL) && (memcmp(data, oid->header, oid->size) == 0)) {
+			ret = csm_array_reader_jump(array, oid->size);
+			ret = ret && csm_array_read_u8(array, &oid->name);  // Then copy the object name
+			ret = ret && csm_array_read_u8(array, &oid->id);    // Then copy the object id
+		}
+	}
+	return ret;
 }
 
-void csm_ber_dump(csm_ber *i_ber)
-{
-    if (i_ber == NULL)
-    {
-        return;
-    }
+void csm_ber_dump(csm_ber *i_ber) {
+	if (i_ber == NULL) {
+		return;
+	}
 
-    CSM_TRACE("-------------- BER FIELD --------------\r\n");
-    CSM_TRACE("Tag: ");
+	CSM_TRACE("-------------- BER FIELD --------------\r\n");
+	CSM_TRACE("Tag: ");
 
-    if (i_ber->tag.cls == TAG_UNIVERSAL)
-    {
-        CSM_TRACE("Universal");
-    }
-    else if (i_ber->tag.cls == TAG_APPLICATION)
-    {
-        CSM_TRACE("Application");
-    }
-    else if (i_ber->tag.cls == TAG_CONTEXT_SPECIFIC)
-    {
-        CSM_TRACE("Context-specific");
-    }
-    else
-    {
-        CSM_TRACE("Private");
-    }
+	if (i_ber->tag.cls == TAG_UNIVERSAL) {
+		CSM_TRACE("Universal");
+	} else if (i_ber->tag.cls == TAG_APPLICATION) {
+		CSM_TRACE("Application");
+	} else if (i_ber->tag.cls == TAG_CONTEXT_SPECIFIC) {
+		CSM_TRACE("Context-specific");
+	} else {
+		CSM_TRACE("Private");
+	}
 
-    if (i_ber->tag.isPrimitive)
-    {
-        CSM_TRACE(" - Primitive");
-    }
-    else
-    {
-        CSM_TRACE(" - Constructed");
-    }
+	if (i_ber->tag.isPrimitive) {
+		CSM_TRACE(" - Primitive");
+	} else {
+		CSM_TRACE(" - Constructed");
+	}
 
-    CSM_TRACE(" - %d(0x%02X)", i_ber->tag.tag, i_ber->tag.tag);
+	CSM_TRACE(" - %d(0x%02X)", i_ber->tag.tag, i_ber->tag.tag);
 
-    if (i_ber->tag.isPrimitive && (i_ber->tag.cls == TAG_UNIVERSAL))
-    {
-        if (i_ber->tag.tag < 31U)
-        {
-            CSM_TRACE("%s", cUniversalTypes[i_ber->tag.tag]);
-        }
-        else
-        {
-            CSM_TRACE("Type: Unkown!");
-        }
-    }
+	if (i_ber->tag.isPrimitive && (i_ber->tag.cls == TAG_UNIVERSAL)) {
+		if (i_ber->tag.tag < 31U) {
+			CSM_TRACE("%s", cUniversalTypes[i_ber->tag.tag]);
+		} else {
+			CSM_TRACE("Type: Unkown!");
+		}
+	}
 
-    CSM_TRACE("\r\nValue length: %d\r\n", i_ber->length.length);
+	CSM_TRACE("\r\nValue length: %d\r\n", i_ber->length.length);
 }
 
-int csm_ber_decode(csm_ber *ber, csm_array *array)
-{
-    int loop = TRUE;
-    if ((ber == NULL) || (array == NULL))
-    {
-        return FALSE;
-    }
+int csm_ber_decode(csm_ber *ber, csm_array *array) {
+	int loop = TRUE;
+	if ((ber == NULL) || (array == NULL)) {
+		return FALSE;
+	}
 
-    if (csm_ber_read_tag(array, &ber->tag))
-    {
-        if (csm_ber_read_len(array, &ber->length))
-        {
-            csm_ber_dump(ber);
-        }
-        else
-        {
-            loop = FALSE;
-        }
-    }
-    else
-    {
-        loop = FALSE;
-    }
+	if (csm_ber_read_tag(array, &ber->tag)) {
+		if (csm_ber_read_len(array, &ber->length)) {
+			csm_ber_dump(ber);
+		} else {
+			loop = FALSE;
+		}
+	} else {
+		loop = FALSE;
+	}
 
-    return loop;
+	return loop;
 }
 
-int csm_ber_write_u8(csm_array *array, uint8_t value)
-{
-    int ret = csm_array_write_u8(array, (uint8_t)CSM_BER_TYPE_INTEGER);
-    ret = ret && csm_array_write_u8(array, (uint8_t)1U); // size of the integer, here 1 byte
-    ret = ret && csm_array_write_u8(array, value);
+int csm_ber_write_u8(csm_array *array, uint8_t value) {
+	int ret = csm_array_write_u8(array, (uint8_t)CSM_BER_TYPE_INTEGER);
+	ret = ret && csm_array_write_u8(array, (uint8_t)1U);  // size of the integer, here 1 byte
+	ret = ret && csm_array_write_u8(array, value);
 
-    return ret;
+	return ret;
 }
 
-int csm_ber_read_u8(csm_array *array, uint8_t *value)
-{
-    csm_ber ber;
+int csm_ber_read_u8(csm_array *array, uint8_t *value) {
+	csm_ber ber;
 
-    int ret = csm_ber_decode(&ber, array);
+	int ret = csm_ber_decode(&ber, array);
 
-    if (ret && (ber.length.length == 1U) && (ber.tag.tag == CSM_BER_TYPE_INTEGER))
-    {
-        ret = csm_array_read_u8(array, value);
-    }
-    return ret;
+	if (ret && (ber.length.length == 1U) && (ber.tag.tag == CSM_BER_TYPE_INTEGER)) {
+		ret = csm_array_read_u8(array, value);
+	}
+	return ret;
 }

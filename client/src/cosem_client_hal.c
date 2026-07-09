@@ -24,7 +24,7 @@ system title, see 4.3.4;
 an integer counter.
 */
 
-static uint8_t system_title[CSM_DEF_APP_TITLE_SIZE] = { 0x4DU, 0x4DU, 0x4DU, 0x00U, 0x00U, 0xBCU, 0x61U, 0x4EU }; // GreenBook server example
+static uint8_t system_title[CSM_DEF_APP_TITLE_SIZE] = {0x4DU, 0x4DU, 0x4DU, 0x00U, 0x00U, 0xBCU, 0x61U, 0x4EU};  // GreenBook server example
 
 // FIXME:
 // 1. Store the key in a configuration file as they can be updated on the field
@@ -37,68 +37,54 @@ static uint8_t system_title[CSM_DEF_APP_TITLE_SIZE] = { 0x4DU, 0x4DU, 0x4DU, 0x0
 // Keep a context by channel to be thread safe
 mbedtls_gcm_context chan_ctx[NUMBER_OF_CHANNELS];
 
-void csm_sys_set_system_title(const uint8_t *buf)
-{
-    memcpy(system_title, buf, sizeof(system_title));
+void csm_sys_set_system_title(const uint8_t *buf) {
+	memcpy(system_title, buf, sizeof(system_title));
 }
 
-
-typedef enum
-{
-    CSM_SEC_IC_CLIENT,
-    CSM_SEC_IC_SERVER,
+typedef enum {
+	CSM_SEC_IC_CLIENT,
+	CSM_SEC_IC_SERVER,
 } csm_sec_ic;
-
 
 // FIXME: create one pair IC per SAP
 static uint32_t gIc = 0U;
 
-uint32_t csm_sys_get_ic(uint8_t sap, csm_sec_ic ic)
-{
-    (void) sap;
-    (void) ic;
-    return gIc++;
+uint32_t csm_sys_get_ic(uint8_t sap, csm_sec_ic ic) {
+	(void)sap;
+	(void)ic;
+	return gIc++;
 }
 
-const uint8_t *csm_sys_get_system_title()
-{
-    return system_title;
+const uint8_t *csm_sys_get_system_title() {
+	return system_title;
 }
 
-int csm_hal_decode_selective_access(csm_request *request, csm_array *array)
-{
-    (void) request;
-    (void) array;
+int csm_hal_decode_selective_access(csm_request *request, csm_array *array) {
+	(void)request;
+	(void)array;
 
-    // FIXME: decode selective access for the server
-    return FALSE;
+	// FIXME: decode selective access for the server
+	return FALSE;
 }
 
-
-void csm_hal_md5(const uint8_t *input, uint32_t size, uint8_t *output)
-{
-    mbedtls_md5(input, size, output);
+void csm_hal_md5(const uint8_t *input, uint32_t size, uint8_t *output) {
+	mbedtls_md5(input, size, output);
 }
 
-void csm_hal_sha1(const uint8_t *input, uint32_t size, uint8_t *output)
-{
-    mbedtls_sha1(input, size, output);
+void csm_hal_sha1(const uint8_t *input, uint32_t size, uint8_t *output) {
+	mbedtls_sha1(input, size, output);
 }
 
-
-void csm_hal_sha256(const uint8_t *input, uint32_t size, uint8_t *output)
-{
-    mbedtls_sha256(input, size, output, 0);
+void csm_hal_sha256(const uint8_t *input, uint32_t size, uint8_t *output) {
+	mbedtls_sha256(input, size, output, 0);
 }
 
+uint8_t *csm_sys_get_key(uint8_t sap, csm_sec_key key_id) {
+	(void)sap;  // FIXME: manage one key per SAP in a configuration file
+	(void)key_id;
+	uint8_t *key = NULL;
 
-uint8_t *csm_sys_get_key(uint8_t sap, csm_sec_key key_id)
-{
-    (void) sap; // FIXME: manage one key per SAP in a configuration file
-    (void) key_id;
-    uint8_t *key = NULL;
-
-    /*
+	/*
     switch(key_id)
     {
     case CSM_SEC_KEK:
@@ -116,39 +102,33 @@ uint8_t *csm_sys_get_key(uint8_t sap, csm_sec_key key_id)
         break;
     }
     */
-    return key;
+	return key;
 }
 
-
-int csm_sys_gcm_init(uint8_t channel, uint8_t sap, csm_sec_key key_id, csm_sec_mode mode, const uint8_t *iv, const uint8_t *aad, uint32_t aad_len)
-{
-    int mbed_mode = (mode == CSM_SEC_ENCRYPT) ? MBEDTLS_GCM_ENCRYPT : MBEDTLS_GCM_DECRYPT;
-    mbedtls_gcm_init(&chan_ctx[channel]);
-    mbedtls_gcm_setkey(&chan_ctx[channel], MBEDTLS_CIPHER_ID_AES, csm_sys_get_key(sap, key_id), 128);
-    int res = mbedtls_gcm_starts(&chan_ctx[channel], mbed_mode, iv, 12, aad, aad_len);
-    return (res == 0) ? TRUE : FALSE;
+int csm_sys_gcm_init(uint8_t channel, uint8_t sap, csm_sec_key key_id, csm_sec_mode mode, const uint8_t *iv, const uint8_t *aad, uint32_t aad_len) {
+	int mbed_mode = (mode == CSM_SEC_ENCRYPT) ? MBEDTLS_GCM_ENCRYPT : MBEDTLS_GCM_DECRYPT;
+	mbedtls_gcm_init(&chan_ctx[channel]);
+	mbedtls_gcm_setkey(&chan_ctx[channel], MBEDTLS_CIPHER_ID_AES, csm_sys_get_key(sap, key_id), 128);
+	int res = mbedtls_gcm_starts(&chan_ctx[channel], mbed_mode, iv, 12, aad, aad_len);
+	return (res == 0) ? TRUE : FALSE;
 }
 
-int csm_sys_gcm_update(uint8_t channel, const uint8_t *plain, uint32_t plain_len, uint8_t *crypt)
-{
-    mbedtls_gcm_update(&chan_ctx[channel], plain_len, plain, crypt);
-    return TRUE;
+int csm_sys_gcm_update(uint8_t channel, const uint8_t *plain, uint32_t plain_len, uint8_t *crypt) {
+	mbedtls_gcm_update(&chan_ctx[channel], plain_len, plain, crypt);
+	return TRUE;
 }
 
 // Sizes are total sizes of plain and AAD
-int csm_sys_gcm_finish(uint8_t channel, uint8_t *tag)
-{
-    mbedtls_gcm_finish(&chan_ctx[channel], tag, 16);
-    return TRUE;
+int csm_sys_gcm_finish(uint8_t channel, uint8_t *tag) {
+	mbedtls_gcm_finish(&chan_ctx[channel], tag, 16);
+	return TRUE;
 }
 
+uint8_t csm_sys_get_mechanism_id(uint8_t sap) {
+	uint8_t mechanism_id = CSM_AUTH_LOWEST_LEVEL;
+	(void)sap;
 
-uint8_t csm_sys_get_mechanism_id(uint8_t sap)
-{
-    uint8_t mechanism_id = CSM_AUTH_LOWEST_LEVEL;
-    (void) sap;
-
-    /*
+	/*
     for (uint32_t i = 0U; i < CFG_COSEM_NB_ASSOS; i++)
     {
         if (sap == cfg_cosem_passwords[i].sap)
@@ -158,15 +138,13 @@ uint8_t csm_sys_get_mechanism_id(uint8_t sap)
         }
     }
     */
-    return mechanism_id;
+	return mechanism_id;
 }
 
 // TODO: Write a note on the randomize function, it should be NIST compliant (use a target-dependant implementation)
-uint8_t csm_hal_get_random_u8(uint8_t min, uint8_t max)
-{
-    return min + rand() % ((max + 1) - min);
+uint8_t csm_hal_get_random_u8(uint8_t min, uint8_t max) {
+	return min + rand() % ((max + 1) - min);
 }
-
 
 // ==================================== FS FUNCTIONS ====================================
 /*
@@ -205,6 +183,3 @@ static const cfg_cosem cDefaultSap[] = {
 #define CFG_COSEM_NB_ASSOS  (sizeof(cDefaultSap)/sizeof(cfg_cosem))
 
 */
-
-
-

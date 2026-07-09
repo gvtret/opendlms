@@ -31,8 +31,8 @@ extern "C" {
 
 /* ── Limits ─────────────────────────────────────────────────────────────── */
 
-#define CSM_SERVER_MAX_CHANNELS  8
-#define CSM_SERVER_MAX_PDU    2048
+#define CSM_SERVER_MAX_CHANNELS 8
+#define CSM_SERVER_MAX_PDU      2048
 
 /* ── Server context ─────────────────────────────────────────────────────── */
 
@@ -49,8 +49,7 @@ typedef struct csm_server csm_server;
  * \param framing    Framing type for this connection
  * \return 0 on success
  */
-int csm_server_init(csm_server *server, csm_transport *transport,
-                    uint8_t channel, csm_framing_type framing);
+int csm_server_init(csm_server *server, csm_transport *transport, uint8_t channel, csm_framing_type framing);
 
 /**
  * \brief Register the database access handler
@@ -85,8 +84,7 @@ int csm_server_poll(csm_server *server, uint32_t timeout_ms);
  * \param apdu_len   APDU length
  * \return bytes sent or error code
  */
-int csm_server_send(csm_server *server, uint8_t channel,
-                    const uint8_t *apdu, uint32_t apdu_len);
+int csm_server_send(csm_server *server, uint8_t channel, const uint8_t *apdu, uint32_t apdu_len);
 
 /**
  * \brief Destroy server and free resources
@@ -104,8 +102,7 @@ void csm_server_destroy(csm_server *server);
  * \param framing    Framing type
  * \return Allocated server, or NULL on failure
  */
-csm_server *csm_server_create(csm_transport *transport, uint8_t channel,
-                               csm_framing_type framing);
+csm_server *csm_server_create(csm_transport *transport, uint8_t channel, csm_framing_type framing);
 
 /**
  * \brief Free a server allocated with csm_server_create
@@ -119,8 +116,7 @@ typedef struct csm_client csm_client;
 /**
  * \brief Initialize a DLMS/COSEM client
  */
-int csm_dlms_client_init(csm_client *client, csm_transport *transport,
-                    uint8_t channel, csm_framing_type framing);
+int csm_dlms_client_init(csm_client *client, csm_transport *transport, uint8_t channel, csm_framing_type framing);
 
 /**
  * \brief Connect to the server
@@ -139,25 +135,23 @@ int csm_client_connect(csm_client *client, uint32_t timeout_ms);
  * \param resp_size  Size of output buffer
  * \return > 0 on success (response length), < 0 on error
  */
-int csm_client_get(csm_client *client, uint8_t invoke_id,
-                   uint16_t class_id, const csm_obis_code *obis,
-                   uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size);
+int csm_client_get(csm_client *client, uint8_t invoke_id, uint16_t class_id, const csm_obis_code *obis, uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size);
 
 /**
  * \brief Send a SET request and receive the response
  */
-int csm_client_set(csm_client *client, uint8_t invoke_id,
-                   uint16_t class_id, const csm_obis_code *obis,
-                   uint8_t attr_id, const uint8_t *data, uint32_t data_len,
-                   uint8_t *resp_buf, uint32_t resp_size);
+int csm_client_set(
+    csm_client *client, uint8_t invoke_id, uint16_t class_id, const csm_obis_code *obis, uint8_t attr_id, const uint8_t *data, uint32_t data_len,
+    uint8_t *resp_buf, uint32_t resp_size
+);
 
 /**
  * \brief Send an ACTION request and receive the response
  */
-int csm_client_action(csm_client *client, uint8_t invoke_id,
-                      uint16_t class_id, const csm_obis_code *obis,
-                      uint8_t method_id, const uint8_t *data, uint32_t data_len,
-                      uint8_t *resp_buf, uint32_t resp_size);
+int csm_client_action(
+    csm_client *client, uint8_t invoke_id, uint16_t class_id, const csm_obis_code *obis, uint8_t method_id, const uint8_t *data, uint32_t data_len,
+    uint8_t *resp_buf, uint32_t resp_size
+);
 
 /* ── Block Transfer Client API ──────────────────────────────────────────── */
 
@@ -177,9 +171,9 @@ int csm_client_action(csm_client *client, uint8_t invoke_id,
  * \param resp_size  Size of output buffer
  * \return > 0 on success (total data length), < 0 on error
  */
-int csm_client_get_block(csm_client *client, uint8_t invoke_id,
-                         uint16_t class_id, const csm_obis_code *obis,
-                         uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size);
+int csm_client_get_block(
+    csm_client *client, uint8_t invoke_id, uint16_t class_id, const csm_obis_code *obis, uint8_t attr_id, uint8_t *resp_buf, uint32_t resp_size
+);
 
 /**
  * \brief SET with automatic block transfer
@@ -198,10 +192,10 @@ int csm_client_get_block(csm_client *client, uint8_t invoke_id,
  * \param resp_size  Size of output buffer
  * \return > 0 on success, < 0 on error
  */
-int csm_client_set_block(csm_client *client, uint8_t invoke_id,
-                         uint16_t class_id, const csm_obis_code *obis,
-                         uint8_t attr_id, const uint8_t *data, uint32_t data_len,
-                         uint8_t *resp_buf, uint32_t resp_size);
+int csm_client_set_block(
+    csm_client *client, uint8_t invoke_id, uint16_t class_id, const csm_obis_code *obis, uint8_t attr_id, const uint8_t *data, uint32_t data_len,
+    uint8_t *resp_buf, uint32_t resp_size
+);
 
 /**
  * \brief Disconnect and release the association
@@ -224,8 +218,7 @@ void csm_client_destroy(csm_client *client);
  * \param framing    Framing type
  * \return Allocated client, or NULL on failure
  */
-csm_client *csm_client_create(csm_transport *transport, uint8_t channel,
-                               csm_framing_type framing);
+csm_client *csm_client_create(csm_transport *transport, uint8_t channel, csm_framing_type framing);
 
 /**
  * \brief Configure the client association used by csm_client_connect().

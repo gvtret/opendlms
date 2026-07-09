@@ -7,4 +7,4 @@
 csm_db_code db_cosem_clock_func(csm_db_context_t *ctx, csm_array *in, csm_array *out, csm_request *request);
 
 
-#endif // CSM_CLOCK_OBJECTS_H
+#endif  // CSM_CLOCK_OBJECTS_H

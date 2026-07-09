@@ -9,11 +9,10 @@
 #ifndef BITFIELD_H
 #define BITFIELD_H
 
-#define BF_BYTE_ARRAY_SIZE(bits)	(((bits - 1U) >> 3U) + 1U)
+#define BF_BYTE_ARRAY_SIZE(bits) (((bits - 1U) >> 3U) + 1U)
 
-struct bitfield
-{
-    uint8_t *bits;	//!< Pointer to the reserved array of bytes
+struct bitfield {
+	uint8_t *bits;  //!< Pointer to the reserved array of bytes
 	size_t max_bits;
 };
 

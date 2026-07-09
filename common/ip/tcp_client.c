@@ -26,7 +26,7 @@
 #include <errno.h>
 
 #define INVALID_SOCKET -1
-#define SOCKET_ERROR -1
+#define SOCKET_ERROR   -1
 #define closesocket(s) close(s)
 typedef int SOCKET;
 typedef struct sockaddr_in SOCKADDR_IN;
@@ -38,31 +38,24 @@ typedef struct in_addr IN_ADDR;
 #define CRLF        "\r\n"
 #define MAX_CLIENTS 10
 
-
-typedef struct
-{
-   SOCKET sock;
-   uint8_t connected; // 0 = not connected, otherwise identifier
+typedef struct {
+	SOCKET sock;
+	uint8_t connected;  // 0 = not connected, otherwise identifier
 } peer;
 
-void tcp_initialize(void)
-{
+void tcp_initialize(void) {
 #ifdef WIN32
-   WSADATA wsa;
-   int err = WSAStartup(MAKEWORD(2, 2), &wsa);
-   if(err < 0)
-   {
-      puts("WSAStartup failed !");
-      exit(EXIT_FAILURE);
-   }
+	WSADATA wsa;
+	int err = WSAStartup(MAKEWORD(2, 2), &wsa);
+	if (err < 0) {
+		puts("WSAStartup failed !");
+		exit(EXIT_FAILURE);
+	}
 #endif
 }
 
-void tcp_end(void)
-{
+void tcp_end(void) {
 #ifdef WIN32
-   WSACleanup();
+	WSACleanup();
 #endif
 }
-
-

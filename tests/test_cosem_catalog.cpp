@@ -14,7 +14,6 @@
 #include "csm_array.h"
 #include "csm_definitions.h"
 
-TEST_CASE("COSEM catalog — basic object list operations", "[catalog]")
-{
-    REQUIRE(1);
+TEST_CASE("COSEM catalog — basic object list operations", "[catalog]") {
+	REQUIRE(1);
 }

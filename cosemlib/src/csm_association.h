@@ -25,7 +25,13 @@ extern "C" {
 #include "csm_block_transfer.h"
 
 // States machine of the Control Function
-enum state_cf { CF_INACTIVE, CF_IDLE, CF_ASSOCIATION_PENDING, CF_ASSOCIATED, CF_ASSOCIATION_RELEASE_PENDING };
+enum state_cf {
+	CF_INACTIVE,
+	CF_IDLE,
+	CF_ASSOCIATION_PENDING,
+	CF_ASSOCIATED,
+	CF_ASSOCIATION_RELEASE_PENDING
+};
 
 /* GreenBook 8
  * 9.4.2.2.2        The COSEM application context
@@ -36,13 +42,12 @@ enum state_cf { CF_INACTIVE, CF_IDLE, CF_ASSOCIATION_PENDING, CF_ASSOCIATED, CF_
     Logical_Name_Referencing_With_Ciphering ::= context_id(3)
     Short_Name_Referencing_With_Ciphering ::= context_id(4)
 */
-enum csm_referencing
-{
-    NO_REF = 0U,
-    LN_REF = 1U,  // Logical Name
-    SN_REF = 2U,  // Short Name
-    LN_REF_WITH_CYPHERING = 3U,
-    SN_REF_WITH_CYPHERING = 4U
+enum csm_referencing {
+	NO_REF = 0U,
+	LN_REF = 1U,  // Logical Name
+	SN_REF = 2U,  // Short Name
+	LN_REF_WITH_CYPHERING = 3U,
+	SN_REF_WITH_CYPHERING = 4U
 };
 
 /*
@@ -57,53 +62,50 @@ enum csm_referencing
     NOTE 1 With mechanism_id(2), the method of processing the challenge is secret.
     NOTE 2 The use of authentication mechanisms 3 and 4 are not recommended for new implementations.
 */
-enum csm_auth_level
-{
-    CSM_AUTH_LOWEST_LEVEL       = 0U,
-    CSM_AUTH_LOW_LEVEL          = 1U,
-    CSM_AUTH_HIGH_LEVEL         = 2U,
-    CSM_AUTH_HIGH_LEVEL_MD5     = 3U,
-    CSM_AUTH_HIGH_LEVEL_SHA1    = 4U,
-    CSM_AUTH_HIGH_LEVEL_GMAC    = 5U,
-    CSM_AUTH_HIGH_LEVEL_SHA256  = 6U
+enum csm_auth_level {
+	CSM_AUTH_LOWEST_LEVEL = 0U,
+	CSM_AUTH_LOW_LEVEL = 1U,
+	CSM_AUTH_HIGH_LEVEL = 2U,
+	CSM_AUTH_HIGH_LEVEL_MD5 = 3U,
+	CSM_AUTH_HIGH_LEVEL_SHA1 = 4U,
+	CSM_AUTH_HIGH_LEVEL_GMAC = 5U,
+	CSM_AUTH_HIGH_LEVEL_SHA256 = 6U
 };
 
 #define CSM_ASSO_TAG(cls, type, id) ((uint8_t)((uint8_t)(cls) + (uint8_t)(type) + (uint8_t)(id)))
 
-typedef enum
-{
-    CSM_ASSO_AARQ                   = CSM_ASSO_TAG(TAG_APPLICATION, TAG_CONSTRUCTED, 0U),   ///< Application number 0
-    CSM_ASSO_AARE                   = CSM_ASSO_TAG(TAG_APPLICATION, TAG_CONSTRUCTED, 1U),   ///< Application number 1
-    CSM_ASSO_RLRQ                   = CSM_ASSO_TAG(TAG_APPLICATION, TAG_CONSTRUCTED, 2U),   ///< Application number 2
-    CSM_ASSO_RLRE                   = CSM_ASSO_TAG(TAG_APPLICATION, TAG_CONSTRUCTED, 3U),   ///< Application number 3
-    CSM_ASSO_PROTO_VER              = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 0U),
-    CSM_ASSO_APP_CONTEXT_NAME       = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 1U),
+typedef enum {
+	CSM_ASSO_AARQ = CSM_ASSO_TAG(TAG_APPLICATION, TAG_CONSTRUCTED, 0U),  ///< Application number 0
+	CSM_ASSO_AARE = CSM_ASSO_TAG(TAG_APPLICATION, TAG_CONSTRUCTED, 1U),  ///< Application number 1
+	CSM_ASSO_RLRQ = CSM_ASSO_TAG(TAG_APPLICATION, TAG_CONSTRUCTED, 2U),  ///< Application number 2
+	CSM_ASSO_RLRE = CSM_ASSO_TAG(TAG_APPLICATION, TAG_CONSTRUCTED, 3U),  ///< Application number 3
+	CSM_ASSO_PROTO_VER = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 0U),
+	CSM_ASSO_APP_CONTEXT_NAME = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 1U),
 
-    // AARQ tags
-    CSM_ASSO_CALLED_AP_TITLE        = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 2U),
-    CSM_ASSO_CALLED_AE_QUALIFIER    = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 3U),
-    CSM_ASSO_CALLED_AP_INVOC_ID     = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 4U),
-    CSM_ASSO_CALLED_AE_INVOC_ID     = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 5U),
-    CSM_ASSO_CALLING_AP_TITLE       = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 6U),
-    CSM_ASSO_CALLING_AE_QUALIFIER   = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 7U),
-    CSM_ASSO_CALLING_AP_INVOC_ID    = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 8U),
-    CSM_ASSO_CALLING_AE_INVOC_ID    = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 9U),
-    CSM_ASSO_SENDER_ACSE_REQU       = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 10U),
-    CSM_ASSO_REQ_MECHANISM_NAME     = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 11U),
-    CSM_ASSO_CALLING_AUTH_VALUE     = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 12U),
-    CSM_ASSO_IMPLEMENTATION_INFO    = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 29U),
-    CSM_ASSO_USER_INFORMATION       = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 30U),
+	// AARQ tags
+	CSM_ASSO_CALLED_AP_TITLE = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 2U),
+	CSM_ASSO_CALLED_AE_QUALIFIER = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 3U),
+	CSM_ASSO_CALLED_AP_INVOC_ID = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 4U),
+	CSM_ASSO_CALLED_AE_INVOC_ID = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 5U),
+	CSM_ASSO_CALLING_AP_TITLE = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 6U),
+	CSM_ASSO_CALLING_AE_QUALIFIER = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 7U),
+	CSM_ASSO_CALLING_AP_INVOC_ID = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 8U),
+	CSM_ASSO_CALLING_AE_INVOC_ID = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 9U),
+	CSM_ASSO_SENDER_ACSE_REQU = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 10U),
+	CSM_ASSO_REQ_MECHANISM_NAME = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 11U),
+	CSM_ASSO_CALLING_AUTH_VALUE = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 12U),
+	CSM_ASSO_IMPLEMENTATION_INFO = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 29U),
+	CSM_ASSO_USER_INFORMATION = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 30U),
 
-    // AARE tags
-    CSM_ASSO_RESP_AUTH_VALUE        = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 10U),
-    CSM_ASSO_RESP_MECHANISM_NAME    = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 9U),
-    CSM_ASSO_RESPONDER_ACSE_REQ     = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 8U),
-    CSM_ASSO_RESP_AP_TITLE          = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 4U),
-    CSM_ASSO_RESULT_FIELD           = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 2U),
-    CSM_ASSO_RESULT_SRC_DIAG        = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 3U),
-    CSM_ASSO_RESULT_SERVICE_USER    = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 1U),
+	// AARE tags
+	CSM_ASSO_RESP_AUTH_VALUE = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 10U),
+	CSM_ASSO_RESP_MECHANISM_NAME = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 9U),
+	CSM_ASSO_RESPONDER_ACSE_REQ = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_PRIMITIVE, 8U),
+	CSM_ASSO_RESP_AP_TITLE = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 4U),
+	CSM_ASSO_RESULT_FIELD = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 2U),
+	CSM_ASSO_RESULT_SRC_DIAG = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 3U),
+	CSM_ASSO_RESULT_SERVICE_USER = CSM_ASSO_TAG(TAG_CONTEXT_SPECIFIC, TAG_CONSTRUCTED, 1U),
 } csm_asso_tag;
-
 
 /*
 
@@ -127,47 +129,42 @@ typedef enum
     }
 
  */
-enum csm_asso_result
-{
-    CSM_ASSO_ERR_NULL                           = 0U,   //!< No error
-    CSM_ASSO_NO_REASON_GIVEN                    = 1U,
-    CSM_ASSO_AUTH_NOT_RECOGNIZED                = 11U,
-    CSM_ASSO_AUTH_MECANISM_NAME_REQUIRED        = 12U,
-    CSM_ASSO_ERR_AUTH_FAILURE                   = 13U,
-    CSM_ASSO_AUTH_REQUIRED                      = 14U,
+enum csm_asso_result {
+	CSM_ASSO_ERR_NULL = 0U,  //!< No error
+	CSM_ASSO_NO_REASON_GIVEN = 1U,
+	CSM_ASSO_AUTH_NOT_RECOGNIZED = 11U,
+	CSM_ASSO_AUTH_MECANISM_NAME_REQUIRED = 12U,
+	CSM_ASSO_ERR_AUTH_FAILURE = 13U,
+	CSM_ASSO_AUTH_REQUIRED = 14U,
 };
 
 /**
  * @brief Configuration structure of one association, should be fixed in ROM at compile time
  */
-typedef struct
-{
-    csm_llc llc;
-    uint32_t conformance;          ///< All services and functionalities authorized.
-    uint8_t  is_auto_connected;    ///< Boolean to indicate if the association is auto connected or not;
-    uint8_t  application_context;  ///< LN_REF/SN_REF context, 0 keeps default LN_REF.
-    uint8_t  authentication;       ///< CSM_AUTH_* mechanism, 0 keeps lowest-level auth.
+typedef struct {
+	csm_llc llc;
+	uint32_t conformance;         ///< All services and functionalities authorized.
+	uint8_t is_auto_connected;    ///< Boolean to indicate if the association is auto connected or not;
+	uint8_t application_context;  ///< LN_REF/SN_REF context, 0 keeps default LN_REF.
+	uint8_t authentication;       ///< CSM_AUTH_* mechanism, 0 keeps lowest-level auth.
 } csm_asso_config;
 
-typedef struct
-{
-    uint8_t value[CSM_DEF_CHALLENGE_SIZE];
-    uint8_t size;
+typedef struct {
+	uint8_t value[CSM_DEF_CHALLENGE_SIZE];
+	uint8_t size;
 } csm_challenge;
-
 
 /**
  * @brief Temporary structure valid during the ACSE
  */
-typedef struct
-{
-    csm_challenge ctos; // CtoS: Client to Server Challenge
-    csm_challenge stoc; // StoC: Server to Client challenge
-    uint32_t proposed_conformance;
-    uint16_t client_max_receive_pdu_size;
-    uint16_t server_max_receive_pdu_size;
-    uint8_t accepted;
-    enum csm_asso_result result;
+typedef struct {
+	csm_challenge ctos;  // CtoS: Client to Server Challenge
+	csm_challenge stoc;  // StoC: Server to Client challenge
+	uint32_t proposed_conformance;
+	uint16_t client_max_receive_pdu_size;
+	uint16_t server_max_receive_pdu_size;
+	uint8_t accepted;
+	enum csm_asso_result result;
 } csm_asso_handshake;
 
 /**
@@ -176,30 +173,36 @@ typedef struct
  * This state structure contains valid data for the life of one association
  *
  */
-typedef struct
-{
-    // Current state and parameters of the association
-    enum state_cf state_cf;
-    enum csm_referencing ref;
-    enum csm_auth_level auth_level;
-    uint8_t client_app_title[CSM_DEF_APP_TITLE_SIZE];
-    uint8_t server_app_title[CSM_DEF_APP_TITLE_SIZE];
+typedef struct {
+	// Current state and parameters of the association
+	enum state_cf state_cf;
+	enum csm_referencing ref;
+	enum csm_auth_level auth_level;
+	uint8_t client_app_title[CSM_DEF_APP_TITLE_SIZE];
+	uint8_t server_app_title[CSM_DEF_APP_TITLE_SIZE];
 
-    // Valid for the ACSE session establishment, for security reasons it should be erased after all
-    csm_asso_handshake handshake;
+	// Valid for the ACSE session establishment, for security reasons it should be erased after all
+	csm_asso_handshake handshake;
 
-    // Pointer to the configuration structure in ROM
-    const csm_asso_config *config;
+	// Pointer to the configuration structure in ROM
+	const csm_asso_config *config;
 
-    // Block transfer state (GBT)
-    csm_block_state block_transfer;
+	// Block transfer state (GBT)
+	csm_block_state block_transfer;
 
-    // Security: invocation counter (monotonically increasing, per-association)
-    uint32_t invocation_counter;
+	// Security: invocation counter (monotonically increasing, per-association)
+	uint32_t invocation_counter;
 
-    // Security: dedicated key (optional, for negotiated security)
-    uint8_t dedicated_key[16];
-    uint8_t dedicated_key_size;
+	// Security: last received client IC (for replay protection)
+	uint32_t last_client_ic;
+	uint8_t ic_valid;  //!< 1 after first successful IC validation
+
+	// Security: HLS authentication failure counter (rate limiting)
+	uint8_t hls_failures;
+
+	// Security: dedicated key (optional, for negotiated security)
+	uint8_t dedicated_key[16];
+	uint8_t dedicated_key_size;
 } csm_asso_state;
 
 void csm_asso_init(csm_asso_state *state);
@@ -211,4 +214,4 @@ int csm_asso_decoder(csm_asso_state *state, csm_array *array, uint8_t tag);
 }
 #endif
 
-#endif // CSM_ASSOCIATION_H
+#endif  // CSM_ASSOCIATION_H

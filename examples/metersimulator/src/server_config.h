@@ -1,8 +1,7 @@
 #ifndef SERVER_CONFIG_H
 #define SERVER_CONFIG_H
 
-#define TCP_PORT            4063
-#define NUMBER_OF_CHANNELS  2
+#define TCP_PORT           4063
+#define NUMBER_OF_CHANNELS 2
 
-#endif // SERVER_CONFIG_H
-
+#endif  // SERVER_CONFIG_H

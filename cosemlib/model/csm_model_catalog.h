@@ -20,7 +20,7 @@ extern "C" {
 #include <stdint.h>
 #include "csm_definitions.h"
 
-#define CSM_MODEL_CATALOG_MAX_ENTRIES   64U
+#define CSM_MODEL_CATALOG_MAX_ENTRIES 64U
 
 int csm_model_catalog_load_yaml(const char *filename);
 int csm_model_catalog_parse_buffer(const char *yaml, size_t len);

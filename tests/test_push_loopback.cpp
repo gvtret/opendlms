@@ -23,9 +23,8 @@ extern "C" {
 typedef int SOCKET;
 }
 
-TEST_CASE("Push loopback — socket creation", "[push]")
-{
-    SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
-    REQUIRE(s != INVALID_SOCKET);
-    close(s);
+TEST_CASE("Push loopback — socket creation", "[push]") {
+	SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
+	REQUIRE(s != INVALID_SOCKET);
+	close(s);
 }

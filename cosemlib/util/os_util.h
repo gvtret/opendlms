@@ -28,58 +28,50 @@ extern "C" {
 #define BIT(x) (1U << (x))
 #endif
 
-static inline uint8_t is_bit_set(uint8_t value, uint8_t bit)
-{
-    return ((value & BIT(bit)) == 0U) ? 0U : 1U;
+static inline uint8_t is_bit_set(uint8_t value, uint8_t bit) {
+	return ((value & BIT(bit)) == 0U) ? 0U : 1U;
 }
 
-static inline uint16_t GET_BE16(const uint8_t *buff)
-{
-    uint16_t val = ((uint16_t)buff[0]) << 8U;
-    val += buff[1] & 0xFFU;
-    return val;
+static inline uint16_t GET_BE16(const uint8_t *buff) {
+	uint16_t val = ((uint16_t)buff[0]) << 8U;
+	val += buff[1] & 0xFFU;
+	return val;
 }
 
-static inline uint32_t GET_BE32(const uint8_t *a)
-{
-    return ((uint32_t) a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3];
+static inline uint32_t GET_BE32(const uint8_t *a) {
+	return ((uint32_t)a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3];
 }
 
-static inline uint64_t GET_BE64(const uint8_t *a)
-{
-    return (uint64_t)(((uint64_t)a[0] << 56) | ((uint64_t)a[1] << 48) | ((uint64_t)a[2] << 40) | ((uint64_t)a[3] << 32) |
-            (uint64_t)a[4] << 24) | ((uint64_t)a[5] << 16) | ((uint64_t)a[6] << 8) | a[7];
+static inline uint64_t GET_BE64(const uint8_t *a) {
+	return (uint64_t)(((uint64_t)a[0] << 56) | ((uint64_t)a[1] << 48) | ((uint64_t)a[2] << 40) | ((uint64_t)a[3] << 32) | (uint64_t)a[4] << 24) |
+	    ((uint64_t)a[5] << 16) | ((uint64_t)a[6] << 8) | a[7];
 }
 
-static inline void PUT_BE16(uint8_t *buff, uint16_t size)
-{
-    buff[0] = (size >> 8U) & 0xFFU;
-    buff[1] = size & 0xFFU;
+static inline void PUT_BE16(uint8_t *buff, uint16_t size) {
+	buff[0] = (size >> 8U) & 0xFFU;
+	buff[1] = size & 0xFFU;
 }
 
-static inline void PUT_BE32(uint8_t *a, uint32_t val)
-{
-    a[0] = (val >> 24) & 0xff;
-    a[1] = (val >> 16) & 0xff;
-    a[2] = (val >> 8) & 0xff;
-    a[3] = val & 0xff;
+static inline void PUT_BE32(uint8_t *a, uint32_t val) {
+	a[0] = (val >> 24) & 0xff;
+	a[1] = (val >> 16) & 0xff;
+	a[2] = (val >> 8) & 0xff;
+	a[3] = val & 0xff;
 }
 
-static inline void PUT_BE64(uint8_t *a, uint64_t val)
-{
-    a[0] = (uint8_t)((val >> 56U) & 0xFFU);
-    a[1] = (uint8_t)((val >> 48U) & 0xFFU);
-    a[2] = (uint8_t)((val >> 40U) & 0xFFU);
-    a[3] = (uint8_t)((val >> 32U) & 0xFFU);
-    a[4] = (uint8_t)((val >> 24U) & 0xFFU);
-    a[5] = (uint8_t)((val >> 16U) & 0xFFU);
-    a[6] = (uint8_t)((val >> 8U) & 0xFFU);
-    a[7] = (uint8_t)(val & 0xFFU);
+static inline void PUT_BE64(uint8_t *a, uint64_t val) {
+	a[0] = (uint8_t)((val >> 56U) & 0xFFU);
+	a[1] = (uint8_t)((val >> 48U) & 0xFFU);
+	a[2] = (uint8_t)((val >> 40U) & 0xFFU);
+	a[3] = (uint8_t)((val >> 32U) & 0xFFU);
+	a[4] = (uint8_t)((val >> 24U) & 0xFFU);
+	a[5] = (uint8_t)((val >> 16U) & 0xFFU);
+	a[6] = (uint8_t)((val >> 8U) & 0xFFU);
+	a[7] = (uint8_t)(val & 0xFFU);
 }
 
-static inline uint32_t div_round_up(uint32_t x, uint32_t y)
-{
-    return  (x + y - 1U) / y;
+static inline uint32_t div_round_up(uint32_t x, uint32_t y) {
+	return (x + y - 1U) / y;
 }
 
 // -----------------------------------  Prototypes --------------------------------------------------
@@ -103,28 +95,33 @@ int memcmp_const(const void *a, const void *b, size_t len);
 
 
 // size is the size of the input string, must be even
-void hex2bin(const char *in, char* out, int size);
+void hex2bin(const char *in, char *out, int size);
 void byte_to_hex(const char byte, char *out);
 void print_hex(const char *buf, int size);
 
 #ifdef DEBUG
 #define debug_print(fmt, ...) \
-        do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-                                __LINE__, __func__, __VA_ARGS__); } while (0)
+	do { \
+		fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, __VA_ARGS__); \
+	} while (0)
 
 #define debug_puts(str) \
-        do { fprintf(stderr, str); } while (0)
+	do { \
+		fprintf(stderr, str); \
+	} while (0)
 
-#else 
+#else
 
 #define debug_print(fmt, ...) \
-        do { } while (0)
+	do { \
+	} while (0)
 
 #define debug_puts(str) \
-        do { } while (0)
+	do { \
+	} while (0)
 
 
-#endif // DEBUG
+#endif  // DEBUG
 
 #ifdef __cplusplus
 }

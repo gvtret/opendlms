@@ -19,7 +19,7 @@ extern "C" {
 #include <stdint.h>
 #include "csm_definitions.h"
 
-#define CSM_MODEL_INSTANCE_MAX   64U
+#define CSM_MODEL_INSTANCE_MAX 64U
 
 int csm_model_instance_add(uint16_t class_id, const csm_obis_code *obis, uint8_t version);
 const csm_object_t *csm_model_instance_find(uint16_t class_id, const csm_obis_code *obis);

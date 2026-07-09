@@ -23,14 +23,14 @@ extern "C" {
 
 /* ── Max PDU sizes ──────────────────────────────────────────────────────── */
 
-#define CSM_FRAMING_MAX_PDU   2048
+#define CSM_FRAMING_MAX_PDU 2048
 
 /* ── COSEM-TCP wrapper (IEC 62056-5-3 §5.1.4) ──────────────────────────── */
 
-#define CSM_WRAPPER_CMD_PREFIX_LEN  3   /* E6 E6 00 */
-#define CSM_WRAPPER_RSP_PREFIX_LEN  3   /* E6 E7 00 */
-#define CSM_TCP_WRAPPER_LEN         8
-#define CSM_WRAPPER_MAX_LEN         (CSM_TCP_WRAPPER_LEN + CSM_FRAMING_MAX_PDU)
+#define CSM_WRAPPER_CMD_PREFIX_LEN 3 /* E6 E6 00 */
+#define CSM_WRAPPER_RSP_PREFIX_LEN 3 /* E6 E7 00 */
+#define CSM_TCP_WRAPPER_LEN        8
+#define CSM_WRAPPER_MAX_LEN        (CSM_TCP_WRAPPER_LEN + CSM_FRAMING_MAX_PDU)
 
 /**
  * \brief Frame an APDU with COSEM-TCP wrapper (command)
@@ -43,16 +43,14 @@ extern "C" {
  * \param out_size   Output buffer size
  * \return Total framed length, or negative error code
  */
-int csm_wrapper_frame_command(const uint8_t *apdu, uint32_t apdu_len,
-                              uint8_t *out, uint32_t out_size);
+int csm_wrapper_frame_command(const uint8_t *apdu, uint32_t apdu_len, uint8_t *out, uint32_t out_size);
 
 /**
  * \brief Frame an APDU with COSEM-TCP wrapper (response)
  *
  *  Output: E6 E7 00 || apdu
  */
-int csm_wrapper_frame_response(const uint8_t *apdu, uint32_t apdu_len,
-                                uint8_t *out, uint32_t out_size);
+int csm_wrapper_frame_response(const uint8_t *apdu, uint32_t apdu_len, uint8_t *out, uint32_t out_size);
 
 /**
  * \brief Deframe a COSEM-TCP wrapped PDU
@@ -65,27 +63,22 @@ int csm_wrapper_frame_response(const uint8_t *apdu, uint32_t apdu_len,
  * \param apdu_len   Output: APDU length
  * \return CSM_TRANSPORT_OK on success, error code on failure
  */
-int csm_wrapper_deframe(const uint8_t *data, uint32_t data_len,
-                        const uint8_t **apdu, uint32_t *apdu_len);
+int csm_wrapper_deframe(const uint8_t *data, uint32_t data_len, const uint8_t **apdu, uint32_t *apdu_len);
 
-int csm_tcp_wrapper_frame(uint16_t source_wport, uint16_t dest_wport,
-                          const uint8_t *apdu, uint32_t apdu_len,
-                          uint8_t *out, uint32_t out_size);
-int csm_tcp_wrapper_deframe(const uint8_t *data, uint32_t data_len,
-                            const uint8_t **apdu, uint32_t *apdu_len,
-                            uint16_t *source_wport, uint16_t *dest_wport);
+int csm_tcp_wrapper_frame(uint16_t source_wport, uint16_t dest_wport, const uint8_t *apdu, uint32_t apdu_len, uint8_t *out, uint32_t out_size);
+int csm_tcp_wrapper_deframe(const uint8_t *data, uint32_t data_len, const uint8_t **apdu, uint32_t *apdu_len, uint16_t *source_wport, uint16_t *dest_wport);
 
 /* ── LLC SAP constants ──────────────────────────────────────────────────── */
 
-#define CSM_LLC_SAP_CMD   0xE6  /* Server SAP for commands */
-#define CSM_LLC_SAP_RSP   0xE6  /* Server SAP for responses */
-#define CSM_LLC_SAP_CMD_SUB  0x00  /* Sub-layer for commands */
-#define CSM_LLC_SAP_RSP_SUB  0x00  /* Sub-layer for responses */
+#define CSM_LLC_SAP_CMD     0xE6 /* Server SAP for commands */
+#define CSM_LLC_SAP_RSP     0xE6 /* Server SAP for responses */
+#define CSM_LLC_SAP_CMD_SUB 0x00 /* Sub-layer for commands */
+#define CSM_LLC_SAP_RSP_SUB 0x00 /* Sub-layer for responses */
 
 /* ── HDLC framing (IEC 62056-46) ────────────────────────────────────────── */
 
-#define CSM_HDLC_FLAG     0x7E
-#define CSM_HDLC_ESC      0x7D
+#define CSM_HDLC_FLAG 0x7E
+#define CSM_HDLC_ESC  0x7D
 
 /**
  * \brief Find the next HDLC frame in a byte stream
@@ -99,32 +92,26 @@ int csm_tcp_wrapper_deframe(const uint8_t *data, uint32_t data_len,
  * \param consumed   Output: number of bytes consumed from stream
  * \return CSM_TRANSPORT_OK if frame found, CSM_TRANSPORT_ERR_TIMEOUT if no complete frame
  */
-int csm_hdlc_find_frame(const uint8_t *stream, uint32_t stream_len,
-                         const uint8_t **frame, uint32_t *frame_len,
-                         uint32_t *consumed);
+int csm_hdlc_find_frame(const uint8_t *stream, uint32_t stream_len, const uint8_t **frame, uint32_t *frame_len, uint32_t *consumed);
 
 /* ── Generic framing interface ──────────────────────────────────────────── */
 
 typedef enum {
-    CSM_FRAMING_NONE = 0,   /*!< No framing (raw) */
-    CSM_FRAMING_WRAPPER,    /*!< COSEM LLC wrapper (E6 E6/E7 00) */
-    CSM_FRAMING_TCP_WRAPPER,/*!< COSEM-TCP WPDU wrapper */
-    CSM_FRAMING_HDLC        /*!< HDLC framing */
+	CSM_FRAMING_NONE = 0,    /*!< No framing (raw) */
+	CSM_FRAMING_WRAPPER,     /*!< COSEM LLC wrapper (E6 E6/E7 00) */
+	CSM_FRAMING_TCP_WRAPPER, /*!< COSEM-TCP WPDU wrapper */
+	CSM_FRAMING_HDLC         /*!< HDLC framing */
 } csm_framing_type;
 
 /**
  * \brief Frame an APDU according to the framing type
  */
-int csm_framing_frame(csm_framing_type type, uint8_t direction,
-                       const uint8_t *apdu, uint32_t apdu_len,
-                       uint8_t *out, uint32_t out_size);
+int csm_framing_frame(csm_framing_type type, uint8_t direction, const uint8_t *apdu, uint32_t apdu_len, uint8_t *out, uint32_t out_size);
 
 /**
  * \brief Deframe a PDU according to the framing type
  */
-int csm_framing_deframe(csm_framing_type type,
-                         const uint8_t *data, uint32_t data_len,
-                         const uint8_t **apdu, uint32_t *apdu_len);
+int csm_framing_deframe(csm_framing_type type, const uint8_t *data, uint32_t data_len, const uint8_t **apdu, uint32_t *apdu_len);
 
 #ifdef __cplusplus
 }

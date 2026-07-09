@@ -24,87 +24,78 @@
 #include "Configuration.h"
 #include "Transport.h"
 
-
-struct Compare
-{
-    bool enabled;
-    std::string data;
+struct Compare {
+	bool enabled;
+	std::string data;
 };
 
-struct Result
-{
-    Result()
-        : success(true)
-    {
+struct Result {
+	Result(): success(true) {
+	}
 
-    }
+	void SetError(const std::string &msg) {
+		success = false;
+		diagnostic = msg;
+	}
 
-    void SetError(const std::string &msg)
-    {
-        success = false;
-        diagnostic = msg;
-    }
-
-    bool success;
-    std::string subject;
-    std::string diagnostic;
+	bool success;
+	std::string subject;
+	std::string diagnostic;
 };
 
-
-class CosemClient
-{
+class CosemClient {
 public:
-    CosemClient();
+	CosemClient();
 
-    bool Initialize(const std::string &commFile, const std::string &objectsFile, const std::string &meterFile);
+	bool Initialize(const std::string &commFile, const std::string &objectsFile, const std::string &meterFile);
 
-    void SetStartDate(const std::string &date);
-    void SetEndDate(const std::string &date);
+	void SetStartDate(const std::string &date);
+	void SetEndDate(const std::string &date);
 
-    void WaitForStop();
+	void WaitForStop();
 
-    bool SendModem(const std::string &command, const std::string &expected, std::string &modemReply, uint32_t timeout);
+	bool SendModem(const std::string &command, const std::string &expected, std::string &modemReply, uint32_t timeout);
 
-    bool PerformTask();
+	bool PerformTask();
 
-    std::string ResultToString(csm_data_access_result result);
+	std::string ResultToString(csm_data_access_result result);
 
-    void PrintResult();
-    std::string GetLls();
+	void PrintResult();
+	std::string GetLls();
 
 private:
-    ModemState mModemState;
-    CosemState mCosemState;
+	ModemState mModemState;
+	CosemState mCosemState;
 
-    static const uint32_t cBufferSize = 40U*1024U;
-    char mSndBuffer[cBufferSize];
-    char mRcvBuffer[cBufferSize];
-    csm_array mRcvArray;
+	static const uint32_t cBufferSize = 40U * 1024U;
+	char mSndBuffer[cBufferSize];
+	char mRcvBuffer[cBufferSize];
+	csm_array mRcvArray;
 
-    uint8_t mScratch[cBufferSize];
+	uint8_t mScratch[cBufferSize];
 
-    static const uint32_t cAppBufferSize = 2000U*1024U;
-    uint8_t mAppBuffer[cAppBufferSize];
+	static const uint32_t cAppBufferSize = 2000U * 1024U;
+	uint8_t mAppBuffer[cAppBufferSize];
 
-    static const uint32_t cSelectiveAccessBufferSize = 256U;
-    uint8_t mSelectiveAccessBuff[cSelectiveAccessBufferSize];
+	static const uint32_t cSelectiveAccessBufferSize = 256U;
+	uint8_t mSelectiveAccessBuff[cSelectiveAccessBufferSize];
 
-    std::uint32_t mReadIndex;
-    uint32_t mMeterIndex;
-    Configuration mConf;
-    Transport mTransport;
-    csm_asso_state mAssoState;
+	std::uint32_t mReadIndex;
+	uint32_t mMeterIndex;
+	Configuration mConf;
+	Transport mTransport;
+	csm_asso_state mAssoState;
 
-    std::vector<Result> mResults;
+	std::vector<Result> mResults;
 
-    std::string AuthResultToString(enum csm_asso_result result);
-    Result Pass3And4(Meter &meter);
-    int ConnectHdlc(Meter &meter);
-    bool HdlcProcess(Meter &meter, const std::string &send, std::string &rcv, int timeout, bool enableRetries);
-    std::string EncapsulateRequest(Meter &meter, csm_array *request);
-    bool PerformCosemRead(Meter &meter);
-    Result ConnectAarq(Meter &meter);
-    Result AccessObject(Meter &meter, const Object &obj, csm_request &request, csm_response &response, csm_array &app_array);
+	std::string AuthResultToString(enum csm_asso_result result);
+	Result Pass3And4(Meter &meter);
+	int ConnectHdlc(Meter &meter);
+	bool HdlcProcess(Meter &meter, const std::string &send, std::string &rcv, int timeout, bool enableRetries);
+	std::string EncapsulateRequest(Meter &meter, csm_array *request);
+	bool PerformCosemRead(Meter &meter);
+	Result ConnectAarq(Meter &meter);
+	Result AccessObject(Meter &meter, const Object &obj, csm_request &request, csm_response &response, csm_array &app_array);
 };
 
-#endif // COSEM_CLIENT_H
+#endif  // COSEM_CLIENT_H

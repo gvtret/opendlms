@@ -24,7 +24,7 @@ extern "C" {
 #define B921600 921600
 
 typedef long speed_t;
-#else // WIN32
+#else  // WIN32
 
 #include <unistd.h>
 #include <termios.h>

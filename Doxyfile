@@ -9,6 +9,15 @@ CREATE_SUBDIRS         = NO
 
 # Input
 INPUT                  = cosemlib/src \
+                          cosemlib/ic \
+                          cosemlib/crypto \
+                          cosemlib/hdlc \
+                          cosemlib/util \
+                          cosemlib/model \
+                          cosemlib/profile \
+                          server \
+                          client \
+                          common
                          cosemlib/crypto \
                          cosemlib/hdlc \
                          cosemlib/ic \

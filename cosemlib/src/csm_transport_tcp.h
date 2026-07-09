@@ -21,9 +21,9 @@ extern "C" {
 
 /* ── TCP transport configuration ────────────────────────────────────────── */
 
-#define CSM_TCP_MAX_CLIENTS  8
-#define CSM_TCP_BACKLOG      8
-#define CSM_TCP_RECV_BUF     4096
+#define CSM_TCP_MAX_CLIENTS 8
+#define CSM_TCP_BACKLOG     8
+#define CSM_TCP_RECV_BUF    4096
 
 /**
  * \brief TCP transport context (opaque to users)
@@ -47,8 +47,7 @@ typedef struct csm_tcp_context csm_tcp_context;
  * \param framing    Framing type (CSM_FRAMING_WRAPPER for standard COSEM-TCP)
  * \return CSM_TRANSPORT_OK on success
  */
-int csm_transport_tcp_server_init(csm_transport *transport, uint16_t port,
-                                   csm_framing_type framing);
+int csm_transport_tcp_server_init(csm_transport *transport, uint16_t port, csm_framing_type framing);
 
 /**
  * \brief Create a TCP transport for client mode (connecting)
@@ -67,8 +66,7 @@ int csm_transport_tcp_server_init(csm_transport *transport, uint16_t port,
  * \param framing    Framing type
  * \return CSM_TRANSPORT_OK on success
  */
-int csm_transport_tcp_client_init(csm_transport *transport, const char *host,
-                                   uint16_t port, csm_framing_type framing);
+int csm_transport_tcp_client_init(csm_transport *transport, const char *host, uint16_t port, csm_framing_type framing);
 
 /**
  * \brief Set the event callback for asynchronous operation
@@ -81,9 +79,7 @@ int csm_transport_tcp_client_init(csm_transport *transport, const char *host,
  * \param callback   Event callback function (NULL to disable)
  * \param user_ctx   User context passed to callback
  */
-void csm_transport_tcp_set_event_cb(csm_transport *transport,
-                                     csm_transport_event_fn callback,
-                                     void *user_ctx);
+void csm_transport_tcp_set_event_cb(csm_transport *transport, csm_transport_event_fn callback, void *user_ctx);
 
 /**
  * \brief Accept a pending connection (server mode, manual accept)

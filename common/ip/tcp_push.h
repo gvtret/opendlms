@@ -36,8 +36,8 @@ extern "C" {
 
 typedef void (*tcp_push_handler)(const uint8_t *data, uint32_t len);
 
-int  tcp_push_connect(const char *host, uint16_t port);
-int  tcp_push_send(SOCKET sock, const uint8_t *data, uint32_t len);
+int tcp_push_connect(const char *host, uint16_t port);
+int tcp_push_send(SOCKET sock, const uint8_t *data, uint32_t len);
 void tcp_push_close(SOCKET sock);
 
 #ifdef __cplusplus

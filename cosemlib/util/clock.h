@@ -15,10 +15,16 @@ extern "C" {
 #include "csm_axdr_codec.h"
 #include "csm_array.h"
 
-
-enum DOW_T {DOW_IGNORE = -1,
-       MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY};
-
+enum DOW_T {
+	DOW_IGNORE = -1,
+	MONDAY,
+	TUESDAY,
+	WEDNESDAY,
+	THURSDAY,
+	FRIDAY,
+	SATURDAY,
+	SUNDAY
+};
 
 /*
 Member	Type	Meaning	Range
@@ -46,31 +52,26 @@ tm_sec is generally 0-59. The extra range is to accommodate for leap seconds in 
  *
  */
 
-typedef struct
-{
-    uint8_t hundredths;
-    uint8_t second; // 0-59
-    uint8_t minute; // 0-59
-    uint8_t hour;   // 0-23
+typedef struct {
+	uint8_t hundredths;
+	uint8_t second;  // 0-59
+	uint8_t minute;  // 0-59
+	uint8_t hour;    // 0-23
 } clk_time_t;
 
-typedef struct
-{
-    uint8_t day;    // 1-31
-    uint8_t dow;    // Day of week [0..6]
-    uint8_t month;  // 1-12
-    uint16_t year;   // 0-99 (representing 2000-2099)
+typedef struct {
+	uint8_t day;    // 1-31
+	uint8_t dow;    // Day of week [0..6]
+	uint8_t month;  // 1-12
+	uint16_t year;  // 0-99 (representing 2000-2099)
 } clk_date_t;
 
-typedef struct
-{
-    clk_date_t date;
-    clk_time_t time;
-    int16_t deviation;
-    uint8_t status;
+typedef struct {
+	clk_date_t date;
+	clk_time_t time;
+	int16_t deviation;
+	uint8_t status;
 } clk_datetime_t;
-
-
 
 // -------------------------------------- RAW UTILITY FUNCTIONS --------------------------------------
 
@@ -107,7 +108,6 @@ int clk_time_from_cosem(clk_time_t *time, csm_array *array);
 void clk_print_datetime(const clk_datetime_t *clk);
 void clk_print_date(const clk_date_t *date);
 void clk_print_time(const clk_time_t *time);
-
 
 
 #if 0
@@ -166,7 +166,7 @@ int main()
 }
 #endif
 
-#endif // CLOCK_H
+#endif  // CLOCK_H
 
 /**
   Zeller formula

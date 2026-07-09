@@ -4,10 +4,10 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define CSM_DEF_PDU_SIZE        1024
+#define CSM_DEF_PDU_SIZE 1024
 
 
-#define TRUE 1
+#define TRUE  1
 #define FALSE 0
 
 #ifndef CSM_ASSERT
@@ -19,12 +19,17 @@
 #endif
 
 #ifndef CSM_LOG
-#define CSM_LOG(...) printf("[LOG]");printf(__VA_ARGS__);printf("\r\n")
+#define CSM_LOG(...) \
+	printf("[LOG]"); \
+	printf(__VA_ARGS__); \
+	printf("\r\n")
 #endif
 
 #ifndef CSM_ERR
-#define CSM_ERR(...) printf("[ERR]");printf(__VA_ARGS__);printf("\r\n")
+#define CSM_ERR(...) \
+	printf("[ERR]"); \
+	printf(__VA_ARGS__); \
+	printf("\r\n")
 #endif
 
-#endif // CSM_CONFIG_H
-
+#endif  // CSM_CONFIG_H

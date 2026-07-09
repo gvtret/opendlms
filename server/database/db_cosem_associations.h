@@ -7,4 +7,4 @@
 
 csm_db_code db_cosem_associations_func(csm_db_context_t *ctx, csm_array *in, csm_array *out, csm_request *request);
 
-#endif // DB_COSEM_ASSOCIATIONS_H
+#endif  // DB_COSEM_ASSOCIATIONS_H
